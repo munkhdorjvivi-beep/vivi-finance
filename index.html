@@ -380,8 +380,9 @@ window.VIVIFB = (() => {
   const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
 
-  const signIn = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => {
-    if (e && /popup/.test(e.code || '')) return auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+  const provider = () => { const p = new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' }); return p; };  // always let the user pick the account
+  const signIn = () => auth.signInWithPopup(provider()).catch(e => {
+    if (e && /popup/.test(e.code || '')) return auth.signInWithRedirect(provider());
     throw e;
   });
   const signOut = () => auth.signOut();
