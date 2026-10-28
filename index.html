@@ -204,7 +204,11 @@ body{margin:0;background:var(--bg)}
       <div class="row" style="margin-top:10px"><button class="btn primary" id="cash-save" disabled>Үр дүнг хадгалж нягтланд харуулах</button><span class="note" id="cash-msg"></span></div>
     </div>
     <div class="card">
-      <h2 id="rev-title">Төлбөрийн хэлбэрээр: Smart ба банк</h2>
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <h2 id="rev-title" style="margin:0">Төлбөрийн хэлбэрээр: Smart ба банк</h2>
+        <div class="row"><button class="btn primary" id="rev-xlsx" disabled>📥 Excel тайлан татах</button></div>
+      </div>
+      <p class="note" id="rev-xlsx-note" style="margin:0 0 8px">Бүтэн Excel тайлан (хураангуй, дэлгүүр өдрөөр, бэлэн мөнгө, зарлага ангиллаар, тодруулах, зээл, дансууд) — дээр Smart тайлан болон хуулгаа оруулсны дараа татна.</p>
       <div class="tbl"><table><thead><tr><th>Төлбөрийн хэлбэр</th><th class="n">Smart</th><th class="n">Банкинд орсон</th><th class="n">Зөрүү</th><th class="n">%</th><th>Дүгнэлт</th></tr></thead><tbody id="rev-sum"><tr><td colspan="6" class="empty">Хяналт хийгдээгүй байна.</td></tr></tbody></table></div>
       <p class="note" id="rev-accs" style="margin:8px 0 0"></p>
       <p class="note" style="margin:8px 0 0">Карт: банк 0.5% шимтгэл суутгасан гэж бүтэн дүн рүү шилжүүлсэн. QPay: шимтгэлийг нэмж тооцсон. QPay ба «Хаан шилжүүлэг» нэг дансанд ордог тул хамт тулгана. Зээл (StorePay, Pocket) банкинд шимтгэлтэйгээр цэвэр дүнгээр орно.</p>
@@ -465,7 +469,7 @@ const VIVI = (() => {
       const out = [];
       for (const r of rows.slice(h+1)){
         const dt = toDT(r[ix('Гүйлгээний огноо')]); if (!dt) continue;
-        out.push({acc, dt, cr: Math.abs(num(r[ix('Орлого')])), dr: Math.abs(num(r[ix('Зарлага')])), desc: str(r[ix('Гүйлгээний утга')]), cp: str(r[ix('Харьцсан данс')])});
+        out.push({acc, dt, cr: Math.abs(num(r[ix('Орлого')])), dr: Math.abs(num(r[ix('Зарлага')])), desc: str(r[ix('Гүйлгээний утга')]), cp: str(r[ix('Харьцсан данс')]), cpName: str(r[ix('Харьцсан дансны нэр')])});
       }
       return {type:'bank', bank:'Golomt', acc, label:`Golomt ${acc}`, rows: out};
     }
@@ -729,7 +733,136 @@ const VIVI = (() => {
   // mail date (UTC ISO) -> Ulaanbaatar local "YYYY-MM-DDTHH:MM:SS"
   function mailLocal(s){ const t = new Date(s); if (isNaN(t)) return ''; const u = new Date(t.getTime() + 8*3600e3); return `${u.getUTCFullYear()}-${pad(u.getUTCMonth()+1)}-${pad(u.getUTCDate())}T${pad(u.getUTCHours())}:${pad(u.getUTCMinutes())}:${pad(u.getUTCSeconds())}`; }
 
-  return {parseRows, build, parseDates, matchCash, classifyCredit, iso, OWN, norm, parseMail, mailLocal};
+  // ---------- full control report (same layout as the 3-month Excel) ----------
+  const ACC_NAME = {'1825100856':'VIVI Golomt','5175306931':'VIVI Khan Дэлгүүр','5175306920':'VIVI Khan Online','5175278095':'VIVI Khan POS Dragon',
+    '5174134484':'VIVI Khan Бэлэн/Пос','5174134473':'VIVI Khan EUR','405095875':'VIVI TDB QPay online','405095876':'VIVI TDB USD','405095877':'VIVI TDB EUR',
+    '405096869':'VIVI TDB Хоум (Энхбаатар орлого)','405096868':'VIVI TDB цалин','5174135239':'VIVI Khan USD','5311365725':'Энхбаатар POS FC',
+    '2106025813':'VIVI Arig (УИД)','5174139482':'Мөнхдорж Khan','5403962410':'Энхтөр Dragon','5403962396':'Энхтөр Food City','5403962454':'Энхтөр Darkhan/Sunday',
+    '5224167095':'Энхбаатар 7095','5224167073':'Энхбаатар цалин 7073','1735156519':'Энхбаатар Golomt','1735159300':'VIVI Golomt цалин',
+    '1735159334':'VIVI Golomt','1735159299':'VIVI Golomt','405097294':'Мөнхдорж TDB (хувийн)','4002622637':'Мөнхдорж TDB (хувийн)','405097565':'Энхбаатар TDB Хэрэглээ',
+    '5310744690':'Энхбаатар Khan','405102965':'VIVI TDB'};
+  const PAYACC = new Set(['109500167338','1105249287','1305143697','1735156283','1735156284','1735156286','1735156288','1735156289','1735156291','1735156292','1735156293','1735156295','1735156297','1735156525','1735156571','1905125044','192200046273','2602036637','2715159415','3665109094','405099752','405126369','458055838','500167338','5001676491','5014232703','5019558822','5020906060','5021476161','5026595377','5026814493','5027299990','5033294847','5033608561','5037266101','5039343277','5056029019','5057669311','5058528471','5059435223','5071683237','5111054591','5157244556','5166146682','5171391025','5251418414','5284076229','5543020794','5598243388','5619052521','5622790325','5653105823','5675291358','5753811879','5845541170','5859083983','5926293828','692387378','8200005364']);
+  const CAT = {own_md:'Эзэмшигч – Мөнхдорж хувийн / Właściciel prywatne', own_eb:'Энхбаатар Хэрэглээ / Энхбаатар konsumpcja', internal:'Дотоод шилжүүлэг / Wewnętrzne',
+    fee:'Банкны шимтгэл / Prowizje', hipay:'hipay (хэтэвч / portfel)', refund:'Буцаалт / Zwroty klientom', salary:'Цалин / Wynagrodzenia', tax:'Татвар, гааль, НДШ / Podatki, cło, ZUS',
+    repair:'Засвар, үйлчилгээ / Remonty', travel:'Томилолт / Delegacje', media:'Цахилгаан, интернэт / Media', rent:'Түрээс / Czynsz', ploan:'Хувийн зээл + хүү / Pożyczki prywatne',
+    bank:'Зээл, ББСБ / Kredyty', f1:'F1 (Энхбаатар)', fx:'Арилжаа / Wymiana walut', cargo:'Тээвэр, карго / Transport', fuel:'Шатахуун / Paliwo', goods:'Бараа, нийлүүлэгч / Towar',
+    other:'Тодруулах / Do wyjaśnienia'};
+  function outCat(t){
+    const s = String(t.desc||'').toLowerCase(), nm = String(t.cpName||'').toLowerCase(), cp = norm(t.cp);
+    let recv = cp && OWN.has(cp) ? cp : '';
+    if (!recv){ const m = String(t.desc||'').replace(/\s/g,'').match(/MN\d{18}/); if (m && OWN.has(norm(m[0]))) recv = norm(m[0]); }
+    if (recv){ const o = ACC_NAME[recv] || ''; if (/Мөнхдорж/.test(o)) return 'own_md'; if (/Хэрэглээ/.test(o)) return 'own_eb'; return 'internal'; }
+    if (/хураамж|хөтөлсний/.test(s) || (/шимтгэл/.test(s) && t.dr < 20000)) return 'fee';
+    if (/hipay/.test(s)) return 'hipay';
+    if (/буцаалт|butsaalt/.test(s)) return 'refund';
+    if (/мост мони/.test(nm) || /цалин/.test(s)) return 'salary';
+    if (/нийгмийн даатгал/.test(nm) || cp === '499071483' || /гааль|бүрдүүлэлт|татвар/.test(s)) return 'tax';
+    if (/\/\s*\d\d[.,]\d\d/.test(s) && t.dr < 3000000) return 'salary';
+    if (/засвар|zaswar|грүүшиг|грушиг/.test(s)) return 'repair';
+    if (/томилолт|амралт|буудал/.test(s)) return 'travel';
+    if (/интернэт/.test(s)) return 'media';
+    if (/tuures|түрээс/.test(s) || cp === '1205266311' || /скайхайпермаркет/.test(nm)) return 'rent';
+    if (['5401270409','5029946765','499201039','5164304347','5031878290'].includes(cp) || /болортунгалаг|отгонтуяа|цэнгэл/.test(s)) return 'ploan';
+    if (/ббсб/.test(nm) || /ббсб|инвескор|зээл|хүү|hhz|хх зээл/.test(s) || ['5174139131','5174144175','5669102767','5567777258','5134092518','5221423123'].includes(cp)) return 'bank';
+    if (/salary/.test(s) || PAYACC.has(cp) || / (фс|др|аг|оф|нс|н|ох|бгд)\s*$/.test(s)) return 'salary';
+    if (/ f1/.test(s) || /f1$/.test(s) || ['444017046','5128024567','5581001313'].includes(cp)) return 'f1';
+    if (/арилжаа/.test(s)) return 'fx';
+    if (/тээвр|карго|cargo|глобал/.test(s)) return 'cargo';
+    if (/шатахуун/.test(s)) return 'fuel';
+    if (/цахилгаан|дулаан|ус |юнител|мобиком/.test(s)) return 'media';
+    if (/бараа|гутл|худалдан авалт|камдер|принт|монос/.test(s) || ['451065110','5035115733','5039860137','5077208652','5305588115','5007910879','5173176640','5308524725'].includes(cp)) return 'goods';
+    if (/нөат|ндш|нийгмийн/.test(s)) return 'tax';
+    return 'other';
+  }
+  const WD = ['Ня/nd','Да/pn','Мя/wt','Лх/śr','Пү/cz','Ба/pt','Бя/sb'];
+  const wdOf = d => d ? WD[new Date(d+'T00:00:00Z').getUTCDay()] : '';
+  const dts = d => { const p = x => String(x).padStart(2,'0'); return `${d.getUTCFullYear()}-${p(d.getUTCMonth()+1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`; };
+  const R = n => Math.round(+n || 0);
+  const STATUS_TXT = {BRAK:'Тушаагаагүй / BRAK WPŁATY', MNIEJ:'Дутуу тушаасан / Wpłacono mniej', WIECEJ:'Илүү тушаасан / Wpłacono więcej', OK:'Зөв / OK', BEZ_DNIA:'Өдөр тодорхойгүй / Bez dnia'};
+  const CH_TXT = {cash:'Бэлэн мөнгө / Gotówka', pos:'Карт (POS) / Karta', qpay:'QPay + шилжүүлэг / QPay + przelewy', credit:'Зээл (StorePay, Pocket) / Kredyt'};
+
+  function report(files){
+    const m = build(files); if (m.error) return m;
+    const smart = files.filter(f => f.type === 'smart').flatMap(f => f.rows).filter(r => r.d >= m.d0 && r.d <= m.d1);
+    const seen = new Set(), bank = [];
+    for (const f of files.filter(f => f.type === 'bank')) for (const t of f.rows){ const k = `${t.acc}|${+t.dt}|${t.cr}|${t.dr}|${t.desc}`; if (!seen.has(k)){ seen.add(k); bank.push(t); } }
+    const inWin = t => { const d = iso(t.dt); return d >= m.d0 && d <= addDays(m.d1, 1); };
+    const sheets = [];
+    // --- 1. summary
+    const W = m.waterfall, sum = [['VIVI – орлогын хяналт / kontrola przychodów'], [`Хугацаа / Okres: ${m.d0} – ${m.d1} · Smart мөр: ${m.nSmart} · банкны гүйлгээ: ${bank.length}`], [],
+      ['Төлбөрийн хэлбэр / Forma', 'Smart', 'Банкинд орсон / Bank', 'Зөрүү / Różnica', '%']];
+    let ts = 0, tb = 0;
+    for (const k of ['cash','pos','qpay','credit']){ const s = W[k].smart, b = W[k].bank; ts += s; tb += b; sum.push([CH_TXT[k], s, b, b - s, s ? +((b - s) / s).toFixed(4) : '']); }
+    sum.push(['Нийт / Razem', ts, tb, tb - ts, ts ? +((tb - ts) / ts).toFixed(4) : '']);
+    sum.push([], ['Дэлгүүр / Sklep', 'Smart бэлэн бус / bezgotówka', 'Банк бэлэн бус / Bank', 'Зөрүү / Różnica', 'Smart бэлэн / Gotówka', 'Тушаасан / Wpłacono', 'Бэлэн зөрүү / Brak gotówki', 'Тушаагаагүй өдөр / Dni bez wpłaty', 'Тушаагаагүй дүн / Kwota']);
+    for (const s of m.summary) sum.push([s.store, R(s.ncSmart), R(s.ncBank), R(s.ncBank - s.ncSmart), R(s.smartCash), R(s.dep), R(s.smartCash - s.dep), s.missDays, R(s.missAmt)]);
+    // outflow categories
+    const outs = bank.filter(t => t.dr > 0 && inWin(t)).map(t => ({...t, cat: outCat(t)}));
+    const byCat = {}; for (const t of outs){ (byCat[t.cat] = byCat[t.cat] || [0,0]); byCat[t.cat][0] += t.dr; byCat[t.cat][1]++; }
+    sum.push([], ['Зарлага ангиллаар / Wypływy wg kategorii', 'Дүн / Kwota', 'Тоо / Liczba']);
+    Object.entries(byCat).sort((a,b) => b[1][0] - a[1][0]).forEach(([k,v]) => sum.push([CAT[k], R(v[0]), v[1]]));
+    const loansIn = bank.filter(t => t.cr > 0 && inWin(t) && classifyCredit(t) && classifyCredit(t).ch === 'loan');
+    sum.push([], ['Авсан зээл / Otrzymane kredyty', R(loansIn.reduce((s,t) => s + t.cr, 0)), loansIn.length]);
+    sheets.push({name:'Хураангуй', aoa: sum, widths:[38,18,18,16,16,16,18,16,16]});
+    // --- 2. stores by day
+    const sd = {}; for (const f of m.forms){ const k = f.store + '|' + f.d; const o = sd[k] = sd[k] || {store: f.store, d: f.d, ns:0, nb:0, cs:0, cb:0}; if (f.ch === 'cash'){ o.cs += f.smart; o.cb += f.bank; } else { o.ns += f.smart; o.nb += f.bank; } }
+    const daily = [['Дэлгүүр / Sklep','Огноо / Data','Гараг / Dzień','Smart бэлэн бус','Банк бэлэн бус','Зөрүү / Różnica','%','Smart бэлэн / Gotówka','Тушаасан / Wpłaty','Хуримтлагдсан тушаагаагүй / Narastająco']];
+    const cum = {};
+    Object.values(sd).filter(o => o.store !== '?').sort((a,b) => a.store === b.store ? (a.d < b.d ? -1 : 1) : (a.store < b.store ? -1 : 1)).forEach(o => {
+      cum[o.store] = (cum[o.store] || 0) + o.cs - o.cb;
+      daily.push([o.store, o.d, wdOf(o.d), R(o.ns), R(o.nb), R(o.nb - o.ns), o.ns ? +((o.nb - o.ns) / o.ns).toFixed(4) : '', R(o.cs), R(o.cb), R(cum[o.store])]); });
+    sheets.push({name:'Дэлгүүр өдрөөр', aoa: daily, widths:[24,12,8,16,16,14,8,14,14,18]});
+    // --- 3/4. cash rows (with cash registers)
+    const kas = {}; for (const r of smart) if (r.form === 'Бэлнээр'){ const k = r.store + '|' + r.d; (kas[k] = kas[k] || {}); kas[k][r.kas || '?'] = (kas[k][r.kas || '?'] || 0) + r.amt; }
+    const cashHead = ['Дэлгүүр / Sklep','Борлуулалтын огноо / Data(y)','Гараг / Dzień','Smart бэлэн / Gotówka Smart','Тушаасан / Wpłacono','Тушаасан огноо / Data wpłaty','Зөрүү / Brakuje','Төлөв / Status','Касс (бэлэн) / Kasy','Тушаалтын утга / Opis wpłaty','Тайлбар / Wyjaśnienie'];
+    const cashRow = g => { const k = {}; g.days.forEach(d => Object.entries(kas[g.store + '|' + d] || {}).forEach(([n,v]) => k[n] = (k[n] || 0) + v));
+      return [g.store, g.days.join(', '), g.days.map(wdOf).join(', '), R(g.smart), R(g.dep), g.depDates.map(d => d.slice(5)).join(', '), R(g.diff), STATUS_TXT[g.status] || g.status,
+        Object.entries(k).sort((a,b) => b[1] - a[1]).map(([n,v]) => `${n}: ${R(v).toLocaleString('ru-RU')}`).join('; '), g.desc || '', '']; };
+    sheets.push({name:'Бэлэн – тайлбар авах', aoa: [cashHead, ...m.cash.filter(g => g.status === 'BRAK' || g.status === 'MNIEJ').map(cashRow)], widths:[22,24,14,14,14,14,14,26,40,40,40]});
+    sheets.push({name:'Бэлэн – бүх өдөр', aoa: [cashHead, ...m.cash.map(cashRow)], widths:[22,24,14,14,14,14,14,26,40,40,40]});
+    sheets.push({name:'Тушаалтууд', aoa: [['Дэлгүүр / Sklep','Данс / Konto','Огноо цаг / Data','Дүн / Kwota','Утга / Opis']].concat(
+      bank.filter(t => t.cr > 0 && inWin(t)).map(t => [t, classifyCredit(t)]).filter(([t,c]) => c && c.ch === 'cash').sort((a,b) => a[0].dt - b[0].dt).map(([t,c]) => [c.store, t.acc, dts(t.dt), R(t.cr), t.desc])), widths:[22,12,20,14,60]});
+    // --- 6. outflows
+    sheets.push({name:'Зарлага', aoa: [['Данс / Konto','Эзэмшигч / Właściciel','Огноо цаг / Data','Дүн / Kwota','Хүлээн авагчийн данс / Konto odbiorcy','Хүлээн авагч / Odbiorca','Утга / Opis','Ангилал / Kategoria','Тайлбар / Wyjaśnienie']]
+      .concat(outs.sort((a,b) => a.dt - b.dt).map(t => [t.acc, ACC_NAME[t.acc] || '', dts(t.dt), R(t.dr), t.cp || '', t.cpName || '', t.desc, CAT[t.cat], ''])), widths:[12,24,20,14,22,26,60,30,30]});
+    // --- 7. to explain (grouped by recipient)
+    const grp = {}; for (const t of outs.filter(t => ['other','hipay','f1','own_md'].includes(t.cat))){ const k = t.cat + '|' + (norm(t.cp) || t.cp || t.desc.slice(0,20)); const o = grp[k] = grp[k] || {cat:t.cat, cp:t.cp, name:t.cpName||'', sum:0, n:0, d0:'9', d1:'0', accs:new Set(), ex:t.desc};
+      o.sum += t.dr; o.n++; const d = iso(t.dt); if (d < o.d0) o.d0 = d; if (d > o.d1) o.d1 = d; o.accs.add(t.acc); }
+    sheets.push({name:'Тодруулах', aoa: [['Бүлэг / Grupa','Хүлээн авагчийн данс / Konto','Нэр / Nazwa','Нийт / Suma','Тоо / Liczba','Эхэлсэн / Od','Дууссан / Do','Данснаас / Z kont','Жишээ утга / Przykład','Тайлбар (хэн / юунд) / Wyjaśnienie']]
+      .concat(Object.values(grp).sort((a,b) => b.sum - a.sum).map(o => [CAT[o.cat], o.cp, o.name, R(o.sum), o.n, o.d0, o.d1, [...o.accs].join(', '), o.ex, ''])), widths:[26,22,24,14,8,12,12,26,50,40]});
+    // --- 8. loans
+    const months = []; for (let d = m.d0.slice(0,7); d <= m.d1.slice(0,7); ){ months.push(d); const [y,mo] = d.split('-').map(Number); d = mo === 12 ? `${y+1}-01` : `${y}-${String(mo+1).padStart(2,'0')}`; }
+    const ln = {}; for (const t of outs.filter(t => t.cat === 'ploan' || t.cat === 'bank')){ const k = t.cat + '|' + (norm(t.cp) || '') + ' ' + (t.cpName || t.desc.slice(0,24)); const o = ln[k] = ln[k] || {cat:t.cat, who:(norm(t.cp) || '') + ' ' + (t.cpName || t.desc.slice(0,24)), m:{}}; const mo = iso(t.dt).slice(0,7); o.m[mo] = (o.m[mo] || 0) + t.dr; }
+    const loanAoa = [['Төрөл / Typ','Зээлдүүлэгч / Pożyczkodawca', ...months, 'Нийт / Razem']].concat(Object.values(ln).map(o => { const v = months.map(mo => R(o.m[mo])); return [CAT[o.cat], o.who.trim(), ...v, v.reduce((a,b) => a + b, 0)]; }).sort((a,b) => b[b.length-1] - a[a.length-1]));
+    loanAoa.push([], ['Авсан зээл / Otrzymane kredyty'], ['Огноо / Data','Данс / Konto','Дүн / Kwota','Утга / Opis']);
+    loansIn.forEach(t => loanAoa.push([dts(t.dt), t.acc, R(t.cr), t.desc]));
+    sheets.push({name:'Зээл', aoa: loanAoa, widths:[28,40,...months.map(() => 14),16]});
+    // --- 9. accounts
+    const ac = {}; for (const t of bank.filter(inWin)){ const o = ac[t.acc] = ac[t.acc] || {cr:0, dr:0, d0:'9', d1:'0', n:0}; o.cr += t.cr; o.dr += t.dr; o.n++; const d = iso(t.dt); if (d < o.d0) o.d0 = d; if (d > o.d1) o.d1 = d; }
+    const bankOf = {}; files.filter(f => f.type === 'bank').forEach(f => bankOf[f.acc] = f.bank);
+    sheets.push({name:'Дансууд', aoa: [['Данс / Konto','Банк / Bank','Тайлбар / Opis','Орлого / Wpływy','Зарлага / Wypływy','Эхний / Pierwsza','Сүүлийн / Ostatnia','Тоо / Liczba']]
+      .concat(Object.entries(ac).sort().map(([a,o]) => [a, bankOf[a] || '', ACC_NAME[a] || '', R(o.cr), R(o.dr), o.d0, o.d1, o.n])), widths:[14,10,32,16,16,12,12,8]});
+    return {d0: m.d0, d1: m.d1, sheets, filename: `VIVI_hyanalt_${m.d0}_${m.d1}.xlsx`};
+  }
+
+  // report -> SheetJS workbook (number formats, column widths, frozen header)
+  function toWorkbook(r, X){
+    const wb = X.utils.book_new();
+    for (const s of r.sheets){
+      const ws = X.utils.aoa_to_sheet(s.aoa);
+      ws['!cols'] = (s.widths || []).map(w => ({wch: w}));
+      let head = null;
+      s.aoa.forEach((row, ri) => {
+        if (row.length > 2 && row.every(v => typeof v === 'string' && v)) head = row;      // a header row
+        row.forEach((v, ci) => { if (typeof v !== 'number') return; const c = ws[X.utils.encode_cell({r: ri, c: ci})]; if (!c) return;
+          c.z = head && /%/.test(String(head[ci] || '')) ? '0.0%' : '#,##0'; });
+      });
+      X.utils.book_append_sheet(wb, ws, s.name.slice(0, 31));
+    }
+    return wb;
+  }
+
+  return {parseRows, build, parseDates, matchCash, classifyCredit, iso, OWN, norm, parseMail, mailLocal, report, outCat, toWorkbook};
 })();
 
 
@@ -755,7 +888,7 @@ let db = null, user = null, me = null, isOwner = false, canWrite = true, assets 
 const S = { requests: [], approvals: {}, banktx: [], cash: null, notes: {}, balances: [], names: {} };
 let bankDay = today(), loadBankDay = null;
 let reqFilter = 'pending', bankFilter = 'all', cashFilter = 'open', cashStore = '', revCh = 'all', revOnly = 'diff', revStore = '';
-let pendingRun = null;
+let pendingRun = null, lastFiles = null;
 
 // ---------- tabs ----------
 function showTab(t){ $$('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t)); $$('[data-panel]').forEach(p => p.hidden = p.dataset.panel !== t); try{ localStorage.setItem('vivi-tab', t); }catch(e){} }
@@ -886,6 +1019,8 @@ const CH_SHORT = {cash:'Бэлэн', pos:'Карт', qpay:'QPay/шилж.'};
 const sgn = n => (n > 0 ? '+' : '') + fmt(n);
 const diffCls = (d, base) => Math.abs(d) <= Math.max(10000, Math.abs(base) * 0.01) ? '' : d < 0 ? 'c-bad' : 'c-grey';
 function renderRev(){
+  $('#rev-xlsx').disabled = !(lastFiles && lastFiles.some(f => f.type === 'smart'));
+  $('#rev-xlsx-note').hidden = !$('#rev-xlsx').disabled;
   const run = pendingRun || S.cash;
   const W = run && run.waterfall, F = (run && run.forms) || [];
   $('#rev-title').textContent = run ? `Төлбөрийн хэлбэрээр: Smart ба банк · ${run.d0} – ${run.d1}${pendingRun ? ' (хадгалаагүй)' : ''}` : 'Төлбөрийн хэлбэрээр: Smart ба банк';
@@ -998,6 +1133,7 @@ async function handleFiles(fl){
     }catch(err){ parsedFiles.push({type:'unknown', label:'Уншиж чадсангүй', rows:[], file:f.name}); }
   }
   $('#cash-filelist').innerHTML = parsedFiles.map(p => `<div>${p.type==='unknown'?'<span class="chip c-bad">?</span>':'<span class="chip c-ok">✓</span>'} ${esc(p.label)} · ${p.rows.length} мөр · ${esc(p.file)}</div>`).join('');
+  lastFiles = parsedFiles.slice();
   const m = VIVI.build(parsedFiles);
   if (m.error){ $('#cash-msg').textContent = 'Smart «Борлуулалт төлбөрийн хэлбэрээр» тайлан оруулна уу.'; return; }
   pendingRun = {d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
@@ -1074,6 +1210,17 @@ async function syncMail(manual){
   }finally{ syncing = false; $('#sync-btn').disabled = false; }
 }
 $('#sync-btn').addEventListener('click', () => syncMail(true));
+
+// ---------- full Excel report ----------
+$('#rev-xlsx').addEventListener('click', () => {
+  if (!lastFiles || typeof XLSX === 'undefined') return;
+  const btn = $('#rev-xlsx'); btn.disabled = true; btn.textContent = 'Бэлтгэж байна…';
+  setTimeout(() => {
+    try{ const r = VIVI.report(lastFiles); if (r.error){ alert(r.error); return; } XLSX.writeFile(VIVI.toWorkbook(r, XLSX), r.filename); }
+    catch(err){ console.warn(err); alert('Excel үүсгэж чадсангүй: ' + (err.message || err)); }
+    finally{ btn.disabled = false; btn.textContent = '📥 Excel тайлан татах'; }
+  }, 30);
+});
 
 // ---------- settings (owner) ----------
 let ACCESS = {emails: []};
