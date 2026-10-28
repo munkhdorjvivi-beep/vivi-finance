@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="mn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>VIVI Санхүүгийн хяналт</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1f5f8b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a ledger-like working tool — sticky top bar with KPIs, tabbed panels, dense tables with tabular figures */
+:root{
+  --bg:#f5f6f4; --surface:#ffffff; --sunk:#eceeea; --line:#d9ddd6; --fg:#1d2420; --muted:#5f6a63;
+  --accent:#1f5f8b; --accent-ink:#ffffff; --accent-soft:#e3eef6;
+  --ok:#2f7d4f; --ok-soft:#e2f2e8; --warn:#9a6a00; --warn-soft:#fbf0d6; --bad:#b3362c; --bad-soft:#f8e1de; --grey-soft:#e9ebe8;
+  --font:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:8px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141917; --surface:#1b211e; --sunk:#222a26; --line:#33403a; --fg:#e6ebe7; --muted:#9aa69f;
+  --accent:#6fb1e0; --accent-ink:#0d1a24; --accent-soft:#1d3242;
+  --ok:#6cc38f; --ok-soft:#1c3326; --warn:#e2b04a; --warn-soft:#3a2f14; --bad:#f08a80; --bad-soft:#3e2220; --grey-soft:#262e2a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141917; --surface:#1b211e; --sunk:#222a26; --line:#33403a; --fg:#e6ebe7; --muted:#9aa69f;
+  --accent:#6fb1e0; --accent-ink:#0d1a24; --accent-soft:#1d3242;
+  --ok:#6cc38f; --ok-soft:#1c3326; --warn:#e2b04a; --warn-soft:#3a2f14; --bad:#f08a80; --bad-soft:#3e2220; --grey-soft:#262e2a; color-scheme:dark}
+*{box-sizing:border-box} [hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;justify-content:space-between;margin-bottom:14px}
+h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);font-size:13px}
+.role{font-size:12px;padding:3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;min-width:0}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi .v{font-family:var(--mono);font-size:20px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px}
+.kpi.bad .v{color:var(--bad)} .kpi.warn .v{color:var(--warn)} .kpi.ok .v{color:var(--ok)}
+.kpi .s{font-size:12px;color:var(--muted);font-family:var(--mono)}
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px;overflow-x:auto}
+nav.tabs button{font:inherit;font-weight:600;background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;color:var(--muted);cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+nav.tabs .n{font-family:var(--mono);font-weight:500;font-size:11px;background:var(--bad-soft);color:var(--bad);border-radius:999px;padding:1px 6px;margin-left:4px}
+.panel{display:flex;flex-direction:column;gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;min-width:0}
+.card h2{font-size:15px;margin:0 0 10px;font-weight:600}
+.note{color:var(--muted);font-size:12.5px}
+.banner{padding:10px 12px;border-radius:var(--r);background:var(--accent-soft);color:var(--fg);font-size:13px}
+.banner.bad{background:var(--bad-soft)}
+form.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+form.grid .full{grid-column:1/-1}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0}
+input,select,textarea{font:inherit;font-size:14px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0;width:100%}
+textarea{resize:vertical;min-height:38px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn{font:inherit;font-weight:600;font-size:13px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:7px 12px;cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.bad{background:var(--surface);border-color:var(--bad);color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap;display:inline-block}
+.c-ok{background:var(--ok-soft);color:var(--ok)} .c-warn{background:var(--warn-soft);color:var(--warn)} .c-bad{background:var(--bad-soft);color:var(--bad)} .c-grey{background:var(--grey-soft);color:var(--muted)} .c-acc{background:var(--accent-soft);color:var(--accent)}
+.filter button{font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:4px 10px;cursor:pointer}
+.filter button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;background:var(--sunk);position:sticky;top:0}
+td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+tr.sev-bad td:first-child{box-shadow:inset 3px 0 0 var(--bad)} tr.sev-warn td:first-child{box-shadow:inset 3px 0 0 var(--warn)} tr.sev-ok td:first-child{box-shadow:inset 3px 0 0 var(--ok)}
+.req{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;padding:12px 0;border-bottom:1px solid var(--line)}
+.req:last-child{border-bottom:0}
+.req .amt{font-family:var(--mono);font-size:16px;font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+.req .who{font-weight:600}
+.req .meta{color:var(--muted);font-size:12.5px;font-family:var(--mono)}
+.req .acts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.req .acts input{max-width:320px}
+.thumb{max-width:120px;max-height:90px;border-radius:6px;border:1px solid var(--line);display:block}
+.drop{border:1.5px dashed var(--line);border-radius:var(--r);padding:18px;text-align:center;color:var(--muted);background:var(--bg)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.files{display:flex;flex-direction:column;gap:4px;font-size:12.5px;font-family:var(--mono)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.empty{color:var(--muted);padding:18px;text-align:center}
+.bal{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))} form.grid{grid-template-columns:1fr} .bal{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+body{margin:0;background:var(--bg)}
+#gate{max-width:420px;margin:12vh auto 0;text-align:center}
+#gate .btn{margin-top:14px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="card" id="gate" hidden>
+    <h2 style="font-size:20px">VIVI Санхүүгийн хяналт</h2>
+    <p class="note" id="gate-msg">Google бүртгэлээрээ нэвтэрнэ үү.</p>
+    <button class="btn primary" id="gate-in">Google-ээр нэвтрэх</button>
+    <button class="btn" id="gate-out" hidden>Өөр бүртгэлээр нэвтрэх</button>
+  </div>
+  <div id="app" hidden>
+  <header class="top">
+    <div>
+      <h1>VIVI Санхүүгийн хяналт</h1>
+      <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
+    </div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="sign-out" title="Гарах">Гарах</button></div>
+  </header>
+
+  <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
+
+  <section class="kpis" aria-label="Тойм">
+    <div class="kpi warn"><div class="l">Хүлээгдэж буй хүсэлт</div><div class="v" id="k-pend">–</div><div class="s" id="k-pend-s">&nbsp;</div></div>
+    <div class="kpi bad"><div class="l">Зөвшөөрөлгүй гүйлгээ</div><div class="v" id="k-unm">–</div><div class="s" id="k-unm-s">&nbsp;</div></div>
+    <div class="kpi bad"><div class="l">Тайлбаргүй бэлэн мөнгөний өдөр</div><div class="v" id="k-cash">–</div><div class="s" id="k-cash-s">&nbsp;</div></div>
+    <div class="kpi"><div class="l">Сүүлийн дансны үлдэгдэл</div><div class="v" id="k-bal">–</div><div class="s" id="k-bal-s">&nbsp;</div></div>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="req" aria-selected="true">Төлбөрийн хүсэлт<span class="n" id="t-req" hidden></span></button>
+    <button role="tab" data-tab="bank" aria-selected="false">Банкны гүйлгээ<span class="n" id="t-bank" hidden></span></button>
+    <button role="tab" data-tab="rev" aria-selected="false">Орлого тулгалт</button>
+    <button role="tab" data-tab="cash" aria-selected="false">Бэлэн мөнгө<span class="n" id="t-cash" hidden></span></button>
+    <button role="tab" data-tab="bal" aria-selected="false">Дансны үлдэгдэл</button>
+    <button role="tab" data-tab="set" aria-selected="false" id="tab-set" hidden>Тохиргоо</button>
+  </nav>
+
+  <!-- REQUESTS -->
+  <section class="panel" data-panel="req">
+    <div class="card" id="req-form-card">
+      <h2>Шинэ төлбөрийн хүсэлт</h2>
+      <form class="grid" id="req-form" autocomplete="off">
+        <label class="f">Хүлээн авагчийн нэр *<input id="rq-payee" required placeholder="Жишээ: Эрдэнэтулга"></label>
+        <label class="f">Дансны дугаар / IBAN *<input id="rq-acc" required inputmode="numeric" placeholder="5005781234"></label>
+        <label class="f">Банк<select id="rq-bank"><option>Хаан банк</option><option>Голомт банк</option><option>Худалдаа хөгжлийн банк</option><option>Хас банк</option><option>Төрийн банк</option><option>Капитрон банк</option><option>Ариг банк</option><option>М банк</option><option>Бусад</option></select></label>
+        <label class="f">Дүн (₮) *<input id="rq-amt" required inputmode="decimal" placeholder="150000"></label>
+        <label class="f">Аль данснаас<select id="rq-from"></select></label>
+        <label class="f">Ангилал<select id="rq-cat"><option>Барааны төлбөр</option><option>Түрээс</option><option>Цалин</option><option>Зээл, хүү</option><option>Тээвэр, карго</option><option>Татвар, НДШ</option><option>Цахилгаан, ашиглалт</option><option>Засвар, үйлчилгээ</option><option>Буцаалт</option><option>Бусад</option></select></label>
+        <label class="f full">Гүйлгээний утга / тайлбар<textarea id="rq-note" rows="2" placeholder="Жишээ: Хоосон хайрцаг, гадна оффсет хэвлэл, нэхэмжлэх №…"></textarea></label>
+        <label class="f">Баримт (нэхэмжлэх, хүсэлтийн зураг)<input id="rq-file" type="file" accept="image/*,application/pdf"></label>
+        <div class="f full row"><button class="btn primary" id="rq-submit" type="submit">Хүсэлт илгээх</button><span class="note" id="rq-msg"></span></div>
+      </form>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:6px">
+        <h2 style="margin:0">Хүсэлтүүд</h2>
+        <div class="filter chips" id="req-filter">
+          <button data-f="all" aria-pressed="false">Бүгд</button>
+          <button data-f="pending" aria-pressed="true">Хүлээгдэж буй</button>
+          <button data-f="approved" aria-pressed="false">Зөвшөөрсөн</button>
+          <button data-f="paid" aria-pressed="false">Шилжүүлсэн</button>
+          <button data-f="rejected" aria-pressed="false">Татгалзсан</button>
+        </div>
+      </div>
+      <div id="req-list"><div class="empty">Хүсэлт алга. Дээрх маягтаар эхний хүсэлтээ илгээнэ үү.</div></div>
+    </div>
+  </section>
+
+  <!-- BANK -->
+  <section class="panel" data-panel="bank" hidden>
+    <div class="banner">Банкны имэйл мэдэгдлээс (kontrolavivi@gmail.com) минут тутам автоматаар орж ирдэг зарлагын гүйлгээ. Гүйлгээ бүрийг зөвшөөрсөн хүсэлттэй дүн болон дансны дугаараар тулгана.</div>
+    <div class="row" id="sync-row" style="justify-content:space-between;margin:8px 0" hidden>
+      <span class="note" id="sync-msg">Имэйл шалгаагүй байна.</span>
+      <button class="btn" id="sync-btn">Имэйл одоо шалгах</button>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <h2 style="margin:0">Зарлагын гүйлгээ</h2>
+        <div class="filter chips" id="bank-filter">
+          <button data-f="all" aria-pressed="true">Бүгд</button>
+          <button data-f="none" aria-pressed="false">Хүсэлтгүй</button>
+          <button data-f="warn" aria-pressed="false">Зөрүүтэй</button>
+          <button data-f="ok" aria-pressed="false">Тохирсон</button>
+          <button data-f="internal" aria-pressed="false">Дотоод</button>
+        </div>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Огноо</th><th>Данснаас</th><th>Хүлээн авагч</th><th class="n">Дүн (₮)</th><th>Утга</th><th>Төлөв</th></tr></thead><tbody id="bank-body"><tr><td colspan="6" class="empty">Гүйлгээ ачаалж байна…</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- REVENUE -->
+  <section class="panel" data-panel="rev" hidden>
+    <div class="card" id="cash-upload" hidden>
+      <h2>Шинэ хяналт хийх</h2>
+      <p class="note" style="margin:0 0 10px">Smart-аас «Борлуулалт төлбөрийн хэлбэрээр» тайлан болон тухайн хугацааны бүх банкны хуулгыг (Хаан, Голомт, ХХБ, Ариг) оруулна уу. Бэлэн мөнгө, карт (POS), QPay/шилжүүлэг, зээлийн орлогыг нэг дор тулгана. Файлуудыг таны компьютер дээр тооцоолно.</p>
+      <div class="drop" id="drop"><input id="cash-files" type="file" multiple accept=".xlsx,.xls" style="max-width:340px"><div style="margin-top:6px">эсвэл файлуудаа энд чирж оруулна уу</div></div>
+      <div class="files" id="cash-filelist" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:10px"><button class="btn primary" id="cash-save" disabled>Үр дүнг хадгалж нягтланд харуулах</button><span class="note" id="cash-msg"></span></div>
+    </div>
+    <div class="card">
+      <h2 id="rev-title">Төлбөрийн хэлбэрээр: Smart ба банк</h2>
+      <div class="tbl"><table><thead><tr><th>Төлбөрийн хэлбэр</th><th class="n">Smart</th><th class="n">Банкинд орсон</th><th class="n">Зөрүү</th><th class="n">%</th><th>Дүгнэлт</th></tr></thead><tbody id="rev-sum"><tr><td colspan="6" class="empty">Хяналт хийгдээгүй байна.</td></tr></tbody></table></div>
+      <p class="note" id="rev-accs" style="margin:8px 0 0"></p>
+      <p class="note" style="margin:8px 0 0">Карт: банк 0.5% шимтгэл суутгасан гэж бүтэн дүн рүү шилжүүлсэн. QPay: шимтгэлийг нэмж тооцсон. QPay ба «Хаан шилжүүлэг» нэг дансанд ордог тул хамт тулгана. Зээл (StorePay, Pocket) банкинд шимтгэлтэйгээр цэвэр дүнгээр орно.</p>
+    </div>
+    <div class="card">
+      <h2>Дэлгүүрээр (банк − Smart)</h2>
+      <div class="tbl"><table><thead><tr><th>Дэлгүүр / данс</th><th class="n">Smart нийт</th><th class="n">Бэлэн</th><th class="n">Карт</th><th class="n">QPay / шилжүүлэг</th></tr></thead><tbody id="rev-store"><tr><td colspan="5" class="empty">–</td></tr></tbody></table></div>
+      <p class="note" style="margin:8px 0 0">Хасах (улаан) = банкинд Smart-аас бага орсон. Зарим дэлгүүрийн QPay/шилжүүлэг өөр дэлгүүрийн дансанд ордог (жишээ нь Дархан → Фүүд сити, Эрдэнэт/Хан-Уул → ХХБ 405095875), тиймээс дэлгүүр тус бүрийн бэлэн бус зөрүүг нийт дүнтэй нь харьцуулж үнэлнэ.</p>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <h2 style="margin:0">Өдөр тутмын зөрүү</h2>
+        <div class="row"><select id="rev-store-sel" style="width:auto"><option value="">Бүх дэлгүүр</option></select>
+        <div class="filter chips" id="rev-ch"><button data-f="all" aria-pressed="true">Бүгд</button><button data-f="cash" aria-pressed="false">Бэлэн</button><button data-f="pos" aria-pressed="false">Карт</button><button data-f="qpay" aria-pressed="false">QPay</button></div>
+        <div class="filter chips" id="rev-only"><button data-f="diff" aria-pressed="true">Зөрүүтэй</button><button data-f="all" aria-pressed="false">Бүх өдөр</button></div></div>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Өдөр</th><th>Дэлгүүр</th><th>Хэлбэр</th><th class="n">Smart</th><th class="n">Банк</th><th class="n">Зөрүү</th></tr></thead><tbody id="rev-days"><tr><td colspan="6" class="empty">–</td></tr></tbody></table></div>
+      <p class="note" style="margin:8px 0 0">Бэлэн мөнгийг тушаасан өдрөөр, картыг хаалтын өдрөөр, QPay/шилжүүлгийг орсон өдрөөр харуулна. Бэлэн мөнгө хэд хоногоор нийлж тушаагддаг тул бэлэн мөнгөний дэлгэрэнгүйг «Бэлэн мөнгө» хэсгээс харна.</p>
+    </div>
+  </section>
+
+  <!-- CASH -->
+  <section class="panel" data-panel="cash" hidden>
+    <div class="banner" id="cash-hint" hidden>Шинэ Smart тайлан, хуулгыг «Орлого тулгалт» хэсгээс оруулна.</div>
+    <div class="card">
+      <h2 id="cash-title">Бэлэн мөнгөний тушаалт</h2>
+      <div class="tbl"><table><thead><tr><th>Дэлгүүр</th><th class="n">Smart бэлэн</th><th class="n">Тушаасан</th><th class="n">Зөрүү</th><th class="n">Тушаагаагүй өдөр</th><th class="n">Бэлэн бус: Smart</th><th class="n">Бэлэн бус: банк</th></tr></thead><tbody id="cash-sum"><tr><td colspan="7" class="empty">Хадгалсан хяналт алга.</td></tr></tbody></table></div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <h2 style="margin:0">Тайлбар шаардлагатай өдрүүд</h2>
+        <div class="row"><select id="cash-store" style="width:auto"><option value="">Бүх дэлгүүр</option></select>
+        <div class="filter chips" id="cash-filter"><button data-f="open" aria-pressed="true">Тайлбаргүй</button><button data-f="all" aria-pressed="false">Бүгд</button></div></div>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Дэлгүүр</th><th>Борлуулалтын өдөр</th><th class="n">Smart бэлэн</th><th class="n">Тушаасан</th><th class="n">Зөрүү</th><th>Төлөв</th><th style="min-width:260px">Тайлбар</th></tr></thead><tbody id="cash-body"><tr><td colspan="7" class="empty">–</td></tr></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS (owner) -->
+  <section class="panel" data-panel="set" hidden>
+    <div class="card">
+      <h2>Нягтлангийн эрх</h2>
+      <p class="note" style="margin:0 0 10px">Энд бүртгэсэн Google имэйлээр нэвтэрсэн хүн хүсэлт илгээх, тайлбар бичих, үлдэгдэл оруулах боломжтой. Зөвшөөрөх, бэлэн мөнгөний хяналт хадгалах эрх зөвхөн эзэмшигчид.</p>
+      <div id="acc-list" class="files"></div>
+      <form id="acc-form" class="row" style="margin-top:10px"><input id="acc-email" type="email" placeholder="нягтлан@gmail.com" style="max-width:320px"><button class="btn primary">Нэмэх</button><span class="note" id="acc-msg"></span></form>
+    </div>
+    <div class="card">
+      <h2>Өгөгдөл импортлох</h2>
+      <p class="note" style="margin:0 0 10px">Өмнөх аппаас экспортолсон <b>vivi-import.json</b> файлыг нэг удаа оруулна.</p>
+      <div class="row"><input id="imp-file" type="file" accept=".json" style="max-width:320px"><span class="note" id="imp-msg"></span></div>
+    </div>
+  </section>
+
+  <!-- BALANCES -->
+  <section class="panel" data-panel="bal" hidden>
+    <div class="card">
+      <h2>Өнөөдрийн дансны үлдэгдэл</h2>
+      <form id="bal-form">
+        <div class="bal" id="bal-fields"></div>
+        <div class="row" style="margin-top:10px"><label class="f" style="width:auto">Огноо<input id="bal-date" type="date"></label><button class="btn primary" type="submit" style="align-self:flex-end">Хадгалах</button><span class="note" id="bal-msg" style="align-self:flex-end"></span></div>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Түүх</h2>
+      <div class="tbl"><table><thead id="bal-head"></thead><tbody id="bal-body"><tr><td class="empty">Бүртгэл алга.</td></tr></tbody></table></div>
+    </div>
+  </section>
+</div>
+
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+// ===== Firebase adapter: gives the app the same db / user / assets interface it had on claude.ai =====
+window.VIVIFB = (() => {
+  const cfg = window.VIVI_FIREBASE_CONFIG;
+  const OWNER = String(window.VIVI_OWNER_EMAIL || '').toLowerCase();
+  if (!cfg || !cfg.apiKey || /PASTE/.test(cfg.apiKey)) return { error: 'config' };
+  firebase.initializeApp(cfg);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  let current = null, staff = false;
+
+  const user = {
+    isOwner: async () => !!current && String(current.email || '').toLowerCase() === OWNER,
+    id: async () => current ? current.uid : null,
+    can: async (what) => what === 'data.write' ? staff : null,
+    email: () => current ? current.email : '',
+    profiles: async (ids) => {
+      const out = {};
+      await Promise.all(ids.map(async id => {
+        try { const d = await db.doc('users/' + id).get(); out[id] = { name: d.exists ? (d.data().name || d.data().email || '') : '' }; }
+        catch (e) { out[id] = { name: '' }; }
+      }));
+      return out;
+    }
+  };
+
+  // invoice photos: shrink to a JPEG and keep inside Firestore (no paid Storage needed)
+  function shrink(file){
+    return new Promise((resolve, reject) => {
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => {
+        const max = 1400, k = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+        let q = 0.75, data = c.toDataURL('image/jpeg', q);
+        while (data.length > 900000 && q > 0.3){ q -= 0.15; data = c.toDataURL('image/jpeg', q); }
+        resolve(data);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image')); };
+      img.src = url;
+    });
+  }
+  const readAsDataURL = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+  const assets = {
+    upload: async (file) => {
+      let data, type;
+      if (/^image\//.test(file.type)){ data = await shrink(file); type = 'image/jpeg'; }
+      else if (file.type === 'application/pdf'){ if (file.size > 700000) throw { code: 'too_big' }; data = await readAsDataURL(file); type = 'application/pdf'; }
+      else throw { code: 'type' };
+      const ref = db.collection('files').doc();
+      await ref.set({ data, type, by: current.uid, at: new Date().toISOString() });
+      return { id: ref.id, contentType: type };
+    }
+  };
+  const fileCache = {};
+  async function fileURL(id){
+    if (fileCache[id]) return fileCache[id];
+    const d = await db.doc('files/' + id).get(); if (!d.exists) return null;
+    const { data } = d.data(); const bin = atob(data.split(',')[1]); const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return fileCache[id] = URL.createObjectURL(new Blob([arr], { type: data.slice(5, data.indexOf(';')) }));
+  }
+
+  function start(onReady, onSignedOut, onNoAccess){
+    auth.onAuthStateChanged(async u => {
+      current = u; staff = false;
+      if (!u) return onSignedOut();
+      try {
+        if (String(u.email || '').toLowerCase() !== OWNER) await db.doc('config/access').get();
+        staff = true;
+        db.doc('users/' + u.uid).set({ name: u.displayName || u.email, email: u.email, lastSeen: new Date().toISOString() }, { merge: true }).catch(() => {});
+        onReady();
+      } catch (e) { onNoAccess(u.email); }
+    });
+  }
+  const signIn = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => {
+    if (e && /popup/.test(e.code || '')) return auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+    throw e;
+  });
+  const signOut = () => auth.signOut();
+  return { db, user, assets, fileURL, start, signIn, signOut, OWNER };
+})();
+
+</script>
+<script>
+// ===== VIVI cash control core (shared by page and node tests) =====
+const VIVI = (() => {
+  const OWN = new Set(['1825100856','5175306931','5175306920','5175278095','5174134484','5174134473','405095875','405095876','405095877','405096869','405096868','5174135239','5311365725','2106025813','5174139482','5403962410','5403962396','5403962454','5224167095','5224167073','1735156519','1735159300','1735159334','1735159299','405097294','4002622637','405097565','4002594661','4002639706','4002636496','4002599151','5310744690','405102965']);
+  const ACC_STORE = {'5403962396':'Food city','5311365725':'Food city','1735156519':'Food city','5403962410':'Драгон','5174139482':'Драгон','5175278095':'Драгон','5310744690':'Драгон','5403962454':'Дархан Үзэсгэлэн','5174134484':'Е март баянгол-3 давхар','405095875':'ХХБ 405095875 (Эрдэнэт, Хан-Уул, онлайн)','5175306920':'Онлайн дэлгүүр'};
+  const TERM_STORE = {'FOOD CITY VIVI 3':'Food city','FOOD CITY-4':'Food city','VIVI-FOOD CITY 2-2':'Food city','DRAGON VIVI 1':'Драгон','DRAGON VIVI 2':'Драгон','DRAGON VIVI 3':'Драгон','VIVI GREAT BRANDS 2':'Драгон','VIVI GREAT BRAND':'Драгон','SUNDAY VIVI':'Дархан Үзэсгэлэн','VIVI-BGD':'Е март баянгол-3 давхар'};
+  const CASH_ACC = {'5403962396':'Food city','5403962410':'Драгон','5403962454':'Дархан Үзэсгэлэн','5174134484':'Е март баянгол-3 давхар'};
+  const NONCASH_FORMS = new Set(['ХААН банк ПОС','Хаан шилжүүлэг','Голомт банк','QPay','Social Pay','Худалдаа хөгжлийн банк']);
+
+  // ---------- dates ----------
+  const pad = n => String(n).padStart(2,'0');
+  const iso = d => `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
+  const mk = (y,m,d) => { const t = new Date(Date.UTC(y,m-1,d)); return (t.getUTCMonth()===m-1 && t.getUTCDate()===d) ? iso(t) : null; };
+  const addDays = (s,n) => { const t = new Date(s+'T00:00:00Z'); t.setUTCDate(t.getUTCDate()+n); return iso(t); };
+  const diffDays = (a,b) => Math.round((new Date(a+'T00:00:00Z') - new Date(b+'T00:00:00Z'))/86400000);
+  function toDT(v){
+    if (v == null || v === '') return null;
+    if (v instanceof Date){ if (isNaN(v)) return null; const r = new Date(Math.round(v.getTime()/60000)*60000); return new Date(Date.UTC(r.getFullYear(),r.getMonth(),r.getDate(),r.getHours(),r.getMinutes(),0)); }
+    if (typeof v === 'number') { const t = new Date(Math.round((v - 25569) * 86400) * 1000); return isNaN(t) ? null : t; }
+    const s = String(v).trim().replace('T',' ');
+    let m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+    if (m) return new Date(Date.UTC(+m[1],+m[2]-1,+m[3],+(m[4]||0),+(m[5]||0),+(m[6]||0)));
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); // mm/dd/yyyy
+    if (m) return new Date(Date.UTC(+m[3],+m[1]-1,+m[2]));
+    return null;
+  }
+  const num = v => { if (typeof v === 'number') return v; if (v == null) return 0; const n = parseFloat(String(v).replace(/[,\s]/g,'')); return isNaN(n) ? 0 : n; };
+  const str = v => v == null ? '' : String(v).trim();
+  const norm = cp => { let s = str(cp).replace(/\D/g,''); if (s.length >= 18) s = s.slice(-10); return s.replace(/^0+/,''); };
+
+  // ---------- parsing ----------
+  function findRow(rows, pred, limit=40){ for (let i=0;i<Math.min(limit,rows.length);i++){ if (pred((rows[i]||[]).map(str))) return i; } return -1; }
+  function parseRows(rows, name){
+    // Smart payment-form report
+    let h = findRow(rows, r => r.includes('Төлбөрийн хэлбэр') && r.includes('Дүн'));
+    if (h >= 0){
+      const c = rows[h].map(str), ix = k => c.indexOf(k);
+      const out = [];
+      for (const r of rows.slice(h+1)){
+        const dt = toDT(r[ix('Огноо')]); const st = str(r[ix('Дэлгүүр')]);
+        if (!dt || !st) continue;
+        out.push({d: iso(dt), store: st, kas: str(r[ix('Касс')]), form: str(r[ix('Төлбөрийн хэлбэр')]), bank: str(r[ix('Банкны нэр')]) || str(r[ix('Төлбөрийн хэлбэр')]), amt: num(r[ix('Дүн')])});
+      }
+      return {type:'smart', label:'Smart – төлбөрийн хэлбэр', rows: out};
+    }
+    // Khan
+    h = findRow(rows, r => r.includes('Кредит гүйлгээ'));
+    if (h >= 0){
+      let acc = ''; for (const r of rows.slice(0,h+1)) for (const v of r||[]) { const m = str(v).replace(/\s/g,'').match(/MN(\d{16,20})/); if (m) acc = m[1].slice(-10).replace(/^0+/,''); }
+      if (!acc) { const m = name.match(/(\d{10})/); if (m) acc = m[1]; }
+      const c = rows[h].map(str), ix = k => c.indexOf(k);
+      const out = [];
+      for (const r of rows.slice(h+1)){
+        const dt = toDT(r[ix('Гүйлгээний огноо')]); if (!dt) continue;
+        out.push({acc, dt, cr: Math.abs(num(r[ix('Кредит гүйлгээ')])), dr: Math.abs(num(r[ix('Дебит гүйлгээ')])), desc: str(r[ix('Гүйлгээний утга')]), cp: str(r[ix('Харьцсан данс')])});
+      }
+      return {type:'bank', bank:'Khan', acc, label:`Khan ${acc}`, rows: out};
+    }
+    // Golomt
+    h = findRow(rows, r => r.includes('Харьцсан дансны нэр') && r.includes('Орлого'));
+    if (h >= 0){
+      let acc=''; for (const r of rows.slice(0,h)) for (const v of r||[]) { const m = str(v).match(/^(\d{10})\s*\[/); if (m) acc = m[1]; }
+      const c = rows[h].map(str), ix = k => c.indexOf(k);
+      const out = [];
+      for (const r of rows.slice(h+1)){
+        const dt = toDT(r[ix('Гүйлгээний огноо')]); if (!dt) continue;
+        out.push({acc, dt, cr: Math.abs(num(r[ix('Орлого')])), dr: Math.abs(num(r[ix('Зарлага')])), desc: str(r[ix('Гүйлгээний утга')]), cp: str(r[ix('Харьцсан данс')])});
+      }
+      return {type:'bank', bank:'Golomt', acc, label:`Golomt ${acc}`, rows: out};
+    }
+    // TDB
+    h = findRow(rows, r => r.includes('Теллер'));
+    if (h >= 0){
+      let acc=''; for (const r of rows.slice(0,h)) { const rr=(r||[]).map(str); const i = rr.indexOf('Хуучин дансны дугаар'); if (i>=0) acc = rr[i+1]; }
+      const out = [];
+      for (const r of rows.slice(h+1)){
+        const dt = toDT(r[0]); if (!dt) continue;
+        out.push({acc, dt, cr: Math.abs(num(r[2])), dr: Math.abs(num(r[3])), desc: str(r[8]), cp: str(r[5])});
+      }
+      return {type:'bank', bank:'TDB', acc, label:`TDB ${acc}`, rows: out};
+    }
+    return {type:'unknown', label:'Танигдаагүй файл', rows: []};
+  }
+
+  // ---------- classification ----------
+  function isCashDeposit(t){
+    const s = t.desc.toLowerCase();
+    if (/qpay|settlement|хаалт|зээл/.test(s)) return false;
+    return norm(t.cp) === '800181200008' || /клиринг/.test(s) || /бэлэн|belen|atm/.test(s);
+  }
+  function cashStore(t){
+    const s = t.desc.toLowerCase();
+    if (CASH_ACC[t.acc] && t.acc !== '5174134484') return CASH_ACC[t.acc];
+    if (/emart|емарт|е март/.test(s) || t.acc === '5174134484') return 'Е март баянгол-3 давхар';
+    if (/xanuul|xan uul|хан-уул|хан уул|khan-uul/.test(s)) return 'Хан-Уул 1 давхар';
+    if (/erdenet|эрдэнэт/.test(s) || norm(t.cp) === '130300349580') return 'Эрдэнэт салбар';
+    return null;
+  }
+  const ROM = [['XII',12],['XI',11],['X',10],['IX',9],['VIII',8],['VII',7],['VI',6],['V',5],['IV',4],['III',3],['II',2],['I',1]];
+  function parseDates(desc, dep){
+    let s = desc.toUpperCase().split('ХААНААС')[0];
+    for (const [r,n] of ROM) s = s.replace(new RegExp('\\b'+r+'/','g'), n+'/');
+    s = s.replace(/(\d{1,2})[.\s]?SAR(?:IIN|YN)?\s*(\d{1,2})/g,'$1/$2');
+    const depY = +dep.slice(0,4), depM = +dep.slice(5,7);
+    const out = [];
+    const re = /(\d{1,2})[\/\-.](\d{1,2})((?:\s*[,\-]\s*(?:\d{1,2}[\/\-.])?\d{1,2})*)/g;
+    let m;
+    while ((m = re.exec(s))){
+      const mo = +m[1], d1 = +m[2]; if (mo<1||mo>12||d1<1||d1>31) continue;
+      const y = mo > depM + 1 ? depY - 1 : depY;
+      const first = mk(y,mo,d1); if (!first) continue;
+      const days = [first]; const rest = m[3] || '';
+      const re2 = /\s*([,\-])\s*(?:(\d{1,2})[\/\-.])?(\d{1,2})/g; let k;
+      while ((k = re2.exec(rest))){
+        const mo2 = k[2] ? +k[2] : mo; const nd = mk(y,mo2,+k[3]); if (!nd) break;
+        const last = days[days.length-1];
+        if (k[1] === '-' && nd > last){ let cur = last; while (cur < nd){ cur = addDays(cur,1); days.push(cur); } }
+        else days.push(nd);
+      }
+      out.push(...days);
+    }
+    return [...new Set(out)].filter(d => d < dep && diffDays(dep,d) <= 10).sort();
+  }
+  function grossQPay(t){ const m = t.desc.match(/CHARGE:\s*([\d.]+)/i); return m ? t.cr + parseFloat(m[1]) : t.cr/0.99; }
+  function classifyCredit(t){
+    const s = t.desc.toLowerCase(), cpn = norm(t.cp);
+    if (t.cr <= 0) return null;
+    if (OWN.has(cpn) || /данс хооронд|шилжүүлэг 709|шилжүүлэг 707|хаалт: \d+:\d{8}/.test(s) && OWN.has(cpn)) return {ch:'internal'};
+    if (/зээл олгол|зээл олгов/.test(s)) return {ch:'loan'};
+    if (/sp manual/.test(s)) return {ch:'storepay'};
+    if (/покет|pocket/.test(s)) return {ch:'pocket'};
+    let m = t.desc.match(/(\d\d)\/(\d\d)\/(\d{4}) SETTLEMENT - (.*)$/);
+    if (m){ const term = m[4].trim(); return {ch:'pos', store: TERM_STORE[term] || ACC_STORE[t.acc] || '?', sd: mk(+m[3],+m[2],+m[1]), g: t.cr/0.995, term}; }
+    m = t.desc.match(/хаалт:\s*\d+:(\d{4})(\d\d)(\d\d)/i);
+    if (m) return {ch:'pos', store: ACC_STORE[t.acc] || '?', sd: mk(+m[1],+m[2],+m[3]), g: t.cr/0.995, term:'Golomt'};
+    if (/картын хаалт/.test(s)) return {ch:'pos', store:'Эрдэнэт салбар', sd: iso(t.dt), g: t.cr, term:'TDB'};
+    if (isCashDeposit(t) && cashStore(t)) return {ch:'cash', store: cashStore(t)};
+    if (/qpay/.test(s)) return ACC_STORE[t.acc] ? {ch:'qpay', store: ACC_STORE[t.acc], sd: iso(t.dt), g: grossQPay(t)} : {ch:'other'};
+    if (ACC_STORE[t.acc]) return {ch:'transfer', store: ACC_STORE[t.acc], sd: iso(t.dt), g: t.cr};
+    return {ch:'other'};
+  }
+
+  // ---------- cash matching ----------
+  function matchCash(store, sales, deposits){
+    // sales: {date: amount}; deposits: [{d, cr, desc, acc}]
+    const days = Object.keys(sales).sort();
+    const deps = deposits.slice().sort((a,b)=> a.dt - b.dt);
+    for (const p of deps){ p.days = parseDates(p.desc, p.d); p.how = p.days.length ? 'opis' : ''; }
+    const covered = new Set(deps.flatMap(p => p.days));
+    const byDep = {};
+    for (const p of deps.filter(p => !p.how)) (byDep[p.d] = byDep[p.d] || []).push(p);
+    for (const dep of Object.keys(byDep).sort()){
+      const pool = byDep[dep], amt = pool.reduce((s,p)=>s+p.cr,0);
+      const cands = days.filter(d => d < dep && diffDays(dep,d) <= 6 && !covered.has(d));
+      let best = null;
+      for (let i=0;i<cands.length;i++) for (let j=i+1;j<=cands.length;j++){
+        const comb = cands.slice(i,j), tot = comb.reduce((s,d)=>s+(sales[d]||0),0), err = Math.abs(tot-amt)/Math.max(amt,1);
+        if (!best || err < best[0]-1e-9) best = [err, comb];
+      }
+      let ds, how;
+      if (best && best[0] < 0.03){ ds = best[1]; how = 'dopasowane po kwocie'; }
+      else if (cands.length){ ds = cands; how = 'dopasowane, kwota nie pasuje'; }
+      else {
+        const dmap = {}; for (const p of deps) if (p.how==='opis') for (const d of p.days) dmap[d] = p.days;
+        const near = Object.keys(dmap).filter(d => d < dep && diffDays(dep,d) <= 3).sort();
+        if (near.length){ ds = dmap[near[near.length-1]]; how = 'dodatkowa wpłata'; } else { ds = []; how = 'wpłata bez dnia'; }
+      }
+      for (const p of pool){ p.days = ds; p.how = how; }
+      ds.forEach(d => covered.add(d));
+    }
+    const groups = {}, used = new Set(), out = [];
+    for (const p of deps){ const k = p.days.join('|'); (groups[k] = groups[k] || []).push(p); }
+    for (const [k, ps] of Object.entries(groups)){
+      const ks = (k ? k.split('|') : []).filter(d => !used.has(d)); ks.forEach(d => used.add(d));
+      const smart = ks.reduce((s,d)=>s+(sales[d]||0),0), dep = ps.reduce((s,p)=>s+p.cr,0);
+      out.push({store, days: ks, first: ks[0] || ps[0].d, smart, dep, depDates: [...new Set(ps.map(p=>p.d))].sort(), how: ps[0].how, desc: ps.map(p=>p.desc.split('ХААНААС')[0].trim().slice(0,40)).join(' | ')});
+    }
+    const firstSale = days[0] || '9999';
+    for (let i = out.length - 1; i >= 0; i--){ const g = out[i]; if (g.days.length && g.days.every(d => d < firstSale)) out.splice(i,1); }
+    for (const d of days) if (!used.has(d) && sales[d] > 0) out.push({store, days:[d], first:d, smart: sales[d], dep:0, depDates:[], how:'brak', desc:''});
+    for (const g of out){
+      g.diff = g.smart - g.dep;
+      g.status = g.how === 'brak' ? 'BRAK' : g.smart === 0 ? 'BEZ_DNIA' : g.diff > 5000 ? 'MNIEJ' : g.diff < -5000 ? 'WIECEJ' : 'OK';
+    }
+    return out.sort((a,b)=> a.first < b.first ? -1 : 1);
+  }
+
+  const SMART_CH = {'ХААН банк ПОС':'pos','Голомт банк':'pos','Худалдаа хөгжлийн банк':'pos','QPay':'qpay','Social Pay':'qpay','Хаан шилжүүлэг':'qpay'};
+  const smartCh = r => r.form === 'Бэлнээр' ? 'cash' : (SMART_CH[r.bank] || 'credit');
+  // ---------- model ----------
+  function build(files){
+    const smart = files.filter(f=>f.type==='smart').flatMap(f=>f.rows);
+    const seen = new Set(), bank = [];
+    for (const f of files.filter(f=>f.type==='bank')) for (const t of f.rows){
+      const key = `${t.acc}|${+t.dt}|${t.cr}|${t.dr}|${t.desc}`; if (seen.has(key)) continue; seen.add(key); bank.push(t);
+    }
+    if (!smart.length) return {error:'Smart «Борлуулалт төлбөрийн хэлбэрээр» тайлан алга.'};
+    const sDays = smart.map(r=>r.d).sort(); const d0 = sDays[0];
+    const bankMax = bank.length ? iso(new Date(Math.max(...bank.map(t=>+t.dt)))) : sDays[sDays.length-1];
+    const d1 = [sDays[sDays.length-1], addDays(bankMax,-1)].sort()[0];   // last sale day whose deposit could be in statements
+    const inWin = d => d >= d0 && d <= d1;
+    // smart aggregates
+    const cashSales = {}, ncSales = {}, credit = {};
+    const F = {}, W = {cash:{smart:0,bank:0}, pos:{smart:0,bank:0}, qpay:{smart:0,bank:0}, credit:{smart:0,bank:0}};
+    const fAdd = (store, d, ch, k, v) => { const key = store+'|'+d+'|'+ch; const o = F[key] = F[key] || {store, d, ch, smart:0, bank:0}; o[k] += v; };
+    for (const r of smart){
+      if (!inWin(r.d)) continue;
+      const ch = smartCh(r); W[ch].smart += r.amt; if (ch !== 'credit') fAdd(r.store, r.d, ch, 'smart', r.amt);
+      if (r.form === 'Бэлнээр'){ (cashSales[r.store] = cashSales[r.store] || {})[r.d] = (cashSales[r.store][r.d]||0) + r.amt; }
+      else if (NONCASH_FORMS.has(r.bank)){ const k = r.store+'|'+r.d; ncSales[k] = (ncSales[k]||0) + r.amt; }
+      else { credit[r.store] = (credit[r.store]||0) + r.amt; }
+    }
+    // bank
+    const deposits = {}, ncBank = {}, ncBankRows = [];
+    const totals = {internal:0, loan:0, storepay:0, pocket:0, other:0, cash:0, pos:0, qpay:0, transfer:0};
+    for (const t of bank){
+      const c = classifyCredit(t); if (!c) continue;
+      totals[c.ch] = (totals[c.ch]||0) + t.cr;
+      const d = iso(t.dt);
+      if (c.ch === 'cash'){ if (d >= d0 && d <= addDays(d1,1)){ (deposits[c.store] = deposits[c.store] || []).push({d, dt:t.dt, cr:t.cr, desc:t.desc, acc:t.acc}); W.cash.bank += t.cr; } }
+      else if (['pos','qpay','transfer'].includes(c.ch) && c.sd && inWin(c.sd)){ const k = c.store+'|'+c.sd; ncBank[k] = (ncBank[k]||0) + c.g; ncBankRows.push({...c, acc:t.acc, cr:t.cr}); const fc = c.ch === 'pos' ? 'pos' : 'qpay'; W[fc].bank += c.g; fAdd(c.store, c.sd, fc, 'bank', c.g); }
+      else if ((c.ch === 'storepay' || c.ch === 'pocket') && inWin(d)) W.credit.bank += t.cr;
+    }
+    const stores = [...new Set([...Object.keys(cashSales), ...Object.keys(deposits)])];
+    const cash = stores.flatMap(st => matchCash(st, cashSales[st] || {}, deposits[st] || []));
+    const ncKeys = [...new Set([...Object.keys(ncSales), ...Object.keys(ncBank)])].sort();
+    const noncash = ncKeys.map(k => { const [store, d] = k.split('|'); const s = ncSales[k]||0, b = ncBank[k]||0; return {store, d, smart:s, bank:b, diff:b-s}; });
+    const summary = stores.map(st => {
+      const g = cash.filter(x=>x.store===st);
+      const nc = noncash.filter(x=>x.store===st);
+      return {store: st, smartCash: g.reduce((s,x)=>s+x.smart,0), dep: g.reduce((s,x)=>s+x.dep,0),
+        missDays: g.filter(x=>x.status==='BRAK').length, missAmt: g.filter(x=>x.status==='BRAK').reduce((s,x)=>s+x.smart,0),
+        ncSmart: nc.reduce((s,x)=>s+x.smart,0), ncBank: nc.reduce((s,x)=>s+x.bank,0)};
+    }).sort((a,b)=> b.smartCash - a.smartCash);
+    const allDeps = Object.values(deposits).flat().sort((a,b)=>a.dt-b.dt);
+    for (const [st, ps] of Object.entries(deposits)) for (const p of ps) fAdd(st, p.d, 'cash', 'bank', p.cr);
+    const forms = Object.values(F).filter(o => Math.abs(o.smart) + Math.abs(o.bank) > 0).map(o => ({...o, smart:Math.round(o.smart), bank:Math.round(o.bank)})).sort((a,b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
+    for (const k in W){ W[k].smart = Math.round(W[k].smart); W[k].bank = Math.round(W[k].bank); }
+    return {d0, d1, summary, cash, noncash, deposits: allDeps, totals, forms, waterfall: W, nSmart: smart.length, nBank: bank.length};
+  }
+  // ---------- bank e-mail parser (Khan / Golomt / TDB transfer receipts) ----------
+  // returns: null = not a completed outgoing transfer (skip); {doc} = parsed; {doc, unparsed:true} = looks like a transfer but failed
+  const ibanAcc = s => { s = String(s||'').replace(/\s/g,''); const m = s.match(/^MN\d{2}(\d{4})(\d+)$/); return (m ? m[2] : s.replace(/\D/g,'')).replace(/^0+/,''); };
+  const mnum = s => +String(s||"").replace(/[^\d.\-]/g,"") || 0;
+  function parseMail(m){
+    const from = String(m.sender||'').toLowerCase(), subj = String(m.subject||''), body = String(m.plaintextBody||'');
+    const base = {src:'email', mailId:m.id, mailTo:(m.toRecipients||[])[0] ? String(m.toRecipients[0]).toLowerCase() : ''};
+    const bad = bank => ({unparsed:true, doc:{...base, bank, dt:mailLocal(m.date), fromAcc:'', fromName:'', toAcc:'', toName:'', toBank:'', amount:0, desc:'UNPARSED: '+subj}});
+    if (from.includes('khanbank')){
+      if (!/Transaction receipt/i.test(subj)) return null;
+      const b = body.replace(/\|/g,' ');
+      const d = b.match(/Огноо\/Date:\s*(\d{4})\.(\d\d)\.(\d\d)\s+([\d:]{8})/) || b.match(/Огноо\/Date:\s*(\d\d)\.(\d\d)\.(\d{4})\s+([\d:]{8})/);
+      const row = b.match(/\n\s*(\d{6,20})\s+(.+?)\s+([\d,]+\.\d\d)\s+MNT/);
+      const to = b.match(/Number\s+Нэр\/Name\s*\n\s*(\d{6,20})\s+([^\n]+)/);
+      const bank = b.match(/Bank Name.*?\n\s*(\d\d)\s+([^\n]+)/s);
+      const desc = b.match(/description:\s*\n\s*([^\n]+)/);
+      if (!d || !row) return bad('Khan');
+      const dt = d[1].length === 4 ? `${d[1]}-${d[2]}-${d[3]}T${d[4]}` : `${d[3]}-${d[2]}-${d[1]}T${d[4]}`;
+      return {doc:{...base, bank:'Khan', dt, fromAcc:row[1].replace(/^0+/,''), fromName:row[2].trim(), toAcc:to ? to[1].replace(/^0+/,'') : '', toName:to ? to[2].trim() : '', toBank:bank ? bank[2].trim() : '', amount:mnum(row[3]), desc:desc ? desc[1].trim() : ''}};
+    }
+    if (from.includes('golomtbank')){
+      if (!/Лавлах дугаар/.test(body)) return null;
+      if (/Гүйлгээний төлөв\s*Амжилтгүй/.test(body)) return null;
+      const d = body.match(/Гүйлгээний огноо:\s*\|\s*(\d\d)-(\d\d)-(\d{4})\s+([\d:]{8})/);
+      const banks = body.match(/\|\s*([^|\n]+?)\s*\|\s*([^|\n]+?)\s*\|\s*MNT\s*([\d,.]+)\s*\|/);
+      const accs = body.match(/\|\s*(MN[\d\s]{16,24}|\d{6,20})\s*\|\s*(MN[\d\s]{16,24}|\d{6,20})\s*\|\s*Гүйлгээний утга\s*([^|\n]*)\|/);
+      const fn = body.match(/Шилжүүлэгчийн нэр\s*([^|\n]*)\|/), tn = body.match(/Хүлээн авагчийн нэр\s*([^|\n]*)\|/);
+      if (!d || !banks || !accs) return bad('Golomt');
+      return {doc:{...base, bank:'Golomt', dt:`${d[3]}-${d[2]}-${d[1]}T${d[4]}`, fromAcc:ibanAcc(accs[1]), fromName:fn ? fn[1].trim() : '', toAcc:ibanAcc(accs[2]), toName:tn ? tn[1].trim() : '', toBank:banks[2].trim(), amount:mnum(banks[3]), desc:accs[3].trim()}};
+    }
+    if (from.includes('tdbm')){
+      if (!/^Шилжүүлгийн мэдээлэл/.test(subj)) return null;
+      const d = body.match(/Огноо \/ Date\s*(\d{4}-\d\d-\d\d)\s+([\d:]{8})/);
+      const accs = [...body.matchAll(/Account no\.\s*(MN\d{18}|\d{6,20})/g)].map(x => x[1]);
+      const hold = [...body.matchAll(/Account holder\s*([^|\n]*)\|/g)].map(x => x[1].trim());
+      const amt = body.match(/Amount sent\s*([\d,]+\.\d\d)/);
+      const desc = body.match(/Description\s*([^|\n]*)\|/);
+      const rb = body.match(/Receiver\s*·\s*([^|\n]+?)\s*\|/);
+      if (!d || accs.length < 2 || !amt) return bad('TDB');
+      return {doc:{...base, bank:'TDB', dt:`${d[1]}T${d[2]}`, fromAcc:ibanAcc(accs[0]), fromName:hold[0]||'', toAcc:ibanAcc(accs[1]), toName:hold[1]||'', toBank:rb ? rb[1].trim() : '', amount:mnum(amt[1]), desc:desc ? desc[1].trim() : ''}};
+    }
+    return null;
+  }
+  // mail date (UTC ISO) -> Ulaanbaatar local "YYYY-MM-DDTHH:MM:SS"
+  function mailLocal(s){ const t = new Date(s); if (isNaN(t)) return ''; const u = new Date(t.getTime() + 8*3600e3); return `${u.getUTCFullYear()}-${pad(u.getUTCMonth()+1)}-${pad(u.getUTCDate())}T${pad(u.getUTCHours())}:${pad(u.getUTCMinutes())}:${pad(u.getUTCSeconds())}`; }
+
+  return {parseRows, build, parseDates, matchCash, classifyCredit, iso, OWN, norm, parseMail, mailLocal};
+})();
+
+
+</script>
+<script>
+(() => {
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => (Math.round(+n || 0)).toLocaleString('ru-RU');
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const normAcc = a => { let s = String(a||'').replace(/\D/g,''); if (s.length >= 18) s = s.slice(-10); return s.replace(/^0+/,''); };
+const FROM_ACCS = [
+  ['5403962396','Хаан – Энхтөр (Фүүд сити) 5403962396'],['5403962410','Хаан – Энхтөр (Драгон) 5403962410'],['5403962454','Хаан – Энхтөр (Дархан) 5403962454'],
+  ['5224167095','Хаан – Энхбаатар 5224167095'],['5224167073','Хаан – Энхбаатар (цалин) 5224167073'],['1735156519','Голомт – Энхбаатар (Эрка) 1735156519'],
+  ['405095875','ХХБ – Вивекавикториа 405095875'],['405096869','ХХБ – Вивекавикториа 405096869'],['1825100856','Голомт – Вивекавикториа 1825100856'],
+  ['1735159300','Голомт – Вивекавикториа (цалин) 1735159300'],['5174139482','Хаан – Мөнхдорж 5174139482'],['2106025813','Ариг – Вивекавикториа 2106025813']];
+const ACC_LABEL = Object.fromEntries(FROM_ACCS.map(([a,l]) => [a,l]));
+const BAL_ACCS = [['tdb','ХХБанк'],['khan','Хаан банк'],['arig','Ариг банк'],['khan_md','Хаан – Мөнхдорж'],['khan_et','Хаан – Энхтөр'],['khan_eb','Хаан – Энхбаатар'],['golomt_erka','Голомт – Эрка']];
+const STORE_CODE = {'Food city':'FC','Драгон':'DR','Дархан Үзэсгэлэн':'DZ','Е март баянгол-3 давхар':'EM','Эрдэнэт салбар':'ER','Хан-Уул 1 давхар':'HU','Онлайн дэлгүүр':'ON','Сандэй плаза':'SP'};
+const ST_LABEL = {BRAK:['Тушаагаагүй','c-bad'], MNIEJ:['Дутуу тушаасан','c-warn'], WIECEJ:['Илүү тушаасан','c-grey'], OK:['Зөв','c-ok'], BEZ_DNIA:['Өдөр тодорхойгүй','c-grey']};
+
+let db = null, user = null, me = null, isOwner = false, canWrite = true, assets = null;
+const S = { requests: [], approvals: {}, banktx: [], cash: null, notes: {}, balances: [], names: {} };
+let reqFilter = 'pending', bankFilter = 'all', cashFilter = 'open', cashStore = '', revCh = 'all', revOnly = 'diff', revStore = '';
+let pendingRun = null;
+
+// ---------- tabs ----------
+function showTab(t){ $$('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t)); $$('[data-panel]').forEach(p => p.hidden = p.dataset.panel !== t); try{ localStorage.setItem('vivi-tab', t); }catch(e){} }
+$$('nav.tabs button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+try{ const t = localStorage.getItem('vivi-tab'); if (t) showTab(t); }catch(e){}
+function bindFilter(id, set){ $(id).addEventListener('click', e => { const b = e.target.closest('button[data-f]'); if (!b) return; $$(id+' button').forEach(x => x.setAttribute('aria-pressed', x === b)); set(b.dataset.f); render(); }); }
+bindFilter('#rev-ch', f => revCh = f); bindFilter('#rev-only', f => revOnly = f); $('#rev-store-sel').addEventListener('change', e => { revStore = e.target.value; render(); });
+bindFilter('#req-filter', f => reqFilter = f); bindFilter('#bank-filter', f => bankFilter = f); bindFilter('#cash-filter', f => cashFilter = f);
+$('#cash-store').addEventListener('change', e => { cashStore = e.target.value; render(); });
+$('#rq-from').innerHTML = FROM_ACCS.map(([a,l]) => `<option value="${a}">${esc(l)}</option>`).join('');
+$('#bal-fields').innerHTML = BAL_ACCS.map(([k,l]) => `<label class="f">${esc(l)}<input id="bal-${k}" inputmode="decimal" placeholder="0"></label>`).join('');
+$('#bal-date').value = today();
+
+// ---------- names ----------
+async function resolveNames(ids){
+  ids = [...new Set(ids.filter(Boolean))]; if (!user || !ids.length) return;
+  try{ const ps = await user.profiles(ids); let changed = false; for (const id of ids){ const n = (ps && ps[id] && ps[id].name) || ''; if (n && S.names[id] !== n){ S.names[id] = n; changed = true; } } if (changed) render(); }catch(e){}
+}
+const nameOf = id => id === me ? 'Та' : (S.names[id] || 'Хэрэглэгч');
+
+// ---------- request status & matching ----------
+function reqStatus(r){
+  const a = S.approvals[r.id];
+  if (a && a.decision === 'rejected') return 'rejected';
+  if (r.paidAt) return 'paid';
+  if (a && a.decision === 'approved') return 'approved';
+  return 'pending';
+}
+function changedSinceApproval(r){ const a = S.approvals[r.id]; return a && a.decision === 'approved' && (Math.abs((+a.amount||0) - (+r.amount||0)) > 0.5 || normAcc(a.payeeAcc) !== normAcc(r.payeeAcc)); }
+function matchBank(){
+  const used = new Set(), res = {};
+  const txs = S.banktx.slice().sort((a,b) => String(a.dt).localeCompare(String(b.dt)));
+  for (const t of txs){
+    const to = normAcc(t.toAcc);
+    if (VIVI.OWN.has(to)) { res[t.id] = {st:'internal', label:'Дотоод шилжүүлэг', cls:'c-grey'}; continue; }
+    const cands = S.requests.filter(r => normAcc(r.payeeAcc) === to && !used.has(r.id));
+    const same = cands.filter(r => Math.abs((+r.amount||0) - (+t.amount||0)) <= 1);
+    const appr = same.filter(r => ['approved','paid'].includes(reqStatus(r)));
+    if (appr.length){ used.add(appr[0].id); res[t.id] = {st:'ok', label:'Зөвшөөрөлтэй', cls:'c-ok', req: appr[0].id}; continue; }
+    if (same.length){ res[t.id] = {st:'warn', label: reqStatus(same[0]) === 'rejected' ? 'Татгалзсан хүсэлт' : 'Зөвшөөрөөгүй', cls:'c-warn', req: same[0].id}; continue; }
+    if (cands.length){ res[t.id] = {st:'warn', label:'Дүн зөрүүтэй', cls:'c-warn', req: cands[0].id}; continue; }
+    if (/\s(ФС|ДР|АГ|ОФ|НС|Н|ОХ)\s*$/i.test(t.desc||'')) { res[t.id] = {st:'warn', label:'Цалин? Жагсаалттай тулга', cls:'c-warn'}; continue; }
+    res[t.id] = {st:'none', label:'Хүсэлтгүй', cls:'c-bad'};
+  }
+  return res;
+}
+
+// ---------- render ----------
+function keepDrafts(sel){ const d = {}; $$(sel).forEach(el => { if (el.id) d[el.id] = el.value; }); return d; }
+function restoreDrafts(d){ for (const [id,v] of Object.entries(d)){ const el = document.getElementById(id); if (el && v !== '' ) el.value = v; } }
+function render(){
+  const drafts = keepDrafts('#req-list input, #cash-body textarea');
+  renderInner();
+  restoreDrafts(drafts);
+  hydrateFiles();
+}
+function hydrateFiles(){
+  if (!window.VIVIFB || !VIVIFB.fileURL) return;
+  $$('img[data-file-img]').forEach(img => { if (img.src) return; VIVIFB.fileURL(img.dataset.fileImg).then(u => { if (u) img.src = u; }).catch(() => {}); });
+}
+document.addEventListener('click', e => { const a = e.target.closest('a[data-file]'); if (!a) return; e.preventDefault();
+  const w = window.open('', '_blank'); VIVIFB.fileURL(a.dataset.file).then(u => { if (u && w) w.location = u; else if (w) w.close(); }); });
+function renderInner(){
+  // requests
+  const counts = {pending:0, approved:0, paid:0, rejected:0}; let pendAmt = 0;
+  for (const r of S.requests){ const s = reqStatus(r); counts[s]++; if (s === 'pending') pendAmt += +r.amount || 0; }
+  $('#k-pend').textContent = counts.pending; $('#k-pend-s').textContent = counts.pending ? fmt(pendAmt) + ' ₮' : 'Бүгд шийдвэрлэгдсэн';
+  $('#t-req').hidden = !counts.pending; $('#t-req').textContent = counts.pending;
+  const mt = matchBank(), byReq = {};
+  for (const t of S.banktx){ const m = mt[t.id]; if (m && m.req) (byReq[m.req] = byReq[m.req] || []).push({t, m}); }
+  const list = S.requests.filter(r => reqFilter === 'all' || reqStatus(r) === reqFilter).sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  $('#req-list').innerHTML = list.length ? list.map(r => reqCard(r, byReq[r.id])).join('') : `<div class="empty">${reqFilter === 'pending' ? 'Хүлээгдэж буй хүсэлт алга.' : 'Энэ төлөвт хүсэлт алга.'}</div>`;
+  // bank
+  const unm = S.banktx.filter(t => mt[t.id] && mt[t.id].st === 'none');
+  $('#k-unm').textContent = unm.length; $('#k-unm-s').textContent = unm.length ? fmt(unm.reduce((s,t)=>s+(+t.amount||0),0)) + ' ₮' : (S.banktx.length ? 'Бүгд тулгагдсан' : 'Гүйлгээ алга');
+  $('#t-bank').hidden = !unm.length; $('#t-bank').textContent = unm.length;
+  const rows = S.banktx.filter(t => bankFilter === 'all' || (mt[t.id] && mt[t.id].st === bankFilter)).sort((a,b) => String(b.dt).localeCompare(String(a.dt)));
+  $('#bank-body').innerHTML = rows.length ? rows.map(t => { const m = mt[t.id] || {}; const sev = m.st === 'none' ? 'sev-bad' : m.st === 'warn' ? 'sev-warn' : m.st === 'ok' ? 'sev-ok' : '';
+    return `<tr class="${sev}"><td class="mono">${esc(String(t.dt).replace('T',' ').slice(0,16))}</td><td>${esc(ACC_LABEL[normAcc(t.fromAcc)] || t.fromAcc)}<div class="note">${esc(t.fromName||'')}</div></td><td>${esc(t.toName||'')}<div class="note mono">${esc(t.toAcc||'')} · ${esc(t.toBank||'')}</div></td><td class="n">${fmt(t.amount)}</td><td>${esc(t.desc||'')}</td><td><span class="chip ${m.cls||'c-grey'}">${esc(m.label||'')}</span></td></tr>`; }).join('')
+    : `<tr><td colspan="6" class="empty">${S.banktx.length ? 'Энэ шүүлтүүрт гүйлгээ алга.' : 'Банкны гүйлгээ хараахан ороогүй байна.'}</td></tr>`;
+  // cash
+  try{ renderCash(); }catch(e){ console.warn('cash', e); }
+  try{ renderRev(); }catch(e){ console.warn('rev', e); }
+  // balances
+  renderBal();
+}
+function reqCard(r, matches){
+  const s = reqStatus(r), a = S.approvals[r.id];
+  const chip = {pending:['Хүлээгдэж буй','c-warn'], approved:['Зөвшөөрсөн','c-ok'], paid:['Шилжүүлсэн','c-acc'], rejected:['Татгалзсан','c-bad']}[s];
+  let acts = '';
+  if (isOwner && s === 'pending') acts += `<input id="cm-${esc(r.id)}" placeholder="Тайлбар (заавал биш)"><button class="btn ok" data-act="approve" data-id="${esc(r.id)}">Зөвшөөрөх</button><button class="btn bad" data-act="reject" data-id="${esc(r.id)}">Татгалзах</button>`;
+  if (canWrite && s === 'approved') acts += `<button class="btn primary" data-act="paid" data-id="${esc(r.id)}">Шилжүүлсэн гэж тэмдэглэх</button>`;
+  if (canWrite && s === 'pending' && (r.createdBy === me || isOwner)) acts += `<button class="btn" data-act="cancel" data-id="${esc(r.id)}">Цуцлах</button>`;
+  const bankChips = (matches||[]).map(({t,m}) => `<span class="chip ${m.cls}">Банк: ${esc(m.label)} · ${esc(String(t.dt).slice(0,10))}</span>`).join('');
+  return `<div class="req">
+    <div><div class="who">${esc(r.payee)}</div>
+      <div class="meta">${esc(r.payeeAcc)} · ${esc(r.payeeBank||'')}</div>
+      <div class="meta">Данснаас: ${esc(ACC_LABEL[r.fromAcc] || r.fromAcc || '')}</div>
+      <div style="margin-top:4px">${esc(r.note||'')}</div>
+      <div class="note">${esc(r.category||'')} · ${esc(nameOf(r.createdBy))} · ${esc(String(r.createdAt||'').replace('T',' ').slice(0,16))}</div>
+      ${a && a.comment ? `<div class="note">Эзэмшигчийн тайлбар: ${esc(a.comment)}</div>` : ''}
+      ${r.attachId ? `<a href="#" data-file="${esc(r.attachId)}">${/pdf/.test(r.attachType||'') ? 'Баримт (PDF) нээх' : `<img class="thumb" data-file-img="${esc(r.attachId)}" alt="Баримт">`}</a>` : ''}
+    </div>
+    <div style="text-align:right"><div class="amt">${fmt(r.amount)} ₮</div><div class="chips" style="justify-content:flex-end;margin-top:6px"><span class="chip ${chip[1]}">${chip[0]}</span>${changedSinceApproval(r) ? '<span class="chip c-bad">Зөвшөөрснөөс хойш өөрчлөгдсөн</span>' : ''}${bankChips}</div></div>
+    ${acts ? `<div class="acts">${acts}</div>` : ''}
+  </div>`;
+}
+function rowId(g){ return (STORE_CODE[g.store] || 'X') + '_' + (g.first || 'x'); }
+const CH_LABEL = {cash:'Бэлэн мөнгө', pos:'Карт (POS)', qpay:'QPay / шилжүүлэг', credit:'Зээл (StorePay, Pocket)'};
+const CH_SHORT = {cash:'Бэлэн', pos:'Карт', qpay:'QPay/шилж.'};
+const sgn = n => (n > 0 ? '+' : '') + fmt(n);
+const diffCls = (d, base) => Math.abs(d) <= Math.max(10000, Math.abs(base) * 0.01) ? '' : d < 0 ? 'c-bad' : 'c-grey';
+function renderRev(){
+  const run = pendingRun || S.cash;
+  const W = run && run.waterfall, F = (run && run.forms) || [];
+  $('#rev-title').textContent = run ? `Төлбөрийн хэлбэрээр: Smart ба банк · ${run.d0} – ${run.d1}${pendingRun ? ' (хадгалаагүй)' : ''}` : 'Төлбөрийн хэлбэрээр: Smart ба банк';
+  if (!W){ $('#rev-sum').innerHTML = `<tr><td colspan="6" class="empty">${isOwner ? (run ? 'Хадгалсан хяналтад төлбөрийн хэлбэрийн задаргаа алга — Smart тайлан, хуулгаа дахин оруулна уу.' : 'Дээр Smart тайлан болон банкны хуулгаа оруулна уу.') : 'Эзэмшигч хяналт хадгалаагүй байна.'}</td></tr>`; $('#rev-store').innerHTML = '<tr><td colspan="5" class="empty">–</td></tr>'; $('#rev-days').innerHTML = '<tr><td colspan="6" class="empty">–</td></tr>'; return; }
+  $('#rev-accs').textContent = run.accs ? `Оруулсан хуулга (${run.accs.length}): ${run.accs.join(', ')}. Аль нэг данс дутуу бол тухайн хэлбэрийн банкны дүн дутуу харагдана.` : '';
+  let ts = 0, tb = 0;
+  const verdict = (k, d, s) => { const p = s ? d / s * 100 : 0;
+    if (k === 'credit') return Math.abs(p) <= 15 ? ['Шимтгэлийн хүрээнд','c-ok'] : ['Шалгах','c-warn'];
+    if (Math.abs(p) <= 1) return ['Тохирсон','c-ok'];
+    if (d < 0) return [k === 'cash' ? 'Дутуу тушаасан' : 'Дутуу орсон', 'c-bad'];
+    return ['Илүү орсон','c-grey']; };
+  $('#rev-sum').innerHTML = Object.keys(CH_LABEL).filter(k => W[k]).map(k => { const s = W[k].smart, b = W[k].bank, d = b - s; ts += s; tb += b; const v = verdict(k, d, s);
+    return `<tr class="${v[1]==='c-bad'?'sev-bad':v[1]==='c-warn'?'sev-warn':v[1]==='c-ok'?'sev-ok':''}"><td>${CH_LABEL[k]}</td><td class="n">${fmt(s)}</td><td class="n">${fmt(b)}</td><td class="n">${sgn(d)}</td><td class="n">${s ? (d/s*100).toFixed(1) : '–'}</td><td><span class="chip ${v[1]}">${v[0]}</span></td></tr>`; }).join('')
+    + `<tr><td><b>Нийт</b></td><td class="n"><b>${fmt(ts)}</b></td><td class="n"><b>${fmt(tb)}</b></td><td class="n"><b>${sgn(tb-ts)}</b></td><td class="n">${ts ? ((tb-ts)/ts*100).toFixed(1) : '–'}</td><td></td></tr>`;
+  const by = {};
+  for (const f of F){ const o = by[f.store] = by[f.store] || {smart:0, cash:[0,0], pos:[0,0], qpay:[0,0]}; o.smart += f.smart; if (o[f.ch]){ o[f.ch][0] += f.smart; o[f.ch][1] += f.bank; } }
+  const cell = a => { const d = a[1] - a[0]; if (!a[0] && !a[1]) return '<td class="n">–</td>'; const c = diffCls(d, a[0]); return `<td class="n">${c ? `<span class="chip ${c}">${sgn(d)}</span>` : sgn(d)}</td>`; };
+  const stores = Object.keys(by).filter(s => s !== '?').sort((a,b) => by[b].smart - by[a].smart);
+  $('#rev-store').innerHTML = stores.map(s => `<tr><td>${esc(s)}</td><td class="n">${fmt(by[s].smart)}</td>${cell(by[s].cash)}${cell(by[s].pos)}${cell(by[s].qpay)}</tr>`).join('') || '<tr><td colspan="5" class="empty">–</td></tr>';
+  const opts = ['<option value="">Бүх дэлгүүр</option>', ...stores.map(s => `<option ${s===revStore?'selected':''}>${esc(s)}</option>`)].join('');
+  if ($('#rev-store-sel').innerHTML !== opts) $('#rev-store-sel').innerHTML = opts;
+  const rows = F.filter(f => f.store !== '?' && (!revStore || f.store === revStore) && (revCh === 'all' || f.ch === revCh) && (revOnly === 'all' || diffCls(f.bank - f.smart, f.smart)))
+    .sort((a,b) => a.d < b.d ? 1 : a.d > b.d ? -1 : a.store.localeCompare(b.store));
+  const lim = rows.slice(0, 150);
+  $('#rev-days').innerHTML = lim.length ? lim.map(f => { const d = f.bank - f.smart, c = diffCls(d, f.smart);
+    return `<tr class="${c==='c-bad'?'sev-bad':''}"><td class="mono">${esc(f.d)}</td><td>${esc(f.store)}</td><td>${CH_SHORT[f.ch]||f.ch}</td><td class="n">${fmt(f.smart)}</td><td class="n">${fmt(f.bank)}</td><td class="n">${c ? `<span class="chip ${c}">${sgn(d)}</span>` : sgn(d)}</td></tr>`; }).join('')
+    + (rows.length > lim.length ? `<tr><td colspan="6" class="empty">… өөр ${rows.length - lim.length} мөр. Дэлгүүр эсвэл хэлбэрээр шүүнэ үү.</td></tr>` : '')
+    : '<tr><td colspan="6" class="empty">Зөрүүтэй өдөр алга.</td></tr>';
+}
+function renderCash(){
+  const run = pendingRun || S.cash;
+  $('#cash-title').textContent = run ? `Бэлэн мөнгөний тушаалт · ${run.d0} – ${run.d1}${pendingRun ? ' (хадгалаагүй)' : ''}` : 'Бэлэн мөнгөний тушаалт';
+  if (!run){ $('#cash-sum').innerHTML = `<tr><td colspan="7" class="empty">${isOwner ? 'Дээр Smart тайлан болон банкны хуулгаа оруулна уу.' : 'Эзэмшигч хяналт хадгалаагүй байна.'}</td></tr>`; $('#cash-body').innerHTML = '<tr><td colspan="7" class="empty">–</td></tr>'; $('#k-cash').textContent = '–'; return; }
+  $('#cash-sum').innerHTML = run.summary.map(s => `<tr class="${s.smartCash - s.dep > 5000 ? 'sev-bad' : ''}"><td>${esc(s.store)}</td><td class="n">${fmt(s.smartCash)}</td><td class="n">${fmt(s.dep)}</td><td class="n">${fmt(s.smartCash - s.dep)}</td><td class="n">${s.missDays}</td><td class="n">${fmt(s.ncSmart)}</td><td class="n">${fmt(s.ncBank)}</td></tr>`).join('');
+  const opts = ['<option value="">Бүх дэлгүүр</option>', ...[...new Set(run.rows.map(r => r.store))].map(s => `<option ${s===cashStore?'selected':''}>${esc(s)}</option>`)].join('');
+  if ($('#cash-store').innerHTML !== opts) $('#cash-store').innerHTML = opts;
+  const prob = run.rows.filter(g => g.status === 'BRAK' || g.status === 'MNIEJ');
+  const open = prob.filter(g => !(S.notes[rowId(g)] && S.notes[rowId(g)].text));
+  $('#k-cash').textContent = open.length; $('#k-cash-s').textContent = open.length ? fmt(open.reduce((s,g)=>s+g.diff,0)) + ' ₮' : 'Бүгд тайлбартай';
+  $('#t-cash').hidden = !open.length; $('#t-cash').textContent = open.length;
+  const rows = (cashFilter === 'open' ? open : prob).filter(g => !cashStore || g.store === cashStore);
+  const focusId = document.activeElement && document.activeElement.id;
+  $('#cash-body').innerHTML = rows.length ? rows.map(g => { const id = rowId(g), n = S.notes[id]; const st = ST_LABEL[g.status] || ['',''];
+    return `<tr class="${g.status==='BRAK'?'sev-bad':'sev-warn'}"><td>${esc(g.store)}</td><td class="mono">${esc(g.days.join(', '))}${g.depDates.length ? `<div class="note">Тушаасан: ${esc(g.depDates.join(', '))}</div>` : ''}</td><td class="n">${fmt(g.smart)}</td><td class="n">${fmt(g.dep)}</td><td class="n">${fmt(g.diff)}</td><td><span class="chip ${st[1]}">${st[0]}</span></td>
+    <td>${pendingRun ? '<span class="note">Хадгалсны дараа тайлбар бичнэ</span>' : `<div class="row"><textarea id="nt-${esc(id)}" rows="1" placeholder="Бэлэн мөнгө хаашаа орсон бэ?" ${canWrite?'':'disabled'}>${esc(n ? n.text : '')}</textarea><button class="btn" data-act="note" data-id="${esc(id)}" ${canWrite?'':'disabled'}>Хадгалах</button></div>${n && n.text ? `<div class="note">${esc(nameOf(n.by))} · ${esc(String(n.at||'').replace('T',' ').slice(0,16))}</div>` : ''}`}</td></tr>`; }).join('')
+    : `<tr><td colspan="7" class="empty">${prob.length ? 'Бүх өдөр тайлбартай.' : 'Асуудалтай өдөр алга.'}</td></tr>`;
+  if (focusId && document.getElementById(focusId)) document.getElementById(focusId).focus();
+}
+function renderBal(){
+  const list = S.balances.slice().sort((a,b) => String(b.date).localeCompare(String(a.date))).slice(0,30);
+  const last = list[0];
+  if (last){ const tot = BAL_ACCS.reduce((s,[k]) => s + (+((last.items||{})[k])||0), 0); $('#k-bal').textContent = fmt(tot); $('#k-bal-s').textContent = last.date; } else { $('#k-bal').textContent = '–'; $('#k-bal-s').textContent = 'Бүртгэл алга'; }
+  $('#bal-head').innerHTML = `<tr><th>Огноо</th>${BAL_ACCS.map(([,l]) => `<th class="n">${esc(l)}</th>`).join('')}<th class="n">Нийт</th><th>Оруулсан</th></tr>`;
+  $('#bal-body').innerHTML = list.length ? list.map(b => { const it = b.items||{}; const tot = BAL_ACCS.reduce((s,[k]) => s + (+it[k]||0), 0);
+    return `<tr><td class="mono">${esc(b.date)}</td>${BAL_ACCS.map(([k]) => `<td class="n">${it[k] == null || it[k] === '' ? '–' : fmt(it[k])}</td>`).join('')}<td class="n"><b>${fmt(tot)}</b></td><td class="note">${esc(nameOf(b.by))}</td></tr>`; }).join('')
+    : `<tr><td colspan="${BAL_ACCS.length+3}" class="empty">Бүртгэл алга. Дээрх маягтыг бөглөнө үү.</td></tr>`;
+}
+
+// ---------- actions ----------
+document.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]'); if (!b || !db) return;
+  const id = b.dataset.id, act = b.dataset.act; b.disabled = true;
+  try{
+    const r = S.requests.find(x => x.id === id);
+    if (act === 'approve' || act === 'reject'){
+      const cm = ($('#cm-'+CSS.escape(id)) || {}).value || '';
+      await db.doc('approvals/'+id).set({decision: act === 'approve' ? 'approved' : 'rejected', amount: +r.amount, payeeAcc: r.payeeAcc, comment: cm, at: new Date().toISOString(), by: me});
+    } else if (act === 'paid'){
+      await db.doc('requests/'+id).update({paidAt: new Date().toISOString(), paidBy: me});
+    } else if (act === 'cancel'){
+      await db.doc('requests/'+id).delete();
+    } else if (act === 'note'){
+      const text = $('#nt-'+CSS.escape(id)).value.trim();
+      await db.doc('cashnotes/'+id).set({text, by: me, at: new Date().toISOString()});
+    }
+  }catch(err){ alertMsg(err); } finally { b.disabled = false; }
+});
+function alertMsg(err){ const m = err && (err.code === 'permission-denied' || err.code === 'invalid_argument') ? 'Танд энэ үйлдлийг хийх эрх алга.' : 'Хадгалж чадсангүй. Дахин оролдоно уу.'; const el = $('#rq-msg'); if (el) el.textContent = m; console.warn(err); }
+
+$('#req-form').addEventListener('submit', async e => {
+  e.preventDefault(); if (!db) return;
+  const amount = parseFloat(String($('#rq-amt').value).replace(/[\s,]/g,''));
+  const acc = $('#rq-acc').value.trim(), payee = $('#rq-payee').value.trim();
+  if (!payee || !acc || !(amount > 0)){ $('#rq-msg').textContent = 'Хүлээн авагч, данс, дүнг бөглөнө үү.'; return; }
+  $('#rq-submit').disabled = true; $('#rq-msg').textContent = 'Илгээж байна…';
+  try{
+    let attachId = null, attachType = null; const f = $('#rq-file').files[0];
+    if (f){ if (!assets){ $('#rq-msg').textContent = 'Баримт оруулах эрх алга, хүсэлтийг баримтгүй илгээлээ.'; } else { const up = await assets.upload(f); attachId = up.id; attachType = up.contentType; } }
+    await db.collection('requests').add({payee, payeeAcc: acc, payeeBank: $('#rq-bank').value, amount, fromAcc: $('#rq-from').value, category: $('#rq-cat').value, note: $('#rq-note').value.trim(), attachId, attachType, createdBy: me, createdAt: new Date().toISOString()});
+    e.target.reset(); $('#rq-msg').textContent = 'Хүсэлт илгээгдлээ.';
+  }catch(err){ alertMsg(err); } finally { $('#rq-submit').disabled = false; }
+});
+
+$('#bal-form').addEventListener('submit', async e => {
+  e.preventDefault(); if (!db) return;
+  const date = $('#bal-date').value || today(), items = {};
+  for (const [k] of BAL_ACCS){ const v = $('#bal-'+k).value.trim(); if (v !== '') items[k] = parseFloat(v.replace(/[\s,]/g,'')) || 0; }
+  try{ await db.doc('balances/'+date).set({date, items, by: me, at: new Date().toISOString()}); $('#bal-msg').textContent = 'Хадгаллаа.'; BAL_ACCS.forEach(([k]) => $('#bal-'+k).value = ''); }
+  catch(err){ $('#bal-msg').textContent = err && err.code === 'invalid_argument' ? 'Хадгалах эрх алга.' : 'Хадгалж чадсангүй.'; }
+});
+
+// ---------- cash upload (owner) ----------
+const parsedFiles = [];
+async function handleFiles(fl){
+  if (typeof XLSX === 'undefined'){ $('#cash-msg').textContent = 'Excel уншигч ачаалагдаагүй байна.'; return; }
+  for (const f of fl){
+    try{ const buf = await f.arrayBuffer(); const wb = XLSX.read(buf, {type:'array', cellDates:false}); let best = {type:'unknown', label:'Танигдаагүй файл', rows:[]};
+      for (const sn of wb.SheetNames){ const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, raw:true, defval:null}); const p = VIVI.parseRows(rows, f.name); if (p.type !== 'unknown'){ best = p; break; } }
+      parsedFiles.push({...best, file: f.name});
+    }catch(err){ parsedFiles.push({type:'unknown', label:'Уншиж чадсангүй', rows:[], file:f.name}); }
+  }
+  $('#cash-filelist').innerHTML = parsedFiles.map(p => `<div>${p.type==='unknown'?'<span class="chip c-bad">?</span>':'<span class="chip c-ok">✓</span>'} ${esc(p.label)} · ${p.rows.length} мөр · ${esc(p.file)}</div>`).join('');
+  const m = VIVI.build(parsedFiles);
+  if (m.error){ $('#cash-msg').textContent = 'Smart «Борлуулалт төлбөрийн хэлбэрээр» тайлан оруулна уу.'; return; }
+  pendingRun = {d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
+  $('#cash-save').disabled = false; $('#cash-msg').textContent = 'Тооцоолсон. Хадгалбал нягтлан тайлбар бичих боломжтой болно.';
+  render();
+}
+$('#cash-files').addEventListener('change', e => handleFiles([...e.target.files]));
+const drop = $('#drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); handleFiles([...e.dataTransfer.files]); });
+$('#cash-save').addEventListener('click', async () => {
+  if (!db || !pendingRun) return; $('#cash-save').disabled = true;
+  try{ await db.doc('cash/latest').set({...pendingRun, savedAt: new Date().toISOString(), by: me}); pendingRun = null; parsedFiles.length = 0; $('#cash-filelist').innerHTML = ''; $('#cash-msg').textContent = 'Хадгаллаа.'; render(); }
+  catch(err){ $('#cash-msg').textContent = err && err.code === 'quota_exceeded' ? 'Өгөгдлийн сангийн хэмжээ хэтэрлээ.' : 'Хадгалж чадсангүй.'; $('#cash-save').disabled = false; }
+});
+
+// ---------- Gmail sync (owner only): read new bank e-mails on every open ----------
+const GMAIL = 'Gmail';
+const SYNC_DEFAULT = '2026-10-26T06:11:01Z'; // everything before this was loaded by Claude
+let mcp = null, syncing = false, bankLoaded = false;
+const hhmm = d => { const t = new Date(d); return isNaN(t) ? '' : `${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`; };
+const payloadOf = r => { let p = r && (r.payload !== undefined ? r.payload : r); if (typeof p === 'string'){ try{ p = JSON.parse(p); }catch(e){} } return p || {}; };
+function syncMsg(t, bad){ const el = $('#sync-msg'); el.textContent = t; el.style.color = bad ? 'var(--bad)' : ''; }
+const MCP_ERR = {
+  needs_reauth: 'Gmail холболт хугацаа дууссан. claude.ai → Settings → Connectors хэсэгт Gmail-ийг дахин холбоно уу.',
+  server_not_connected: 'Gmail холбогдоогүй байна. claude.ai → Settings → Connectors хэсэгт kontrolavivi@gmail.com-оор Gmail холбоно уу.',
+  selection_required: 'Хэд хэдэн Gmail холболт байна — аль нэгийг сонгоно уу.',
+  not_in_manifest: 'Энэ хуудсанд Gmail ашиглахыг зөвшөөрөөгүй байна (хуудасны Permissions цэс).',
+  approval_required: 'Gmail уншихад таны зөвшөөрөл хэрэгтэй — «Имэйл одоо шалгах» товчийг дарна уу.',
+  blocked_by_policy: 'Байгууллагын бодлогоор Gmail хаалттай.',
+  server_unavailable: 'Gmail түр холбогдсонгүй. Дараа дахин оролдоно уу.'
+};
+async function syncMail(manual){
+  if (syncing || !mcp || !db || !isOwner || !bankLoaded) return;
+  syncing = true; $('#sync-btn').disabled = true; syncMsg('Имэйл шалгаж байна…');
+  try{
+    const metaRef = db.doc('meta/sync');
+    const meta = await metaRef.get();
+    const md = meta.exists ? meta.data() : {};
+    let since = Date.parse(md.mailTs || SYNC_DEFAULT); if (isNaN(since)) since = Date.parse(SYNC_DEFAULT);
+    const day = new Date(since - 86400e3);
+    const q = `(from:khanbank.com OR from:golomtbank.com OR from:tdbm.mn) after:${day.getFullYear()}/${String(day.getMonth()+1).padStart(2,'0')}/${String(day.getDate()).padStart(2,'0')}`;
+    const threadIds = []; let pageToken = '';
+    for (let i = 0; i < 10; i++){
+      const p = payloadOf(await mcp.callTool(GMAIL, 'search_threads', pageToken ? {query:q, pageSize:50, pageToken, view:'THREAD_VIEW_METADATA_ONLY'} : {query:q, pageSize:50, view:'THREAD_VIEW_METADATA_ONLY'}, {cache:false}));
+      for (const t of (p.threads || [])) threadIds.push(t.id);
+      pageToken = p.nextPageToken || ''; if (!pageToken) break;
+    }
+    const have = new Set(S.banktx.map(t => t.id));
+    const keys = new Set(S.banktx.map(t => `${t.dt}|${Math.round(+t.amount||0)}|${t.fromAcc}`));
+    const fresh = []; let newest = since, bad = 0;
+    for (let i = 0; i < threadIds.length; i += 4){
+      const batch = await Promise.all(threadIds.slice(i, i+4).map(id => mcp.callTool(GMAIL, 'get_thread', {threadId:id, messageFormat:'PLAIN_TEXT'}, {cache:false}).then(payloadOf).catch(e => { if (e && e.code && MCP_ERR[e.code] && e.code !== 'server_unavailable') throw e; bad++; return {}; })));
+      for (const th of batch) for (const m of (th.messages || [])){
+        const ts = Date.parse(m.date); if (isNaN(ts) || ts <= since) continue;
+        if (ts > newest) newest = ts;
+        if (have.has(m.id)) continue;
+        const r = VIVI.parseMail(m); if (!r) continue;
+        const d = r.doc, k = `${d.dt}|${Math.round(+d.amount||0)}|${d.fromAcc}`;
+        if (!r.unparsed && keys.has(k)) continue;
+        keys.add(k); have.add(m.id); fresh.push([m.id, d]);
+      }
+      syncMsg(`Имэйл шалгаж байна… ${Math.min(i+4, threadIds.length)}/${threadIds.length}`);
+    }
+    for (const [id, d] of fresh) await db.doc('banktx/' + id).set({...d, addedAt: new Date().toISOString()});
+    const now = new Date().toISOString();
+    await metaRef.set({...md, mailTs: bad ? md.mailTs || SYNC_DEFAULT : new Date(newest).toISOString(), lastRun: now, added: fresh.length, by: 'page'});
+    syncMsg(`Имэйл шалгасан ${hhmm(now)} · ${fresh.length ? fresh.length + ' шинэ гүйлгээ нэмэгдлээ' : 'шинэ гүйлгээ алга'}${bad ? ` · ${bad} захидал уншиж чадсангүй` : ''}`, !!bad);
+  }catch(e){
+    const code = e && e.code;
+    syncMsg(MCP_ERR[code] || ('Имэйл шалгаж чадсангүй' + (code ? ` (${code})` : '') + '.'), true);
+    if (code === 'server_unavailable' && !manual && e.retryable) setTimeout(() => syncMail(false), (e.retryAfterMs || 5000) + Math.random()*3000);
+  }finally{ syncing = false; $('#sync-btn').disabled = false; }
+}
+$('#sync-btn').addEventListener('click', () => syncMail(true));
+
+// ---------- settings (owner) ----------
+let ACCESS = {emails: []};
+function renderAccess(){
+  $('#acc-list').innerHTML = ACCESS.emails.length ? ACCESS.emails.map(e => `<div class="row" style="justify-content:space-between"><span>${esc(e)}</span><button class="btn bad" data-rm="${esc(e)}">Хасах</button></div>`).join('') : '<div class="note">Нягтлан бүртгээгүй байна.</div>';
+}
+$('#acc-form').addEventListener('submit', async e => {
+  e.preventDefault(); const em = $('#acc-email').value.trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { $('#acc-msg').textContent = 'Имэйл буруу байна.'; return; }
+  try{ await db.doc('config/access').set({emails: [...new Set([...ACCESS.emails, em])]}, {merge:true}); $('#acc-email').value = ''; $('#acc-msg').textContent = 'Нэмлээ.'; }catch(err){ $('#acc-msg').textContent = 'Хадгалж чадсангүй.'; }
+});
+$('#acc-list').addEventListener('click', async e => { const b = e.target.closest('button[data-rm]'); if (!b) return;
+  try{ await db.doc('config/access').set({emails: ACCESS.emails.filter(x => x !== b.dataset.rm)}, {merge:true}); }catch(err){ $('#acc-msg').textContent = 'Хадгалж чадсангүй.'; } });
+$('#imp-file').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return; $('#imp-msg').textContent = 'Импортолж байна…';
+  try{
+    const data = JSON.parse(await f.text()); let n = 0;
+    for (const [col, docs] of Object.entries(data)) for (const [id, d] of Object.entries(docs)){
+      if (!/^[A-Za-z0-9_-]+$/.test(col) || !/^[A-Za-z0-9_.:@+-]+$/.test(id)) continue;
+      await db.collection(col).doc(id).set(d); n++; if (n % 20 === 0) $('#imp-msg').textContent = `Импортолж байна… ${n}`;
+    }
+    $('#imp-msg').textContent = `${n} бичлэг орлоо.`;
+  }catch(err){ console.warn(err); $('#imp-msg').textContent = 'Импорт амжилтгүй: ' + (err.code || err.message || ''); }
+  e.target.value = '';
+});
+
+// ---------- boot ----------
+render();
+$('#gate-in').addEventListener('click', () => VIVIFB.signIn().catch(e => { $('#gate-msg').textContent = 'Нэвтэрч чадсангүй: ' + (e.code || e.message || ''); }));
+$('#gate-out').addEventListener('click', () => VIVIFB.signOut());
+$('#sign-out').addEventListener('click', () => VIVIFB.signOut());
+let booted = false;
+function gate(msg, showOut){ $('#app').hidden = true; $('#gate').hidden = false; $('#gate-msg').innerHTML = msg; $('#gate-in').hidden = !!showOut; $('#gate-out').hidden = !showOut; }
+if (!window.VIVIFB || VIVIFB.error){ gate('firebase-config.js тохируулаагүй байна. Заавар: README.'); }
+else VIVIFB.start(async () => {
+  if (booted){ location.reload(); return; }
+  booted = true;
+  $('#gate').hidden = true; $('#app').hidden = false;
+  db = VIVIFB.db; user = VIVIFB.user; assets = VIVIFB.assets;
+  isOwner = await user.isOwner();
+  me = await user.id();
+  canWrite = true;
+  $('#role').textContent = (isOwner ? 'Эзэмшигч' : 'Нягтлан') + ' · ' + user.email();
+  $('#cash-upload').hidden = !isOwner; $('#cash-hint').hidden = !isOwner;
+  $('#req-form-card').hidden = !canWrite;
+  $('#tab-set').hidden = !isOwner;
+  const onErr = e => console.warn('db', e);
+  db.collection('requests').onSnapshot(s => { S.requests = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.requests.map(r => r.createdBy)); render(); }, onErr);
+  db.collection('approvals').onSnapshot(s => { S.approvals = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
+  const since = new Date(Date.now() - 45*86400e3).toISOString().slice(0,10);  // last 45 days keeps reads inside the free plan
+  db.collection('banktx').where('dt', '>=', since).onSnapshot(s => { S.banktx = s.docs.map(d => ({id:d.id, ...d.data()})); render(); }, onErr);
+  $('#sync-row').hidden = false; $('#sync-btn').hidden = true; syncMsg('Имэйл автоматаар шалгагдана.');
+  db.doc('meta/sync').onSnapshot(d => { if (!d.exists) return; const m = d.data(); if (m.lastRun) syncMsg(`Имэйл автоматаар шалгасан ${hhmm(m.lastRun)}${m.lastAdded ? ' · сүүлийн шинэ гүйлгээ ' + hhmm(m.lastAdded) : ''}`); }, onErr);
+  db.doc('cash/latest').onSnapshot(d => { S.cash = d.exists ? d.data() : null; render(); }, onErr);
+  db.collection('cashnotes').onSnapshot(s => { S.notes = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); resolveNames(Object.values(S.notes).map(n => n.by)); render(); }, onErr);
+  db.collection('balances').onSnapshot(s => { S.balances = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.balances.map(b => b.by)); render(); }, onErr);
+  if (isOwner) db.doc('config/access').onSnapshot(d => { ACCESS = {emails: (d.exists && d.data().emails) || []}; renderAccess(); }, onErr);
+}, () => { if (booted){ location.reload(); return; } gate('Google бүртгэлээрээ нэвтэрнэ үү.'); },
+   (email) => gate(`<b>${esc(email)}</b> бүртгэлд эрх олгогдоогүй байна. Эзэмшигчээс энэ имэйлийг «Тохиргоо» хэсэгт нэмүүлнэ үү.`, true));
+})();
+</script>
+</body>
+</html>
