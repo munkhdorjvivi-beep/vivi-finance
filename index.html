@@ -845,17 +845,61 @@ const VIVI = (() => {
     return {d0: m.d0, d1: m.d1, sheets, filename: `VIVI_hyanalt_${m.d0}_${m.d1}.xlsx`};
   }
 
-  // report -> SheetJS workbook (number formats, column widths, frozen header)
+  // report -> SheetJS workbook: number formats, widths and (with xlsx-js-style) colours
+  const ST = {
+    title: {font:{bold:true, sz:14, color:{rgb:'1F3B57'}}},
+    sub:   {font:{italic:true, color:{rgb:'5F6A63'}}},
+    head:  {font:{bold:true, color:{rgb:'FFFFFF'}}, fill:{patternType:'solid', fgColor:{rgb:'1F5F8B'}}, alignment:{wrapText:true, vertical:'center'}, border:{bottom:{style:'thin', color:{rgb:'0F3550'}}}},
+    bad:   {fill:{patternType:'solid', fgColor:{rgb:'FFC7CE'}}, font:{color:{rgb:'9C0006'}}},
+    warn:  {fill:{patternType:'solid', fgColor:{rgb:'FFEB9C'}}, font:{color:{rgb:'9C5700'}}},
+    ok:    {fill:{patternType:'solid', fgColor:{rgb:'C6EFCE'}}, font:{color:{rgb:'006100'}}},
+    grey:  {fill:{patternType:'solid', fgColor:{rgb:'EDEDED'}}, font:{color:{rgb:'595959'}}},
+    purple:{fill:{patternType:'solid', fgColor:{rgb:'E4DFEC'}}, font:{color:{rgb:'5B3B8C'}}},
+    note:  {fill:{patternType:'solid', fgColor:{rgb:'FFF2CC'}}},
+    redTxt:{font:{bold:true, color:{rgb:'C00000'}}},
+    total: {font:{bold:true}, border:{top:{style:'thin', color:{rgb:'000000'}}}}
+  };
+  const mergeSt = (a, b) => ({...a, ...b, font:{...(a.font||{}), ...(b.font||{})}});
   function toWorkbook(r, X){
     const wb = X.utils.book_new();
     for (const s of r.sheets){
       const ws = X.utils.aoa_to_sheet(s.aoa);
       ws['!cols'] = (s.widths || []).map(w => ({wch: w}));
+      const cell = (ri, ci) => ws[X.utils.encode_cell({r: ri, c: ci})];
+      const put = (ri, ci, st) => { const c = cell(ri, ci); if (c) c.s = c.s ? mergeSt(c.s, st) : st; };
       let head = null;
       s.aoa.forEach((row, ri) => {
-        if (row.length > 2 && row.every(v => typeof v === 'string' && v)) head = row;      // a header row
-        row.forEach((v, ci) => { if (typeof v !== 'number') return; const c = ws[X.utils.encode_cell({r: ri, c: ci})]; if (!c) return;
-          c.z = head && /%/.test(String(head[ci] || '')) ? '0.0%' : '#,##0'; });
+        if (!row.length) { head = null; return; }
+        const isHead = row.length > 2 && row.every(v => typeof v === 'string' && v);
+        if (isHead){ head = row; row.forEach((v, ci) => put(ri, ci, ST.head)); return; }
+        if (ri === 0 && row.length === 1) { put(ri, 0, ST.title); return; }
+        if (row.length === 1 && typeof row[0] === 'string') { put(ri, 0, ri === 1 ? ST.sub : {font:{bold:true}}); return; }
+        const H = ci => String(head && head[ci] || '');
+        row.forEach((v, ci) => {
+          const h = H(ci), c = cell(ri, ci); if (!c) return;
+          if (typeof v === 'number') c.z = /%/.test(h) ? '0.0%' : '#,##0';
+          // status words
+          if (typeof v === 'string'){
+            if (/^Тушаагаагүй|BRAK/.test(v)) put(ri, ci, ST.bad);
+            else if (/^Дутуу/.test(v)) put(ri, ci, ST.warn);
+            else if (/^Зөв \/ OK/.test(v)) put(ri, ci, ST.ok);
+            else if (/^Илүү|^Өдөр тодорхойгүй/.test(v)) put(ri, ci, ST.grey);
+            else if (/^Тодруулах/.test(v)) put(ri, ci, ST.bad);
+            else if (/^Эзэмшигч – Мөнхдорж|^Энхбаатар Хэрэглээ|^hipay|^F1/.test(v)) put(ri, ci, ST.purple);
+            else if (/^Дотоод шилжүүлэг/.test(v)) put(ri, ci, ST.grey);
+            else if (/^Хувийн зээл|^Зээл, ББСБ/.test(v)) put(ri, ci, ST.warn);
+          }
+          if (/Тайлбар|Wyjaśnienie/.test(h) && !/Тайлбар \/ Opis/.test(h)) put(ri, ci, ST.note);
+          if (typeof v !== 'number') return;
+          // % columns: small = green, shortfall = red, surplus = grey
+          if (/^%$/.test(h) || / %$/.test(h)){ const a = Math.abs(v); put(ri, ci, a <= 0.01 ? ST.ok : v < 0 ? (a > 0.05 ? ST.bad : ST.warn) : ST.grey); }
+          if (/Бэлэн зөрүү|Brak gotówki/.test(h) && v > 5000) put(ri, ci, ST.bad);
+          if (/Тушаагаагүй өдөр|Dni bez/.test(h) && v > 0) put(ri, ci, ST.redTxt);
+          if (/Тушаагаагүй дүн/.test(h) && v > 0) put(ri, ci, ST.redTxt);
+          if (/Хуримтлагдсан|Narastająco/.test(h) && v > 5000) put(ri, ci, ST.redTxt);
+          if (/^Зөрүү \/ Brakuje/.test(h) && v > 5000) put(ri, ci, ST.redTxt);
+        });
+        if (/^(Нийт|Razem)/.test(String(row[0]))) row.forEach((v, ci) => put(ri, ci, ST.total));
       });
       X.utils.book_append_sheet(wb, ws, s.name.slice(0, 31));
     }
@@ -1212,14 +1256,26 @@ async function syncMail(manual){
 $('#sync-btn').addEventListener('click', () => syncMail(true));
 
 // ---------- full Excel report ----------
+// coloured export uses xlsx-js-style (loaded on first click, kept apart from the reader)
+let styledXLSX = null;
+function loadStyledXLSX(){
+  if (styledXLSX) return styledXLSX;
+  return styledXLSX = new Promise(res => {
+    const orig = window.XLSX, sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';
+    sc.onload = () => { const XS = window.XLSX; window.XLSX = orig; res(XS && XS.writeFile ? XS : orig); };
+    sc.onerror = () => { window.XLSX = orig; styledXLSX = null; res(orig); };   // fall back to plain (no colours)
+    document.head.appendChild(sc);
+  });
+}
 $('#rev-xlsx').addEventListener('click', () => {
   if (!lastFiles || typeof XLSX === 'undefined') return;
   const btn = $('#rev-xlsx'); btn.disabled = true; btn.textContent = 'Бэлтгэж байна…';
-  setTimeout(() => {
-    try{ const r = VIVI.report(lastFiles); if (r.error){ alert(r.error); return; } XLSX.writeFile(VIVI.toWorkbook(r, XLSX), r.filename); }
+  loadStyledXLSX().then(XS => {
+    try{ const r = VIVI.report(lastFiles); if (r.error){ alert(r.error); return; } XS.writeFile(VIVI.toWorkbook(r, XS), r.filename); }
     catch(err){ console.warn(err); alert('Excel үүсгэж чадсангүй: ' + (err.message || err)); }
     finally{ btn.disabled = false; btn.textContent = '📥 Excel тайлан татах'; }
-  }, 30);
+  });
 });
 
 // ---------- settings (owner) ----------
