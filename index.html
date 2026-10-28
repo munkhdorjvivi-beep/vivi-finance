@@ -66,7 +66,7 @@ input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid v
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap;display:inline-block}
-.c-ok{background:var(--ok-soft);color:var(--ok)} .c-warn{background:var(--warn-soft);color:var(--warn)} .c-bad{background:var(--bad-soft);color:var(--bad)} .c-grey{background:var(--grey-soft);color:var(--muted)} .c-acc{background:var(--accent-soft);color:var(--accent)}
+.c-ok{background:var(--ok-soft);color:var(--ok)} .c-warn{background:var(--warn-soft);color:var(--warn)} .c-bad{background:var(--bad-soft);color:var(--bad)} .c-grey{background:var(--grey-soft);color:var(--muted)} .c-acc{background:var(--accent-soft);color:var(--accent)} .c-hold{background:#ece4f6;color:#5b3b8c} .rm-sel{width:auto;max-width:180px} .rm-custom{width:auto} .btn.hold{background:#ece4f6;color:#5b3b8c;border-color:#c9b6e4}
 .filter button{font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:999px;padding:4px 10px;cursor:pointer}
 .filter button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .tbl{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface)}
@@ -156,11 +156,20 @@ body{margin:0;background:var(--bg)}
         <div class="filter chips" id="req-filter">
           <button data-f="all" aria-pressed="false">Бүгд</button>
           <button data-f="pending" aria-pressed="true">Хүлээгдэж буй</button>
+          <button data-f="hold" aria-pressed="false">⏸ Хүлээлгэсэн</button>
           <button data-f="approved" aria-pressed="false">Зөвшөөрсөн</button>
           <button data-f="paid" aria-pressed="false">Шилжүүлсэн</button>
           <button data-f="rejected" aria-pressed="false">Татгалзсан</button>
         </div>
       </div>
+      <div class="row daybar" style="margin-bottom:10px">
+        <button class="btn" id="rday-prev" title="Өмнөх өдөр">◀</button>
+        <input type="date" id="rday-pick" style="width:auto">
+        <button class="btn" id="rday-next" title="Дараагийн өдөр">▶</button>
+        <button class="btn" id="rday-today">Өнөөдөр</button>
+        <button class="btn" id="rday-all">Бүх өдөр</button>
+      </div>
+      <div class="daysum" id="rday-sum"></div>
       <div id="req-list"><div class="empty">Хүсэлт алга. Дээрх маягтаар эхний хүсэлтээ илгээнэ үү.</div></div>
     </div>
   </section>
@@ -931,7 +940,7 @@ const ST_LABEL = {BRAK:['Тушаагаагүй','c-bad'], MNIEJ:['Дутуу т
 
 let db = null, user = null, me = null, isOwner = false, canWrite = true, assets = null;
 const S = { requests: [], approvals: {}, banktx: [], cash: null, notes: {}, balances: [], names: {} };
-let bankDay = today(), loadBankDay = null;
+let bankDay = today(), loadBankDay = null, reqDay = today();
 let reqFilter = 'pending', bankFilter = 'all', cashFilter = 'open', cashStore = '', revCh = 'all', revOnly = 'diff', revStore = '';
 let pendingRun = null, lastFiles = null;
 
@@ -952,6 +961,15 @@ $('#day-prev').addEventListener('click', () => setBankDay(shiftDay(bankDay || to
 $('#day-next').addEventListener('click', () => { const n = shiftDay(bankDay || today(), 1); if (n <= today()) setBankDay(n); });
 $('#day-today').addEventListener('click', () => setBankDay(today()));
 $('#day-all').addEventListener('click', () => setBankDay(''));
+// requests: same day picker
+const localDay = v => { const d = new Date(v); return isNaN(d) ? '' : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+function setReqDay(d){ reqDay = d; $('#rday-pick').value = d || ''; render(); }
+$('#rday-pick').value = reqDay;
+$('#rday-pick').addEventListener('change', e => setReqDay(e.target.value || ''));
+$('#rday-prev').addEventListener('click', () => setReqDay(shiftDay(reqDay || today(), -1)));
+$('#rday-next').addEventListener('click', () => { const n = shiftDay(reqDay || today(), 1); if (n <= today()) setReqDay(n); });
+$('#rday-today').addEventListener('click', () => setReqDay(today()));
+$('#rday-all').addEventListener('click', () => setReqDay(''));
 bindFilter('#req-filter', f => reqFilter = f); bindFilter('#bank-filter', f => bankFilter = f); bindFilter('#cash-filter', f => cashFilter = f);
 $('#cash-store').addEventListener('change', e => { cashStore = e.target.value; render(); });
 $('#rq-from').innerHTML = FROM_ACCS.map(([a,l]) => `<option value="${a}">${esc(l)}</option>`).join('');
@@ -971,6 +989,7 @@ function reqStatus(r){
   if (a && a.decision === 'rejected') return 'rejected';
   if (r.paidAt) return 'paid';
   if (a && a.decision === 'approved') return 'approved';
+  if (r.holdAt) return 'hold';
   return 'pending';
 }
 function changedSinceApproval(r){ const a = S.approvals[r.id]; return a && a.decision === 'approved' && (Math.abs((+a.amount||0) - (+r.amount||0)) > 0.5 || normAcc(a.payeeAcc) !== normAcc(r.payeeAcc)); }
@@ -996,9 +1015,10 @@ function matchBank(){
 function keepDrafts(sel){ const d = {}; $$(sel).forEach(el => { if (el.id) d[el.id] = el.value; }); return d; }
 function restoreDrafts(d){ for (const [id,v] of Object.entries(d)){ const el = document.getElementById(id); if (el && v !== '' ) el.value = v; } }
 function render(){
-  const drafts = keepDrafts('#req-list input, #cash-body textarea');
+  const drafts = keepDrafts('#req-list input, #req-list select, #cash-body textarea');
   renderInner();
   restoreDrafts(drafts);
+  document.querySelectorAll('.rm-sel').forEach(sel => { const c = document.getElementById('rmc-' + sel.id.slice(3)); if (c) c.hidden = sel.value !== 'custom'; });
   hydrateFiles();
 }
 function hydrateFiles(){
@@ -1009,14 +1029,21 @@ document.addEventListener('click', e => { const a = e.target.closest('a[data-fil
   const w = window.open('', '_blank'); VIVIFB.fileURL(a.dataset.file).then(u => { if (u && w) w.location = u; else if (w) w.close(); }); });
 function renderInner(){
   // requests
-  const counts = {pending:0, approved:0, paid:0, rejected:0}; let pendAmt = 0;
+  const counts = {pending:0, hold:0, approved:0, paid:0, rejected:0}; let pendAmt = 0;
   for (const r of S.requests){ const s = reqStatus(r); counts[s]++; if (s === 'pending') pendAmt += +r.amount || 0; }
-  $('#k-pend').textContent = counts.pending; $('#k-pend-s').textContent = counts.pending ? fmt(pendAmt) + ' ₮' : 'Бүгд шийдвэрлэгдсэн';
+  $('#k-pend').textContent = counts.pending; $('#k-pend-s').textContent = (counts.pending ? fmt(pendAmt) + ' ₮' : 'Бүгд шийдвэрлэгдсэн') + (counts.hold ? ` · ⏸ ${counts.hold}` : '');
+  { const lb = {pending:'Хүлээгдэж буй', hold:'⏸ Хүлээлгэсэн'}; for (const k in lb){ const b = document.querySelector(`#req-filter button[data-f="${k}"]`); if (b) b.textContent = lb[k] + (counts[k] ? ` (${counts[k]})` : ''); } }
   $('#t-req').hidden = !counts.pending; $('#t-req').textContent = counts.pending;
   const mt = matchBank(), byReq = {};
   for (const t of S.banktx){ const m = mt[t.id]; if (m && m.req) (byReq[m.req] = byReq[m.req] || []).push({t, m}); }
-  const list = S.requests.filter(r => reqFilter === 'all' || reqStatus(r) === reqFilter).sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-  $('#req-list').innerHTML = list.length ? list.map(r => reqCard(r, byReq[r.id])).join('') : `<div class="empty">${reqFilter === 'pending' ? 'Хүлээгдэж буй хүсэлт алга.' : 'Энэ төлөвт хүсэлт алга.'}</div>`;
+  const openOnly = reqFilter === 'pending' || reqFilter === 'hold';     // open requests: always every day
+  const dayList = S.requests.filter(r => openOnly || !reqDay || localDay(r.createdAt) === reqDay);
+  const list = dayList.filter(r => reqFilter === 'all' || reqStatus(r) === reqFilter).sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  { const amt = list.reduce((s2,r) => s2 + (+r.amount || 0), 0);
+    $('#rday-sum').innerHTML = (openOnly ? '<b>Бүх өдрийн</b> <span class="note">(хүлээгдэж буй / хүлээлгэсэн хүсэлт огноогоор шүүгдэхгүй)</span>' : reqDay ? `<b>${esc(dayLong(reqDay))}</b>` : '<b>Бүх өдөр</b>')
+      + ` · ${list.length} хүсэлт · ${fmt(amt)} ₮`;
+    $('#rday-next').disabled = !reqDay || reqDay >= today(); $('#rday-today').disabled = reqDay === today(); $('#rday-all').disabled = !reqDay; }
+  $('#req-list').innerHTML = list.length ? list.map(r => reqCard(r, byReq[r.id])).join('') : `<div class="empty">${reqFilter === 'pending' ? 'Хүлээгдэж буй хүсэлт алга.' : reqFilter === 'hold' ? 'Хүлээлгэсэн хүсэлт алга.' : 'Энэ төлөвт хүсэлт алга.'}</div>`;
   // bank
   const unm = S.banktx.filter(t => !t._old && mt[t.id] && mt[t.id].st === 'none');
   $('#k-unm').textContent = unm.length; $('#k-unm-s').textContent = unm.length ? fmt(unm.reduce((s,t)=>s+(+t.amount||0),0)) + ' ₮' : (S.banktx.length ? 'Бүгд тулгагдсан' : 'Гүйлгээ алга');
@@ -1039,11 +1066,13 @@ function renderInner(){
 }
 function reqCard(r, matches){
   const s = reqStatus(r), a = S.approvals[r.id];
-  const chip = {pending:['Хүлээгдэж буй','c-warn'], approved:['Зөвшөөрсөн','c-ok'], paid:['Шилжүүлсэн','c-acc'], rejected:['Татгалзсан','c-bad']}[s];
+  const chip = {pending:[r.resendCount ? 'Дахин ирсэн' : 'Хүлээгдэж буй','c-warn'], hold:['⏸ Хүлээлгэсэн','c-hold'], approved:['Зөвшөөрсөн','c-ok'], paid:['Шилжүүлсэн','c-acc'], rejected:['Татгалзсан','c-bad']}[s];
   let acts = '';
-  if (isOwner && s === 'pending') acts += `<input id="cm-${esc(r.id)}" placeholder="Тайлбар (заавал биш)"><button class="btn ok" data-act="approve" data-id="${esc(r.id)}">Зөвшөөрөх</button><button class="btn bad" data-act="reject" data-id="${esc(r.id)}">Татгалзах</button>`;
+  if (isOwner && (s === 'pending' || s === 'hold')) acts += `<input id="cm-${esc(r.id)}" placeholder="Тайлбар (заавал биш)"><button class="btn ok" data-act="approve" data-id="${esc(r.id)}">Зөвшөөрөх</button>${s === 'pending' ? `<select id="rm-${esc(r.id)}" class="rm-sel" title="Хүлээлгэвэл хэзээ дахин сануулах"><option value="">Сануулахгүй</option><option value="2h">2 цагийн дараа</option><option value="eve">Өнөөдөр 18:00</option><option value="tom">Маргааш 09:00</option><option value="2d">Нөгөөдөр 09:00</option><option value="custom">Огноо, цаг сонгох…</option></select><input type="datetime-local" id="rmc-${esc(r.id)}" class="rm-custom" hidden><button class="btn hold" data-act="hold" data-id="${esc(r.id)}">⏸ Хүлээлгэх</button>` : ''}<button class="btn bad" data-act="reject" data-id="${esc(r.id)}">Татгалзах</button>`;
+  if (canWrite && !isOwner && s === 'hold') acts += `<button class="btn primary" data-act="resend" data-id="${esc(r.id)}">↻ Дахин илгээх</button>`;
   if (canWrite && s === 'approved') acts += `<button class="btn primary" data-act="paid" data-id="${esc(r.id)}">Шилжүүлсэн гэж тэмдэглэх</button>`;
-  if (canWrite && s === 'pending' && (r.createdBy === me || isOwner)) acts += `<button class="btn" data-act="cancel" data-id="${esc(r.id)}">Цуцлах</button>`;
+  if (s === 'approved' || s === 'paid') acts += `<button class="btn" data-act="print" data-id="${esc(r.id)}">🖨 Зарлагын баримт</button>`;
+  if (canWrite && (s === 'pending' || s === 'hold') && r.createdBy === me) acts += `<button class="btn" data-act="cancel" data-id="${esc(r.id)}">Цуцлах</button>`;
   const bankChips = (matches||[]).map(({t,m}) => `<span class="chip ${m.cls}">Банк: ${esc(m.label)} · ${esc(String(t.dt).slice(0,10))}</span>`).join('');
   return `<div class="req" data-req="${esc(r.id)}">
     <div><div class="who">${esc(r.payee)}</div>
@@ -1052,12 +1081,25 @@ function reqCard(r, matches){
       <div style="margin-top:4px">${esc(r.note||'')}</div>
       <div class="note">${esc(r.category||'')} · ${esc(nameOf(r.createdBy))} · ${esc(String(r.createdAt||'').replace('T',' ').slice(0,16))}</div>
       ${a && a.comment ? `<div class="note">Эзэмшигчийн тайлбар: ${esc(a.comment)}</div>` : ''}
+      ${s === 'hold' ? `<div class="note" style="color:#5b3b8c">⏸ Хүлээлгэсэн ${esc(fmtDT(r.holdAt))}${r.holdNote ? ' · ' + esc(r.holdNote) : ''}${r.remindAt ? ' · ⏰ сануулга ' + esc(fmtDT(r.remindAt)) : ''}</div>` : ''}
+      ${r.resendCount ? `<div class="note">↻ Дахин илгээсэн ${r.resendCount} удаа${r.resentAt ? ' · сүүлд ' + esc(String(r.resentAt).replace('T',' ').slice(0,16)) : ''}</div>` : ''}
       ${r.attachId ? `<a href="#" data-file="${esc(r.attachId)}">${/pdf/.test(r.attachType||'') ? 'Баримт (PDF) нээх' : `<img class="thumb" data-file-img="${esc(r.attachId)}" alt="Баримт">`}</a>` : ''}
     </div>
     <div style="text-align:right"><div class="amt">${fmt(r.amount)} ₮</div><div class="chips" style="justify-content:flex-end;margin-top:6px"><span class="chip ${chip[1]}">${chip[0]}</span>${changedSinceApproval(r) ? '<span class="chip c-bad">Зөвшөөрснөөс хойш өөрчлөгдсөн</span>' : ''}${bankChips}</div></div>
     ${acts ? `<div class="acts">${acts}</div>` : ''}
   </div>`;
 }
+const fmtDT = v => { const d = new Date(v); if (isNaN(d)) return String(v||''); const p = x => String(x).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+function remindTime(opt, custom){                  // reminder moment as UTC ISO (null = no reminder)
+  const d = new Date();
+  if (opt === '2h') return new Date(d.getTime() + 2*3600e3).toISOString();
+  if (opt === 'eve'){ const t = new Date(d); t.setHours(18,0,0,0); if (t <= d) t.setTime(d.getTime() + 3600e3); return t.toISOString(); }
+  if (opt === 'tom'){ const t = new Date(d); t.setDate(t.getDate()+1); t.setHours(9,0,0,0); return t.toISOString(); }
+  if (opt === '2d'){ const t = new Date(d); t.setDate(t.getDate()+2); t.setHours(9,0,0,0); return t.toISOString(); }
+  if (opt === 'custom' && custom){ const t = new Date(custom); return isNaN(t) ? null : t.toISOString(); }
+  return null;
+}
+document.addEventListener('change', e => { const sel = e.target.closest('.rm-sel'); if (!sel) return; const c = document.getElementById('rmc-' + sel.id.slice(3)); if (c) c.hidden = sel.value !== 'custom'; });
 function rowId(g){ return (STORE_CODE[g.store] || 'X') + '_' + (g.first || 'x'); }
 const CH_LABEL = {cash:'Бэлэн мөнгө', pos:'Карт (POS)', qpay:'QPay / шилжүүлэг', credit:'Зээл (StorePay, Pocket)'};
 const CH_SHORT = {cash:'Бэлэн', pos:'Карт', qpay:'QPay/шилж.'};
@@ -1133,6 +1175,14 @@ document.addEventListener('click', async e => {
     if (act === 'approve' || act === 'reject'){
       const cm = ($('#cm-'+CSS.escape(id)) || {}).value || '';
       await db.doc('approvals/'+id).set({decision: act === 'approve' ? 'approved' : 'rejected', amount: +r.amount, payeeAcc: r.payeeAcc, comment: cm, at: new Date().toISOString(), by: me, to: r.createdBy || null, payee: r.payee || '', notified: false});
+    } else if (act === 'print'){
+      printVoucher(r);
+    } else if (act === 'hold'){
+      const cm = ($('#cm-'+CSS.escape(id)) || {}).value || '';
+      const when = remindTime(($('#rm-'+CSS.escape(id)) || {}).value || '', ($('#rmc-'+CSS.escape(id)) || {}).value || '');
+      await db.doc('requests/'+id).update({holdAt: new Date().toISOString(), holdBy: me, holdNote: cm, holdNotified: false, remindAt: when});
+    } else if (act === 'resend'){
+      await db.doc('requests/'+id).update({holdAt: null, remindAt: null, autoResent: false, resentAt: new Date().toISOString(), resendCount: (r.resendCount || 0) + 1, ownerNotified: false});
     } else if (act === 'paid'){
       await db.doc('requests/'+id).update({paidAt: new Date().toISOString(), paidBy: me});
     } else if (act === 'cancel'){
@@ -1278,6 +1328,57 @@ $('#rev-xlsx').addEventListener('click', () => {
     finally{ btn.disabled = false; btn.textContent = '📥 Excel тайлан татах'; }
   });
 });
+
+// ---------- printable expense voucher (НХМаягт МХ-2 style) ----------
+const MN_ATTR = ['', 'нэг', 'хоёр', 'гурван', 'дөрвөн', 'таван', 'зургаан', 'долоон', 'найман', 'есөн'];
+const MN_TENS = ['', 'арван', 'хорин', 'гучин', 'дөчин', 'тавин', 'жаран', 'далан', 'наян', 'ерэн'];
+function mnWords(n){                               // amount in Mongolian words (attributive, followed by "төгрөг")
+  n = Math.floor(Math.abs(+n || 0)); if (!n) return 'тэг';
+  const tri = x => { const h = Math.floor(x/100), t = Math.floor(x%100/10), o = x%10; return [h ? MN_ATTR[h] + ' зуун' : '', t ? MN_TENS[t] : '', o ? MN_ATTR[o] : ''].filter(Boolean).join(' '); };
+  const parts = [], units = ['', 'мянган', 'сая', 'тэрбум'];
+  for (let i = 0; n > 0 && i < units.length; i++){ const c = n % 1000; if (c) parts.unshift(tri(c) + (units[i] ? ' ' + units[i] : '')); n = Math.floor(n/1000); }
+  const w = parts.join(' '); return w.charAt(0).toUpperCase() + w.slice(1);
+}
+async function printVoucher(r){
+  const a0 = S.approvals[r.id] || {}; try{ await resolveNames([a0.by, r.createdBy]); }catch(e){}
+  const realName = id => (id && S.names[id]) || '';
+  const a = a0, mt = matchBank(), tx = S.banktx.find(t => mt[t.id] && mt[t.id].req === r.id);
+  const amt = +r.amount || 0, kop = Math.round((amt - Math.floor(amt)) * 100);
+  const no = (localDay(a.at || r.createdAt) || '').replace(/-/g,'') + '-' + String(r.id).slice(-4).toUpperCase();
+  const d = new Date(tx ? String(tx.dt) : (r.paidAt || a.at || r.createdAt)); const y = d.getFullYear(), mo = d.getMonth()+1, dd = d.getDate();
+  const line = (l, v) => `<tr><th>${l}</th><td>${esc(v || '')}</td></tr>`;
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Зарлагын баримт ${esc(no)}</title><style>
+    @page{size:A5 landscape;margin:12mm} body{font:12.5px/1.45 Arial,Helvetica,sans-serif;color:#000;margin:0}
+    .code{text-align:right;font-size:11px} h1{text-align:center;font-size:18px;letter-spacing:1px;margin:2px 0 2px} .no{text-align:center;margin-bottom:8px}
+    table{width:100%;border-collapse:collapse} th{width:34%;text-align:left;font-weight:normal;padding:4px 6px;border-bottom:1px dotted #777;vertical-align:top} td{padding:4px 6px;border-bottom:1px dotted #777;font-weight:bold}
+    .sum td{font-size:15px} .words td{font-weight:normal;font-style:italic} .sig{display:grid;grid-template-columns:1fr 1fr;gap:16px 40px;margin-top:22px} .sig div{padding-top:3px;font-size:11.5px}
+    .meta{margin-top:10px;font-size:10.5px;color:#333}</style></head><body>
+    <div class="code">НХМаягт МХ-2</div>
+    <h1>ЗАРЛАГЫН БАРИМТ</h1>
+    <div class="no">№ ${esc(no)} &nbsp;&nbsp; ${y} он ${mo} сар ${dd} өдөр</div>
+    <table>
+      ${line('Байгууллагын нэр', 'Вивекавикториа ХХК')}
+      ${line('Мөнгө хүлээн авагч', r.payee)}
+      ${line('Хүлээн авагчийн данс', (r.payeeAcc || '') + (r.payeeBank ? ' · ' + r.payeeBank : ''))}
+      ${line('Шилжүүлсэн данс', ACC_LABEL[r.fromAcc] || r.fromAcc)}
+      ${line('Гүйлгээний утга', [r.category, r.note].filter(Boolean).join(' · '))}
+      <tr class="sum"><th>Олгосон мөнгөний дүн</th><td>${fmt(amt)} төгрөг ${String(kop).padStart(2,'0')} мөнгө</td></tr>
+      <tr class="words"><th>/үсгээр/</th><td>${esc(mnWords(amt))} төгрөг</td></tr>
+      ${line('Хавсаргасан баримт', r.attachId ? 'Нэхэмжлэх / баримт 1 хуудас' : '')}
+      ${tx ? line('Банкны гүйлгээ', String(tx.dt).replace('T',' ').slice(0,16) + ' · ' + (tx.desc || '')) : ''}
+    </table>
+    <div class="sig">
+      <div>Захирал: <b>✓ Зөвшөөрсөн (цахимаар)</b> ${esc(fmtDT(a.at))}</div>
+      <div>Нягтлан бодогч: ............................ /${esc(realName(r.createdBy))}/</div>
+      <div>Хүлээлгэн өгсөн: ............................ /&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/</div>
+      <div>Хүлээн авсан: ............................ /&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/</div>
+    </div>
+    <div class="meta">Хүсэлт: ${esc(fmtDT(r.createdAt))} · Зөвшөөрсөн: ${esc(fmtDT(a.at))}${r.paidAt ? ' · Шилжүүлсэн: ' + esc(fmtDT(r.paidAt)) : ''} · VIVI Санхүүгийн хяналт</div>
+  </body></html>`;
+  const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
+  f.contentDocument.open(); f.contentDocument.write(html); f.contentDocument.close();
+  setTimeout(() => { try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){ console.warn(e); } setTimeout(() => f.remove(), 60000); }, 300);
+}
 
 // ---------- settings (owner) ----------
 let ACCESS = {emails: [], perms: {}};
