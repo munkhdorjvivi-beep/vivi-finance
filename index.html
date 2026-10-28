@@ -480,6 +480,23 @@ const VIVI = (() => {
       }
       return {type:'bank', bank:'TDB', acc, label:`TDB ${acc}`, rows: out};
     }
+    // TDB, newer export: no header row; row 1 = "Дансны дугаар: 4002594661 MNT", "Хамрах хугацаа: …";
+    // rows = date | teller | credit | debit (negative) | rate | "counter-account name" | balance | description
+    h = findRow(rows, r => r.some(v => /^Дансны дугаар:/.test(v)) && r.some(v => /Депозит дансны хуулга|Хамрах хугацаа/.test(v)), 5);
+    if (h >= 0){
+      const meta = rows[h].map(str), accCell = meta.find(v => /^Дансны дугаар:/.test(v)) || '';
+      const mm = accCell.match(/(\d{8,12})\s*([A-Z]{3})?/), cur = (mm && mm[2]) || 'MNT';
+      const old = name.match(/(4050\d{5})/);                      // keep the old 9-digit number used everywhere else
+      const acc = old ? old[1] : (mm ? mm[1] : '');
+      const out = [];
+      for (const r of rows.slice(h+1)){
+        const dt = toDT(r[0]); if (!dt) continue;
+        const k = cur === 'MNT' ? 1 : (num(r[4]) || 1);
+        const cp = str(r[5]).split(/\s+/)[0] || '';
+        out.push({acc, dt, cr: Math.abs(num(r[2])) * k, dr: Math.abs(num(r[3])) * k, desc: str(r[7]), cp, cpName: str(r[5]).slice(cp.length).trim(), cur});
+      }
+      return {type:'bank', bank:'TDB', acc, label:`TDB ${acc}${cur !== 'MNT' ? ' ('+cur+')' : ''}`, rows: out};
+    }
     // Arig: "№ | Огноо | Гүйлгээний утга | Орлого | Зарлага | Үлдэгдэл", account in the "Данс" row
     h = findRow(rows, r => r.includes('№') && r.includes('Гүйлгээний утга') && r.includes('Орлого') && r.includes('Зарлага'));
     if (h >= 0){
