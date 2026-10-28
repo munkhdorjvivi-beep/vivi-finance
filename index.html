@@ -95,6 +95,7 @@ tr.sev-bad td:first-child{box-shadow:inset 3px 0 0 var(--bad)} tr.sev-warn td:fi
 body{margin:0;background:var(--bg)}
 #gate{max-width:420px;margin:12vh auto 0;text-align:center}
 #gate .btn{margin-top:14px}
+.acc-row{padding:10px 0;border-bottom:1px solid var(--line)} .acc-perms{gap:14px;margin-top:6px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -251,7 +252,7 @@ body{margin:0;background:var(--bg)}
   <section class="panel" data-panel="set" hidden>
     <div class="card">
       <h2>Нягтлангийн эрх</h2>
-      <p class="note" style="margin:0 0 10px">Энд бүртгэсэн Google имэйлээр нэвтэрсэн хүн хүсэлт илгээх, тайлбар бичих, үлдэгдэл оруулах боломжтой. Зөвшөөрөх, бэлэн мөнгөний хяналт хадгалах эрх зөвхөн эзэмшигчид.</p>
+      <p class="note" style="margin:0 0 10px">Энд бүртгэсэн Google имэйлээр нэвтэрсэн хүн зөвхөн чагталсан хэсгүүдээ харна. Зөвшөөрөх, бэлэн мөнгөний хяналт хадгалах, тохиргоо эрх зөвхөн эзэмшигчид.</p>
       <div id="acc-list" class="files"></div>
       <form id="acc-form" class="row" style="margin-top:10px"><input id="acc-email" type="email" placeholder="нягтлан@gmail.com" style="max-width:320px"><button class="btn primary">Нэмэх</button><span class="note" id="acc-msg"></span></form>
     </div>
@@ -1279,16 +1280,26 @@ $('#rev-xlsx').addEventListener('click', () => {
 });
 
 // ---------- settings (owner) ----------
-let ACCESS = {emails: []};
+let ACCESS = {emails: [], perms: {}};
+const SECTIONS = [['req','Төлбөрийн хүсэлт'],['bank','Банкны гүйлгээ'],['rev','Орлого тулгалт'],['cash','Бэлэн мөнгө'],['bal','Дансны үлдэгдэл']];
+const DEFAULT_PERMS = {req:true, bank:true, rev:false, cash:true, bal:true};
+const permsOf = e => ({...DEFAULT_PERMS, ...((ACCESS.perms || {})[e] || {})});
 function renderAccess(){
-  $('#acc-list').innerHTML = ACCESS.emails.length ? ACCESS.emails.map(e => `<div class="row" style="justify-content:space-between"><span>${esc(e)}</span><button class="btn bad" data-rm="${esc(e)}">Хасах</button></div>`).join('') : '<div class="note">Нягтлан бүртгээгүй байна.</div>';
+  $('#acc-list').innerHTML = ACCESS.emails.length ? ACCESS.emails.map(e => { const p = permsOf(e);
+    return `<div class="acc-row"><div class="row" style="justify-content:space-between"><b>${esc(e)}</b><button class="btn bad" data-rm="${esc(e)}">Хасах</button></div>
+      <div class="row acc-perms">${SECTIONS.map(([k,l]) => `<label class="row" style="gap:6px;width:auto"><input type="checkbox" style="width:auto" data-perm="${k}" data-email="${esc(e)}" ${p[k] ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div></div>`; }).join('')
+    : '<div class="note">Нягтлан бүртгээгүй байна.</div>';
 }
 $('#acc-form').addEventListener('submit', async e => {
   e.preventDefault(); const em = $('#acc-email').value.trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { $('#acc-msg').textContent = 'Имэйл буруу байна.'; return; }
-  try{ await db.doc('config/access').set({emails: [...new Set([...ACCESS.emails, em])]}, {merge:true}); $('#acc-email').value = ''; $('#acc-msg').textContent = 'Нэмлээ.'; }catch(err){ $('#acc-msg').textContent = 'Хадгалж чадсангүй.'; }
+  try{ await db.doc('config/access').set({emails: [...new Set([...ACCESS.emails, em])], perms: {...(ACCESS.perms || {}), [em]: permsOf(em)}}); $('#acc-email').value = ''; $('#acc-msg').textContent = 'Нэмлээ. Доор юу харахыг нь сонгоно уу.'; }catch(err){ $('#acc-msg').textContent = 'Хадгалж чадсангүй.'; }
 });
 $('#acc-list').addEventListener('click', async e => { const b = e.target.closest('button[data-rm]'); if (!b) return;
-  try{ await db.doc('config/access').set({emails: ACCESS.emails.filter(x => x !== b.dataset.rm)}, {merge:true}); }catch(err){ $('#acc-msg').textContent = 'Хадгалж чадсангүй.'; } });
+  const perms = {...(ACCESS.perms || {})}; delete perms[b.dataset.rm];
+  try{ await db.doc('config/access').set({emails: ACCESS.emails.filter(x => x !== b.dataset.rm), perms}); }catch(err){ $('#acc-msg').textContent = 'Хадгалж чадсангүй.'; } });
+$('#acc-list').addEventListener('change', async e => { const c = e.target.closest('input[data-perm]'); if (!c) return;
+  const em = c.dataset.email, perms = {...(ACCESS.perms || {})}; perms[em] = {...permsOf(em), [c.dataset.perm]: c.checked};
+  try{ await db.doc('config/access').set({emails: ACCESS.emails, perms}); $('#acc-msg').textContent = 'Хадгаллаа.'; }catch(err){ $('#acc-msg').textContent = 'Хадгалж чадсангүй.'; c.checked = !c.checked; } });
 $('#imp-file').addEventListener('change', async e => {
   const f = e.target.files[0]; if (!f) return; $('#imp-msg').textContent = 'Импортолж байна…';
   try{
@@ -1323,22 +1334,30 @@ else VIVIFB.start(async () => {
   $('#req-form-card').hidden = !canWrite;
   $('#tab-set').hidden = !isOwner;
   const onErr = e => console.warn('db', e);
-  db.collection('requests').onSnapshot(s => { S.requests = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.requests.map(r => r.createdBy)); render(); }, onErr);
-  db.collection('approvals').onSnapshot(s => { S.approvals = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
+  let ALLOW = {req:true, bank:true, rev:true, cash:true, bal:true};
+  if (!isOwner){
+    try{ const a = await db.doc('config/access').get(); const x = a.exists ? a.data() : {}; ALLOW = {...DEFAULT_PERMS, ...((x.perms || {})[String(user.email()).toLowerCase()] || {})}; }catch(e){ console.warn(e); }
+  }
+  const TABS = {req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
+  for (const k in TABS){ const b = document.querySelector(`nav.tabs button[data-tab="${TABS[k]}"]`); if (b) b.hidden = !ALLOW[k]; if (KPI[k]) $(KPI[k]).closest('.kpi').hidden = !ALLOW[k]; }
+  { const cur = document.querySelector('nav.tabs button[aria-selected="true"]'); if (!cur || cur.hidden){ const first = [...document.querySelectorAll('nav.tabs button')].find(b => !b.hidden); if (first) showTab(first.dataset.tab); } }
+  if (!Object.values(ALLOW).some(Boolean)) gate('Танд харах хэсэг сонгогдоогүй байна. Эзэмшигчид хандана уу.', true);
+  if (ALLOW.req) db.collection('requests').onSnapshot(s => { S.requests = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.requests.map(r => r.createdBy)); render(); }, onErr);
+  if (ALLOW.req) db.collection('approvals').onSnapshot(s => { S.approvals = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
   const since = new Date(Date.now() - 45*86400e3).toISOString().slice(0,10);  // last 45 days keeps reads inside the free plan
   let bankRecent = [], bankOld = {};
   const mergeBank = () => { const seen = new Set(bankRecent.map(t => t.id)); S.banktx = bankRecent.concat(...Object.values(bankOld).map(a => a.filter(t => !seen.has(t.id)))); render(); };
-  db.collection('banktx').where('dt', '>=', since).onSnapshot(s => { bankRecent = s.docs.map(d => ({id:d.id, ...d.data()})); mergeBank(); }, onErr);
+  if (ALLOW.bank) db.collection('banktx').where('dt', '>=', since).onSnapshot(s => { bankRecent = s.docs.map(d => ({id:d.id, ...d.data()})); mergeBank(); }, onErr);
   loadBankDay = d => {                     // a day older than the live window: load it on demand
-    if (!d || d >= since || bankOld[d]) return;
+    if (!ALLOW.bank || !d || d >= since || bankOld[d]) return;
     bankOld[d] = [];
     db.collection('banktx').where('dt', '>=', d).where('dt', '<', shiftDay(d, 1)).onSnapshot(s => { bankOld[d] = s.docs.map(x => ({id:x.id, ...x.data(), _old:true})); mergeBank(); }, onErr);
   };
   $('#sync-row').hidden = false; $('#sync-btn').hidden = true; syncMsg('Имэйл автоматаар шалгагдана.');
-  db.doc('meta/sync').onSnapshot(d => { if (!d.exists) return; const m = d.data(); if (m.lastRun) syncMsg(`Имэйл автоматаар шалгасан ${hhmm(m.lastRun)}${m.lastAdded ? ' · сүүлийн шинэ гүйлгээ ' + hhmm(m.lastAdded) : ''}`); }, onErr);
-  db.doc('cash/latest').onSnapshot(d => { S.cash = d.exists ? d.data() : null; render(); }, onErr);
-  db.collection('cashnotes').onSnapshot(s => { S.notes = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); resolveNames(Object.values(S.notes).map(n => n.by)); render(); }, onErr);
-  db.collection('balances').onSnapshot(s => { S.balances = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.balances.map(b => b.by)); render(); }, onErr);
+  if (ALLOW.bank) db.doc('meta/sync').onSnapshot(d => { if (!d.exists) return; const m = d.data(); if (m.lastRun) syncMsg(`Имэйл автоматаар шалгасан ${hhmm(m.lastRun)}${m.lastAdded ? ' · сүүлийн шинэ гүйлгээ ' + hhmm(m.lastAdded) : ''}`); }, onErr);
+  if (ALLOW.cash || ALLOW.rev) db.doc('cash/latest').onSnapshot(d => { S.cash = d.exists ? d.data() : null; render(); }, onErr);
+  if (ALLOW.cash) db.collection('cashnotes').onSnapshot(s => { S.notes = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); resolveNames(Object.values(S.notes).map(n => n.by)); render(); }, onErr);
+  if (ALLOW.bal) db.collection('balances').onSnapshot(s => { S.balances = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.balances.map(b => b.by)); render(); }, onErr);
   // push button
   const pushLabel = st => ({on:'🔔 Мэдэгдэл асаалттай', denied:'🔕 Мэдэгдэл хаалттай', unsupported:'🔔 Мэдэгдэл', off:'🔔 Мэдэгдэл асаах'})[st] || '🔔 Мэдэгдэл асаах';
   const setPush = st => { $('#push-btn').textContent = pushLabel(st); $('#push-btn').dataset.state = st; };
@@ -1368,7 +1387,7 @@ else VIVIFB.start(async () => {
     db.doc('config/notify').onSnapshot(d => { $('#nt-unapproved').checked = !!(d.exists && d.data().unapproved); }, onErr);
     $('#nt-unapproved').addEventListener('change', e => db.doc('config/notify').set({unapproved: e.target.checked}, {merge:true}).catch(onErr));
   }
-  if (isOwner) db.doc('config/access').onSnapshot(d => { ACCESS = {emails: (d.exists && d.data().emails) || []}; renderAccess(); }, onErr);
+  if (isOwner) db.doc('config/access').onSnapshot(d => { const x = d.exists ? d.data() : {}; ACCESS = {emails: x.emails || [], perms: x.perms || {}}; renderAccess(); }, onErr);
 }, () => { if (booted){ location.reload(); return; } gate('Google бүртгэлээрээ нэвтэрнэ үү.'); },
    (email) => gate(`<b>${esc(email)}</b> бүртгэлд эрх олгогдоогүй байна. Эзэмшигчээс энэ имэйлийг «Тохиргоо» хэсэгт нэмүүлнэ үү.`, true));
 })();
