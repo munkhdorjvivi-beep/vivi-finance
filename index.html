@@ -1369,7 +1369,7 @@ async function printVoucher(r){
     </table>
     <div class="sig">
       <div>Захирал: <b>✓ Зөвшөөрсөн (цахимаар)</b> ${esc(fmtDT(a.at))}</div>
-      <div>Нягтлан бодогч: ............................ /${esc(realName(r.createdBy))}/</div>
+      <div>Нягтлан бодогч: ............................ /&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/</div>
       <div>Хүлээлгэн өгсөн: ............................ /&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/</div>
       <div>Хүлээн авсан: ............................ /&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/</div>
     </div>
@@ -1408,9 +1408,9 @@ function companyVoucher(r, a, tx, no, realName){
     ${f('Банкны нэр:', r.payeeBank)}
     ${f('Утасны дугаар:', '')}
     <div class="gap"></div>
-    <div class="sigl"><span>Хариуцсан ажилтан:</span><span class="v"></span><span class="n">/ ${esc(realName(r.createdBy))} /</span></div>
+    <div class="sigl"><span>Хариуцсан ажилтан:</span><span class="v"></span><span class="n">/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</span></div>
     ${f('Тэмдэглэл:', 'Шилжүүлэх данс: ' + (ACC_LABEL[r.fromAcc] || r.fromAcc || '') + (tx ? ' · гүйлгээ ' + String(tx.dt).replace('T',' ').slice(0,16) : '') + (r.attachId ? ' · нэхэмжлэх хавсаргасан' : ''))}
-    <div class="sigl"><span>Өргөдөл гаргасан:</span><span class="v"></span><span class="n">/ ${esc(realName(r.createdBy))} /</span></div>
+    <div class="sigl"><span>Өргөдөл гаргасан:</span><span class="v"></span><span class="n">/ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; /</span></div>
     <div class="appr">ОЛГОХ ЗӨВШӨӨРӨЛ</div>
     <div class="appr2"><span>Гүйцэтгэх захирал:</span><b>✓ Зөвшөөрсөн (цахимаар) ${esc(fmtDT(a.at))}</b></div>
     <div class="meta">Хүсэлт: ${esc(fmtDT(r.createdAt))}${r.paidAt ? ' · Шилжүүлсэн: ' + esc(fmtDT(r.paidAt)) : ''} · VIVI Санхүүгийн хяналт</div>
