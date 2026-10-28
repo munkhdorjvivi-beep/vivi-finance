@@ -111,7 +111,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="sign-out" title="Гарах">Гарах</button></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -243,6 +243,12 @@ body{margin:0;background:var(--bg)}
       <form id="acc-form" class="row" style="margin-top:10px"><input id="acc-email" type="email" placeholder="нягтлан@gmail.com" style="max-width:320px"><button class="btn primary">Нэмэх</button><span class="note" id="acc-msg"></span></form>
     </div>
     <div class="card">
+      <h2>Мэдэгдэл</h2>
+      <p class="note" style="margin:0 0 10px">Шинэ хүсэлт ирэхэд эзэмшигчид, шийдвэр гарахад нягтланд утсан дээр мэдэгдэл очно (дээд талын «🔔» товчоор утас бүр дээр асаана).</p>
+      <label class="row" style="gap:8px"><input type="checkbox" id="nt-unapproved" style="width:auto"> Зөвшөөрөлгүй гүйлгээ (хүсэлтгүй шилжүүлэг) гарахад надад мэдэгдэх</label>
+      <p class="note" style="margin:6px 0 0">Цалингийн данс (5224167073) болон өөрсдийн данс хоорондын шилжүүлгийг тооцохгүй.</p>
+    </div>
+    <div class="card">
       <h2>Өгөгдөл импортлох</h2>
       <p class="note" style="margin:0 0 10px">Өмнөх аппаас экспортолсон <b>vivi-import.json</b> файлыг нэг удаа оруулна.</p>
       <div class="row"><input id="imp-file" type="file" accept=".json" style="max-width:320px"><span class="note" id="imp-msg"></span></div>
@@ -270,12 +276,13 @@ body{margin:0;background:var(--bg)}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
 // ===== Firebase adapter: gives the app the same db / user / assets interface it had on claude.ai =====
 window.VIVIFB = (() => {
-  const cfg = window.VIVI_FIREBASE_CONFIG;
-  const OWNER = String(window.VIVI_OWNER_EMAIL || '').toLowerCase();
+  const cfg = self.VIVI_FIREBASE_CONFIG;
+  const OWNER = String(self.VIVI_OWNER_EMAIL || '').toLowerCase();
   if (!cfg || !cfg.apiKey || /PASTE/.test(cfg.apiKey)) return { error: 'config' };
   firebase.initializeApp(cfg);
   const auth = firebase.auth();
@@ -346,12 +353,39 @@ window.VIVIFB = (() => {
       } catch (e) { onNoAccess(u.email); }
     });
   }
+  // ---------- push notifications (Firebase Cloud Messaging) ----------
+  const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && !!firebase.messaging;
+  let swReg = null;
+  async function pushToken(ask){
+    if (!pushSupported()) return { state: 'unsupported' };
+    if (Notification.permission === 'denied') return { state: 'denied' };
+    if (Notification.permission !== 'granted'){
+      if (!ask) return { state: 'off' };
+      const p = await Notification.requestPermission();
+      if (p !== 'granted') return { state: p === 'denied' ? 'denied' : 'off' };
+    }
+    swReg = swReg || await navigator.serviceWorker.register('firebase-messaging-sw.js');
+    const token = await firebase.messaging().getToken({ vapidKey: self.VIVI_VAPID_KEY, serviceWorkerRegistration: swReg });
+    if (!token) return { state: 'off' };
+    await db.collection('pushTokens').doc(token).set({ uid: current.uid, email: String(current.email || '').toLowerCase(), at: new Date().toISOString(), ua: navigator.userAgent.slice(0, 160) });
+    if (!pushToken.listening){
+      pushToken.listening = true;
+      firebase.messaging().onMessage(p => {           // app is open: show it anyway
+        const n = p.notification || {}, link = (p.data && p.data.link) || (p.fcmOptions && p.fcmOptions.link) || '';
+        swReg.showNotification(n.title || 'VIVI', { body: n.body || '', icon: 'icon-192.png', data: { link } });
+      });
+    }
+    return { state: 'on' };
+  }
+  const isStandalone = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent);
+
   const signIn = () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => {
     if (e && /popup/.test(e.code || '')) return auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
     throw e;
   });
   const signOut = () => auth.signOut();
-  return { db, user, assets, fileURL, start, signIn, signOut, OWNER };
+  return { db, user, assets, fileURL, start, signIn, signOut, OWNER, pushToken, pushSupported, isStandalone, isIOS };
 })();
 
 </script>
@@ -761,7 +795,7 @@ function reqCard(r, matches){
   if (canWrite && s === 'approved') acts += `<button class="btn primary" data-act="paid" data-id="${esc(r.id)}">Шилжүүлсэн гэж тэмдэглэх</button>`;
   if (canWrite && s === 'pending' && (r.createdBy === me || isOwner)) acts += `<button class="btn" data-act="cancel" data-id="${esc(r.id)}">Цуцлах</button>`;
   const bankChips = (matches||[]).map(({t,m}) => `<span class="chip ${m.cls}">Банк: ${esc(m.label)} · ${esc(String(t.dt).slice(0,10))}</span>`).join('');
-  return `<div class="req">
+  return `<div class="req" data-req="${esc(r.id)}">
     <div><div class="who">${esc(r.payee)}</div>
       <div class="meta">${esc(r.payeeAcc)} · ${esc(r.payeeBank||'')}</div>
       <div class="meta">Данснаас: ${esc(ACC_LABEL[r.fromAcc] || r.fromAcc || '')}</div>
@@ -846,7 +880,7 @@ document.addEventListener('click', async e => {
     const r = S.requests.find(x => x.id === id);
     if (act === 'approve' || act === 'reject'){
       const cm = ($('#cm-'+CSS.escape(id)) || {}).value || '';
-      await db.doc('approvals/'+id).set({decision: act === 'approve' ? 'approved' : 'rejected', amount: +r.amount, payeeAcc: r.payeeAcc, comment: cm, at: new Date().toISOString(), by: me});
+      await db.doc('approvals/'+id).set({decision: act === 'approve' ? 'approved' : 'rejected', amount: +r.amount, payeeAcc: r.payeeAcc, comment: cm, at: new Date().toISOString(), by: me, to: r.createdBy || null, payee: r.payee || '', notified: false});
     } else if (act === 'paid'){
       await db.doc('requests/'+id).update({paidAt: new Date().toISOString(), paidBy: me});
     } else if (act === 'cancel'){
@@ -868,7 +902,7 @@ $('#req-form').addEventListener('submit', async e => {
   try{
     let attachId = null, attachType = null; const f = $('#rq-file').files[0];
     if (f){ if (!assets){ $('#rq-msg').textContent = 'Баримт оруулах эрх алга, хүсэлтийг баримтгүй илгээлээ.'; } else { const up = await assets.upload(f); attachId = up.id; attachType = up.contentType; } }
-    await db.collection('requests').add({payee, payeeAcc: acc, payeeBank: $('#rq-bank').value, amount, fromAcc: $('#rq-from').value, category: $('#rq-cat').value, note: $('#rq-note').value.trim(), attachId, attachType, createdBy: me, createdAt: new Date().toISOString()});
+    await db.collection('requests').add({payee, payeeAcc: acc, payeeBank: $('#rq-bank').value, amount, fromAcc: $('#rq-from').value, category: $('#rq-cat').value, note: $('#rq-note').value.trim(), attachId, attachType, createdBy: me, createdAt: new Date().toISOString(), ownerNotified: false});
     e.target.reset(); $('#rq-msg').textContent = 'Хүсэлт илгээгдлээ.';
   }catch(err){ alertMsg(err); } finally { $('#rq-submit').disabled = false; }
 });
@@ -1023,6 +1057,35 @@ else VIVIFB.start(async () => {
   db.doc('cash/latest').onSnapshot(d => { S.cash = d.exists ? d.data() : null; render(); }, onErr);
   db.collection('cashnotes').onSnapshot(s => { S.notes = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); resolveNames(Object.values(S.notes).map(n => n.by)); render(); }, onErr);
   db.collection('balances').onSnapshot(s => { S.balances = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.balances.map(b => b.by)); render(); }, onErr);
+  // push button
+  const pushLabel = st => ({on:'🔔 Мэдэгдэл асаалттай', denied:'🔕 Мэдэгдэл хаалттай', unsupported:'🔔 Мэдэгдэл', off:'🔔 Мэдэгдэл асаах'})[st] || '🔔 Мэдэгдэл асаах';
+  const setPush = st => { $('#push-btn').textContent = pushLabel(st); $('#push-btn').dataset.state = st; };
+  VIVIFB.pushToken(false).then(r => setPush(r.state)).catch(() => setPush('off'));
+  $('#push-btn').addEventListener('click', async () => {
+    if (!VIVIFB.pushSupported()){
+      alert(VIVIFB.isIOS() && !VIVIFB.isStandalone()
+        ? 'iPhone дээр: Safari-д энэ хуудсыг нээгээд «Хуваалцах» (□↑) → «Add to Home Screen / Нүүр дэлгэцэнд нэмэх». Дараа нь нүүр дэлгэцийн дүрснээс нээж энэ товчийг дахин дарна уу.'
+        : 'Энэ хөтөч мэдэгдэл дэмжихгүй байна. Chrome эсвэл Safari ашиглана уу.'); return; }
+    if ($('#push-btn').dataset.state === 'denied'){ alert('Мэдэгдлийг хөтчийн тохиргоонд хаасан байна. Хаягийн мөрний 🔒 дүрс → Notifications → Allow болгоно уу.'); return; }
+    $('#push-btn').disabled = true;
+    try{ const r = await VIVIFB.pushToken(true); setPush(r.state); if (r.state === 'on') alert('Мэдэгдэл асаалттай. Энэ төхөөрөмж дээр мэдэгдэл ирнэ.'); }
+    catch(err){ console.warn(err); alert('Мэдэгдэл асааж чадсангүй: ' + (err.code || err.message || '')); }
+    finally{ $('#push-btn').disabled = false; }
+  });
+  // deep link from a notification: ?req=ID or ?tab=bank
+  const qp = new URLSearchParams(location.search);
+  if (qp.get('tab')) showTab(qp.get('tab'));
+  if (qp.get('req')){
+    showTab('req'); reqFilter = 'all'; $$('#req-filter button').forEach(x => x.setAttribute('aria-pressed', x.dataset.f === 'all'));
+    const want = qp.get('req'); let tries = 0;
+    const seek = () => { const el = document.querySelector(`[data-req="${CSS.escape(want)}"]`); if (el){ el.scrollIntoView({block:'center'}); el.style.outline = '2px solid var(--accent)'; setTimeout(() => el.style.outline = '', 4000); } else if (++tries < 20) setTimeout(seek, 300); };
+    setTimeout(seek, 300);
+  }
+  if (qp.toString()) history.replaceState(null, '', location.pathname);
+  if (isOwner){
+    db.doc('config/notify').onSnapshot(d => { $('#nt-unapproved').checked = !!(d.exists && d.data().unapproved); }, onErr);
+    $('#nt-unapproved').addEventListener('change', e => db.doc('config/notify').set({unapproved: e.target.checked}, {merge:true}).catch(onErr));
+  }
   if (isOwner) db.doc('config/access').onSnapshot(d => { ACCESS = {emails: (d.exists && d.data().emails) || []}; renderAccess(); }, onErr);
 }, () => { if (booted){ location.reload(); return; } gate('Google бүртгэлээрээ нэвтэрнэ үү.'); },
    (email) => gate(`<b>${esc(email)}</b> бүртгэлд эрх олгогдоогүй байна. Эзэмшигчээс энэ имэйлийг «Тохиргоо» хэсэгт нэмүүлнэ үү.`, true));
