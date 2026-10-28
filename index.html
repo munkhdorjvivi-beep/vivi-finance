@@ -1357,7 +1357,7 @@ async function printVoucher(r){
     <h1>ЗАРЛАГЫН БАРИМТ</h1>
     <div class="no">№ ${esc(no)} &nbsp;&nbsp; ${y} он ${mo} сар ${dd} өдөр</div>
     <table>
-      ${line('Байгууллагын нэр', 'Вивекавикториа ХХК')}
+      ${line('Байгууллагын нэр', 'Д.Энхбаатар')}
       ${line('Мөнгө хүлээн авагч', r.payee)}
       ${line('Хүлээн авагчийн данс', (r.payeeAcc || '') + (r.payeeBank ? ' · ' + r.payeeBank : ''))}
       ${line('Шилжүүлсэн данс', ACC_LABEL[r.fromAcc] || r.fromAcc)}
@@ -1375,6 +1375,48 @@ async function printVoucher(r){
     </div>
     <div class="meta">Хүсэлт: ${esc(fmtDT(r.createdAt))} · Зөвшөөрсөн: ${esc(fmtDT(a.at))}${r.paidAt ? ' · Шилжүүлсэн: ' + esc(fmtDT(r.paidAt)) : ''} · VIVI Санхүүгийн хяналт</div>
   </body></html>`;
+  printHTML(/Вивекавикториа/.test(ACC_LABEL[r.fromAcc] || '') ? companyVoucher(r, a, tx, no, realName) : html);
+}
+// company accounts (Вивекавикториа ХХК): НХМаягт МХ-3 «Мөнгө шилжүүлэхийг хүссэн өргөдөл»
+function companyVoucher(r, a, tx, no, realName){
+  const amt = +r.amount || 0, kop = Math.round((amt - Math.floor(amt)) * 100);
+  const d = new Date(a.at || r.createdAt); const y = d.getFullYear(), mo = d.getMonth()+1, dd = d.getDate();
+  const f = (label, val, cls) => `<div class="f ${cls||''}"><span class="l">${label}</span><span class="v">${esc(val || '')}</span></div>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Мөнгө шилжүүлэх өргөдөл ${esc(no)}</title><style>
+    @page{size:A5 portrait;margin:11mm 12mm} body{font:12px/1.5 Arial,Helvetica,sans-serif;color:#000;margin:0}
+    .top{display:grid;grid-template-columns:1fr 1.6fr;gap:10px;align-items:start} .code{font-weight:bold;font-size:12px} .law{text-align:center;font-size:9.5px;line-height:1.3}
+    h1{text-align:center;font-size:15px;margin:14px 0 10px} .nd{display:flex;justify-content:space-between;margin-bottom:10px}
+    .f{display:flex;gap:6px;margin:5px 0;align-items:baseline} .f .l{white-space:nowrap} .f .v{flex:1;border-bottom:1px dotted #000;font-weight:bold;min-height:16px;padding:0 4px}
+    .amt .v{font-size:14px} .words{text-align:center;font-size:10.5px;margin:-2px 0 8px} .gap{height:8px}
+    .sigl{margin:7px 0;display:flex;gap:6px;align-items:baseline} .sigl .v{flex:1;border-bottom:1px dotted #000;padding:0 4px} .sigl .n{min-width:38%;border-bottom:1px dotted #000;text-align:center}
+    .appr{margin-top:16px;text-align:center;font-weight:bold} .appr2{display:flex;gap:10px;justify-content:center;margin-top:6px}
+    .meta{margin-top:14px;font-size:9.5px;color:#333}</style></head><body>
+    <div class="top"><div class="code">НХМаягт МХ3</div><div class="law">Санхүү, эдийн засгийн сайд Үндэсний статистикийн даргын 2002 оны 6-р сарын 171/111 тоот тушаалын хавсралт</div></div>
+    <h1>Мөнгө шилжүүлэхийг хүссэн өргөдөл</h1>
+    <div class="nd"><span>Дугаар: <b>${esc(no)}</b></span><span>${y} он ${mo} сар ${dd} өдөр</span></div>
+    ${f('Байгууллагын нэр:', '"Вивека викториа" ХХК')}
+    <div class="gap"></div>
+    ${f('Овог, Нэр:', r.payee)}
+    ${f('Хаана:', r.category || '')}
+    ${f('Зориулалт:', r.note || '')}
+    <div class="gap"></div>
+    ${f('Үнийн дүн:', fmt(amt) + ' төг ' + String(kop).padStart(2,'0') + ' мөнгийг олгоно уу', 'amt')}
+    ${f('', mnWords(amt) + ' төгрөг')}
+    <div class="words">/Үсгээр/</div>
+    ${f('Дансны эзэмшигчийн нэр:', r.payee)}
+    ${f('Дансны дугаар:', r.payeeAcc)}
+    ${f('Банкны нэр:', r.payeeBank)}
+    ${f('Утасны дугаар:', '')}
+    <div class="gap"></div>
+    <div class="sigl"><span>Хариуцсан ажилтан:</span><span class="v"></span><span class="n">/ ${esc(realName(r.createdBy))} /</span></div>
+    ${f('Тэмдэглэл:', 'Шилжүүлэх данс: ' + (ACC_LABEL[r.fromAcc] || r.fromAcc || '') + (tx ? ' · гүйлгээ ' + String(tx.dt).replace('T',' ').slice(0,16) : '') + (r.attachId ? ' · нэхэмжлэх хавсаргасан' : ''))}
+    <div class="sigl"><span>Өргөдөл гаргасан:</span><span class="v"></span><span class="n">/ ${esc(realName(r.createdBy))} /</span></div>
+    <div class="appr">ОЛГОХ ЗӨВШӨӨРӨЛ</div>
+    <div class="appr2"><span>Гүйцэтгэх захирал:</span><b>✓ Зөвшөөрсөн (цахимаар) ${esc(fmtDT(a.at))}</b></div>
+    <div class="meta">Хүсэлт: ${esc(fmtDT(r.createdAt))}${r.paidAt ? ' · Шилжүүлсэн: ' + esc(fmtDT(r.paidAt)) : ''} · VIVI Санхүүгийн хяналт</div>
+  </body></html>`;
+}
+function printHTML(html){
   const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; document.body.appendChild(f);
   f.contentDocument.open(); f.contentDocument.write(html); f.contentDocument.close();
   setTimeout(() => { try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){ console.warn(e); } setTimeout(() => f.remove(), 60000); }, 300);
