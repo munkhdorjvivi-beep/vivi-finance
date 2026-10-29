@@ -131,6 +131,7 @@ body{margin:0;background:var(--bg)}
     <button role="tab" data-tab="rev" aria-selected="false">Орлого тулгалт</button>
     <button role="tab" data-tab="cash" aria-selected="false">Бэлэн мөнгө<span class="n" id="t-cash" hidden></span></button>
     <button role="tab" data-tab="bal" aria-selected="false">Дансны үлдэгдэл</button>
+    <button role="tab" data-tab="pay" aria-selected="false">Цалин<span class="n" id="t-pay" hidden></span></button>
     <button role="tab" data-tab="set" aria-selected="false" id="tab-set" hidden>Тохиргоо</button>
   </nav>
 
@@ -278,6 +279,46 @@ body{margin:0;background:var(--bg)}
     </div>
   </section>
 
+  <!-- PAYROLL -->
+  <section class="panel" data-panel="pay" hidden>
+    <div class="card" id="pay-upload">
+      <h2>Цалингийн жагсаалт оруулах</h2>
+      <p class="note" style="margin:0 0 10px">Цалингийн программаас гаргасан Excel файлыг (НДШ, Төлдөггүй, Нэгтгэл хуудастай) шилжүүлэг хийхээс <b>өмнө</b> оруулна. Эзэмшигч зөвшөөрсний дараа шилжүүлнэ — банкны мэдэгдлээр хүн бүрийн шилжүүлэг автоматаар тулгагдаж, бүгд шилжмэгц жагсаалт хаагдана.</p>
+      <div class="row"><input id="pay-file" type="file" accept=".xls,.xlsx" style="max-width:320px">
+        <label class="f" style="width:auto">Сар<input id="pay-per" type="month" style="width:auto"></label>
+        <label class="f" style="width:auto">Төрөл<select id="pay-kind" style="width:auto"><option value="adv">Урьдчилгаа цалин</option><option value="final">Сүүл цалин</option></select></label></div>
+      <div id="pay-draft" style="margin-top:10px" hidden></div>
+      <div class="row" style="margin-top:10px"><button class="btn primary" id="pay-send" disabled>Эзэмшигчид илгээх</button><span class="note" id="pay-msg"></span></div>
+    </div>
+    <div class="card">
+      <h2>Жагсаалтууд</h2>
+      <div class="row" id="pay-lists"></div>
+    </div>
+    <div class="card" id="pay-detail" hidden>
+      <div id="pay-head"></div>
+      <div class="row" style="justify-content:space-between;margin:12px 0 8px">
+        <div class="filter chips" id="pay-filter">
+          <button data-f="all" aria-pressed="true">Бүгд</button><button data-f="todo" aria-pressed="false">Шилжээгүй</button><button data-f="diff" aria-pressed="false">Зөрүүтэй</button><button data-f="warn" aria-pressed="false">Анхаарах</button><button data-f="paid" aria-pressed="false">Шилжсэн</button>
+        </div>
+        <label class="note row" style="gap:6px">ХХБ цалингийн данс гэх мэт имэйл ирдэггүй дансны хуулга:<input id="pay-stmt" type="file" multiple accept=".xls,.xlsx" style="max-width:240px"></label>
+      </div>
+      <div class="note" id="pay-stmt-msg" style="margin-bottom:6px"></div>
+      <div class="tbl"><table><thead><tr><th>Хэлтэс</th><th>Ажилтан</th><th>Данс</th><th class="n">Жагсаалт</th><th class="n">Шилжсэн</th><th class="n">Зөрүү</th><th style="min-width:280px">Төлөв / гүйлгээ</th></tr></thead><tbody id="pay-body"></tbody></table></div>
+      <p class="note" style="margin:8px 0 0">Хүн бүрийн нийт шилжүүлсэн дүнг жагсаалттай тулгана — нэг хүнд хэд хэдэн дансаар (НДШ ба НДШ-гүй хэсэг, шүүхийн шийдвэр гүйцэтгэгч гэх мэт) шилжсэн ч нийлбэр таарвал «Шилжсэн». Жагсаалтад байхгүй өөр дансаар шилжсэн бол шар тэмдэглэгээтэй.</p>
+    </div>
+    <div class="card">
+      <h2>Цалингийн данснаас жагсаалтгүй шилжүүлэг</h2>
+      <div class="daysum" id="pay-loose-sum"></div>
+      <div class="tbl"><table><thead><tr><th>Огноо</th><th>Данснаас</th><th>Хүлээн авагч</th><th class="n">Дүн</th><th>Утга</th><th>Төрөл</th></tr></thead><tbody id="pay-loose"></tbody></table></div>
+      <p class="note" style="margin:8px 0 0">Жагсаалтгүй боловч зөвшөөрөгдсөн данс (жишээ нь гэрийн туслах) — «✓ Зөвшөөрөгдсөн данс» дарж нэр өгвөл цаашид анхааруулга өгөхгүй. «/06.15-19/» гэх мэт огноотой утгатай шилжүүлгийг түр ажилтан гэж ангилна.</p>
+    </div>
+    <div class="card">
+      <h2 id="pay-debt-title">Ажилчдын авлага</h2>
+      <div class="tbl"><table><thead><tr><th>Ажилтан</th><th class="n">Өмнөх үлдэгдэл</th><th class="n">Шинээр авсан</th><th class="n">Цалингаас хаасан</th><th class="n">Өөрөөр төлсөн</th><th class="n">Үлдэгдэл</th><th class="n">Нийт хаасан</th><th>Төлөв</th></tr></thead><tbody id="pay-debt"></tbody></table></div>
+      <p class="note" style="margin:8px 0 0">Сүүл цалингийн жагсаалтын «Ажилчидаас авах авлага /N29/» ба «Авлага хаах дүн /N30/» баганаас. Өмнөх үлдэгдэл = өмнөх сүүл цалингийн жагсаалтын дараах үлдэгдэл.</p>
+    </div>
+  </section>
+
   <!-- BALANCES -->
   <section class="panel" data-panel="bal" hidden>
     <div class="card">
@@ -417,9 +458,9 @@ window.VIVIFB = (() => {
 // ===== VIVI cash control core (shared by page and node tests) =====
 const VIVI = (() => {
   const OWN = new Set(['1825100856','5175306931','5175306920','5175278095','5174134484','5174134473','405095875','405095876','405095877','405096869','405096868','5174135239','5311365725','2106025813','5174139482','5403962410','5403962396','5403962454','5224167095','5224167073','1735156519','1735159300','1735159334','1735159299','405097294','4002622637','405097565','4002594661','4002639706','4002636496','4002599151','5310744690','405102965']);
-  const ACC_STORE = {'5403962396':'Food city','5311365725':'Food city','1735156519':'Food city','5403962410':'Драгон','5174139482':'Драгон','5175278095':'Драгон','5310744690':'Драгон','5403962454':'Дархан Үзэсгэлэн','5174134484':'Е март баянгол-3 давхар','405095875':'ХХБ 405095875 (Эрдэнэт, Хан-Уул, онлайн)','5175306920':'Онлайн дэлгүүр'};
-  const TERM_STORE = {'FOOD CITY VIVI 3':'Food city','FOOD CITY-4':'Food city','VIVI-FOOD CITY 2-2':'Food city','DRAGON VIVI 1':'Драгон','DRAGON VIVI 2':'Драгон','DRAGON VIVI 3':'Драгон','VIVI GREAT BRANDS 2':'Драгон','VIVI GREAT BRAND':'Драгон','SUNDAY VIVI':'Дархан Үзэсгэлэн','VIVI-BGD':'Е март баянгол-3 давхар'};
-  const CASH_ACC = {'5403962396':'Food city','5403962410':'Драгон','5403962454':'Дархан Үзэсгэлэн','5174134484':'Е март баянгол-3 давхар'};
+  const ACC_STORE = {'5403962396':'Food city','5311365725':'Food city','1735156519':'Food city','5403962410':'Драгон','5174139482':'Драгон','5175278095':'Драгон','5310744690':'Драгон','5403962454':'Дархан / Сандэй плаза','5174134484':'Е март баянгол-3 давхар','405095875':'ХХБ 405095875 (Эрдэнэт, Хан-Уул, онлайн)','5175306920':'Онлайн дэлгүүр'};
+  const TERM_STORE = {'FOOD CITY VIVI 3':'Food city','FOOD CITY-4':'Food city','VIVI-FOOD CITY 2-2':'Food city','DRAGON VIVI 1':'Драгон','DRAGON VIVI 2':'Драгон','DRAGON VIVI 3':'Драгон','VIVI GREAT BRANDS 2':'Драгон','VIVI GREAT BRAND':'Драгон','SUNDAY VIVI':'Дархан / Сандэй плаза','FOOD CITY VIVI 1':'Food city','FOOD CITY VIVI 2':'Food city','VIVI-BGD':'Е март баянгол-3 давхар'};
+  const CASH_ACC = {'5403962396':'Food city','5403962410':'Драгон','5403962454':'Дархан / Сандэй плаза','5174134484':'Е март баянгол-3 давхар'};
   const NONCASH_FORMS = new Set(['ХААН банк ПОС','Хаан шилжүүлэг','Голомт банк','QPay','Social Pay','Худалдаа хөгжлийн банк']);
 
   // ---------- dates ----------
@@ -452,7 +493,7 @@ const VIVI = (() => {
       const c = rows[h].map(str), ix = k => c.indexOf(k);
       const out = [];
       for (const r of rows.slice(h+1)){
-        const dt = toDT(r[ix('Огноо')]); const st = str(r[ix('Дэлгүүр')]);
+        const dt = toDT(r[ix('Огноо')]); let st = str(r[ix('Дэлгүүр')]); if (st === 'Дархан Үзэсгэлэн' || st === 'Сандэй плаза') st = 'Дархан / Сандэй плаза';   // one shop, one bank account (5403962454)
         if (!dt || !st) continue;
         out.push({d: iso(dt), store: st, kas: str(r[ix('Касс')]), form: str(r[ix('Төлбөрийн хэлбэр')]), bank: str(r[ix('Банкны нэр')]) || str(r[ix('Төлбөрийн хэлбэр')]), amt: num(r[ix('Дүн')])});
       }
@@ -500,8 +541,9 @@ const VIVI = (() => {
     if (h >= 0){
       const meta = rows[h].map(str), accCell = meta.find(v => /^Дансны дугаар:/.test(v)) || '';
       const mm = accCell.match(/(\d{8,12})\s*([A-Z]{3})?/), cur = (mm && mm[2]) || 'MNT';
+      const NEW2OLD = {'4002594661':'405095875','4002639706':'405096869','4002636496':'405096868','4002599151':'405095877'};
       const old = name.match(/(4050\d{5})/);                      // keep the old 9-digit number used everywhere else
-      const acc = old ? old[1] : (mm ? mm[1] : '');
+      const acc = (mm && NEW2OLD[mm[1]]) || (old ? old[1] : (mm ? mm[1] : ''));
       const out = [];
       for (const r of rows.slice(h+1)){
         const dt = toDT(r[0]); if (!dt) continue;
@@ -585,7 +627,7 @@ const VIVI = (() => {
     const s = t.desc.toLowerCase(), cpn = norm(t.cp);
     if (t.cr <= 0) return null;
     if (OWN.has(cpn) || /данс хооронд|шилжүүлэг 709|шилжүүлэг 707|хаалт: \d+:\d{8}/.test(s) && OWN.has(cpn)) return {ch:'internal'};
-    if (/зээл олгол|зээл олгов/.test(s)) return {ch:'loan'};
+    if (/зээл олгол|зээл олгов|згбөо/.test(s)) return {ch:'loan'};
     if (/sp manual/.test(s)) return {ch:'storepay'};
     if (/покет|pocket/.test(s)) return {ch:'pocket'};
     let m = t.desc.match(/(\d\d)\/(\d\d)\/(\d{4}) SETTLEMENT - (.*)$/);
@@ -920,6 +962,222 @@ const VIVI = (() => {
 })();
 
 
+// ===== VIVI payroll (Цалин): read the payroll Excel, compare lists, match bank transfers per person, employee debts =====
+const PAY = (() => {
+  const SAL_ACCS = ['5224167073', '405096868', '4002636496', '1735159300'];   // salary payout accounts
+  const BANKS = {'0005':'Хаан', '0004':'ХХБ', '0015':'Голомт'};
+  const KIND_LABEL = {adv:'Урьдчилгаа цалин', final:'Сүүл цалин'};
+
+  // MN420015001735156284 -> 1735156284 ; 5033294847 -> 5033294847 ; 109500167338 -> 109500167338
+  function accShort(a){
+    let s = String(a == null ? '' : a).toUpperCase().replace(/\s/g, '');
+    const m = s.match(/^(?:MN)?(\d{2})(\d{4})(\d{12})$/);
+    if (m) return m[3].replace(/^0+/, '');
+    s = s.replace(/\D/g, '');
+    if (s.length === 18) return s.slice(6).replace(/^0+/, '');
+    return s.replace(/^0+/, '');
+  }
+  function accBank(a){ const m = String(a || '').toUpperCase().replace(/\s/g, '').match(/^(?:MN)?\d{2}(\d{4})\d{12}$/); return m ? (BANKS[m[1]] || 'банк ' + m[1]) : ''; }
+  const sameAcc = (a, b) => !!a && !!b && (a === b || (a.length >= 9 && b.length >= 9 && a.slice(-9) === b.slice(-9)));
+  // УП89063046-1 / 1-МЮ06211901 / ЙЮ70022606- -> one person
+  const baseCode = c => String(c || '').toUpperCase().trim().replace(/^\d+-/, '').replace(/-\d*$/, '');
+  // Б.Наранцэцэг -> НАРАНЦЭЦЭГ (for finding the name in a bank description)
+  const nameCore = n => String(n || '').toUpperCase().replace(/^[А-ЯӨҮЁA-Z]{1,3}\.\s*/, '').trim();
+  const num = v => { if (typeof v === 'number') return v; const x = parseFloat(String(v == null ? '' : v).replace(/[\s,]/g, '')); return isFinite(x) ? x : 0; };
+  const r2 = x => Math.round(x * 100) / 100;
+
+  // sheets: [{name, rows: [[...], ...]}]  (rows as from XLSX sheet_to_json header:1)
+  function parse(sheets, fileName){
+    let kind = null; const parts = []; let nTotal = null; const warnings = [];
+    for (const sh of sheets){
+      const R = sh.rows || [];
+      const hi = R.findIndex(r => r && r.some(c => String(c == null ? '' : c).trim() === 'Ажилтны код'));
+      if (hi < 0){                                     // summary sheet («Нэгтгэл»): grand total row
+        for (const r of R){ if (r && String(r[0] || '').trim() === 'Нийт дүн'){ const v = num(r[3]); if (v) nTotal = v; } }
+        continue;
+      }
+      const H = R[hi].map(c => String(c == null ? '' : c).trim());
+      const ix = p => H.findIndex(h => h.startsWith(p));
+      const k = ix('Гарт олгох') >= 0 ? 'final' : ix('Урьдчилгаа цалин нийт') >= 0 ? 'adv' : null;
+      if (!k) continue;
+      if (kind && kind !== k) warnings.push('Нэг файлд урьдчилгаа ба сүүл цалин холилдсон байна.');
+      kind = kind || k;
+      const ai = k === 'final' ? ix('Гарт олгох') : ix('Урьдчилгаа цалин нийт');
+      const c = {code: ix('Ажилтны код'), name: ix('Ажилтны нэр'), ovog: ix('Овог'), pos: ix('Албан тушаал'), acc: ix('Банкны данс'), ins: ix('Даатгуулагчийн төрөл'),
+        base: ix('Үндсэн цалин'), fund: ix('Сарын ажлын фонд цаг'), worked: ix('Ажилласан цаг'), owed: ix('Ажилчидаас авах авлага'), closed: ix('Авлага хаах дүн'), adv: ix('Урьдчилгаа цалин нийт')};
+      const ins = /НДШ/i.test(sh.name) && !/төлдөггүй/i.test(sh.name);
+      let dept = '';
+      for (const r of R.slice(hi + 1)){
+        if (!r) continue;
+        const c0 = r[c.code];
+        if (typeof c0 === 'string' && /^Хэлтэс тасаг/.test(c0.trim())){ dept = c0.split(':').slice(1).join(':').trim(); continue; }
+        if (typeof c0 !== 'string' || !c0.trim()) continue;
+        const g = i => i >= 0 ? r[i] : null;
+        const accRaw = String(g(c.acc) == null ? '' : g(c.acc)).replace(/\s/g, '');
+        parts.push({sheet: sh.name.trim(), ndsh: ins, dept, code: c0.trim(), key: baseCode(c0), name: String(g(c.name) || '').trim(), ovog: String(g(c.ovog) || '').trim(),
+          pos: String(g(c.pos) || '').trim(), accRaw, acc: accShort(accRaw), bank: accBank(accRaw), ins: String(g(c.ins) == null ? '' : g(c.ins)).trim(),
+          base: num(g(c.base)), fund: num(g(c.fund)), worked: num(g(c.worked)), amt: r2(num(g(ai))),
+          owed: r2(num(g(c.owed))), closed: r2(num(g(c.closed))), advPaid: k === 'final' ? r2(num(g(c.adv))) : 0});
+      }
+    }
+    if (!kind) return {error: 'Цалингийн жагсаалт танигдсангүй («Ажилтны код», «Банкны данс», «Урьдчилгаа цалин нийт» эсвэл «Гарт олгох» багана хэрэгтэй).'};
+    // advance rule: 40% (НДШ төлдөг, type 01) or 50% of the base, pro-rata to hours worked
+    for (const p of parts) if (kind === 'adv' && p.fund > 0){
+      const rate = p.ins === '01' ? 0.4 : 0.5;
+      p.expected = r2(p.base * rate * Math.min(p.worked, p.fund) / p.fund);
+      p.ruleDiff = r2(p.amt - p.expected);
+    }
+    // one person = one base code (НДШ part + non-НДШ part, each may have its own account)
+    const by = new Map();
+    for (const p of parts){
+      if (!by.has(p.key)) by.set(p.key, {key: p.key, name: p.name, ovog: p.ovog, pos: p.pos, dept: p.dept, parts: []});
+      const o = by.get(p.key); o.parts.push(p);
+      if (p.name.length > o.name.length) o.name = p.name;
+    }
+    const people = [...by.values()].map(o => ({...o, amt: r2(o.parts.reduce((s, p) => s + p.amt, 0)),
+      accs: [...new Set(o.parts.filter(p => p.amt > 0 && p.acc).map(p => p.acc))],
+      owed: r2(o.parts.reduce((s, p) => s + p.owed, 0)), closed: r2(o.parts.reduce((s, p) => s + p.closed, 0))}));
+    const total = r2(people.reduce((s, p) => s + p.amt, 0));
+    const m = String(fileName || '').match(/(20\d\d)[.\-_ ]?(\d\d)/);
+    if (nTotal != null && Math.abs(nTotal - total) > 1) warnings.push(`Нэгтгэл хуудасны нийт дүн (${Math.round(nTotal).toLocaleString('ru-RU')}) жагсаалтын нийлбэртэй (${Math.round(total).toLocaleString('ru-RU')}) таарахгүй байна.`);
+    return {kind, per: m ? `${m[1]}-${m[2]}` : '', people, total, count: people.filter(p => p.amt > 0).length, nTotal, warnings};
+  }
+
+  // what the owner must look at before approving
+  // prev = previous list of the same kind, history = all earlier lists (any kind, oldest first)
+  function compare(cur, prev, history){
+    history = history || (prev ? [prev] : []);
+    const flags = [];   // {lvl:'bad'|'warn'|'info', key, name, text}
+    const add = (lvl, p, text) => flags.push({lvl, key: p.key, name: p.name, text});
+    const fmtN = x => Math.round(x).toLocaleString('ru-RU');
+    const paid = cur.people.filter(p => p.amt > 0);
+    // the same account for two different people
+    const accOwner = new Map();
+    for (const p of paid) for (const a of p.accs){ const o = accOwner.get(a); if (o && o.key !== p.key) add('bad', p, `Данс ${a} өөр хүнтэй (${o.name}) давхардсан`); else accOwner.set(a, p); }
+    for (const p of paid){
+      if (!p.accs.length) add('warn', p, 'Данс бүртгэгдээгүй');
+      for (const q of p.parts) if (q.ruleDiff != null && Math.abs(q.ruleDiff) > 1)
+        add('bad', p, `Урьдчилгаа дүрмээс зөрүүтэй: ${fmtN(q.amt)} (дүрмээр ${fmtN(q.expected)}, ${q.worked}/${q.fund} цаг)`);
+    }
+    // last known account of every part (code) and of every account
+    const lastPart = new Map(), accSeen = new Map(), seen = new Set();
+    for (const l of history) for (const p of l.people){ seen.add(p.key);
+      for (const q of p.parts || []) if (q.acc){ lastPart.set(q.code.toUpperCase(), q.acc); accSeen.set(q.acc, p); } }
+    const pm = new Map((prev ? prev.people : []).map(p => [p.key, p]));
+    for (const p of paid){
+      if (history.length && !seen.has(p.key)) add('warn', p, 'Шинэ ажилтан (өмнөх жагсаалтуудад байгаагүй)');
+      for (const q of p.parts){ const was = lastPart.get(q.code.toUpperCase());
+        if (was && q.acc && q.amt > 0 && !sameAcc(was, q.acc)) add('bad', p, `Данс солигдсон: ${was} → ${q.acc}`); }
+      for (const a of p.accs){ const o2 = accSeen.get(a); if (o2 && o2.key !== p.key) add('bad', p, `Данс ${a} өмнө нь ${o2.name}-д бүртгэлтэй байсан`); }
+      const o = pm.get(p.key);
+      if (o && o.amt > 0){
+        const lim = cur.kind === 'adv' ? 1.2 : 1.6, min = cur.kind === 'adv' ? 100000 : 400000;
+        if (p.amt > o.amt * lim && p.amt - o.amt > min) add('warn', p, `Дүн ${Math.round((p.amt / o.amt - 1) * 100)}% өссөн (${fmtN(o.amt)} → ${fmtN(p.amt)})`);
+      }
+    }
+    if (prev) for (const o of prev.people) if (o.amt > 0 && !cur.people.some(p => p.key === o.key && p.amt > 0)) flags.push({lvl:'info', key:o.key, name:o.name, text:'Өмнөх жагсаалтад байсан, энэ удаа алга'});
+    const order = {bad:0, warn:1, info:2};
+    return flags.sort((a, b) => order[a.lvl] - order[b.lvl] || a.name.localeCompare(b.name));
+  }
+
+  // lists: [{id, kind, at, decidedAt, people, extra:{key:[acc]}, marks:{key:{type:'cash',amount}}}]  (uploaded before paying)
+  // txs: [{id, dt, from, to, toName, desc, amount, src}]  outgoing transfers
+  // opts: {exempt:{acc:label}, salAccs:[...], own:Set}
+  function match(lists, txs, opts){
+    opts = opts || {};
+    const sal = new Set((opts.salAccs || SAL_ACCS).map(accShort));
+    const exempt = opts.exempt || {};
+    const T = txs.map(t => ({...t, toS: accShort(t.to), fromS: accShort(t.from), day: String(t.dt || '').slice(0, 10), amount: +t.amount || 0}))
+      .sort((a, b) => String(a.dt).localeCompare(String(b.dt)));
+    const used = new Map();   // tx id -> {list, key}
+    const sorted = lists.slice().sort((a, b) => String(a.at).localeCompare(String(b.at)));
+    const day = (iso, n) => new Date(Date.parse(iso) + n * 86400e3).toISOString().slice(0, 10);
+    const wordIn = (txt, w) => new RegExp('(^|[^А-ЯӨҮЁA-Z])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^А-ЯӨҮЁA-Z]|$)').test(txt);
+    // per list: window and per person state
+    const st = sorted.map((L, li) => {
+      const next = sorted.slice(li + 1).find(x => x.kind === L.kind), nextAny = sorted[li + 1];
+      const d0 = day(L.at, -7), dEnd = day(L.at, 60);
+      const d1 = next && day(next.at, -1) < dEnd ? day(next.at, -1) : dEnd;          // late payments: up to the next list of the same kind
+      const dP = nextAny && day(nextAny.at, -4) < d1 ? day(nextAny.at, -4) : d1;     // main window: until the next list arrives
+      const extra = L.extra || {};
+      const P = L.people.filter(p => p.amt > 0).map(p => {
+        const mark = (L.marks || {})[p.key];
+        return {p, accs: [...p.accs, ...(extra[p.key] || [])], extra: extra[p.key] || [], got: [], sum: mark && mark.type === 'cash' ? r2(+mark.amount || 0) : 0, mark, core: nameCore(p.name)};
+      });
+      return {L, d0, d1, P, win: T.filter(t => t.day >= d0 && t.day <= dP), late: T.filter(t => t.day > dP && t.day <= d1)};
+    });
+    const take = (s, x, t, how) => { x.got.push({id: t.id, dt: t.dt, from: t.from, to: t.to, amount: t.amount, how, src: t.src || '', early: s.L.decidedAt ? String(t.dt) < String(s.L.decidedAt).slice(0, 19) : true});
+      used.set(t.id, {list: s.L.id, key: x.p.key}); x.sum = r2(x.sum + t.amount); };
+    const need = x => r2(x.p.amt - x.sum);
+    const toMine = (x, t) => x.accs.some(a => sameAcc(a, t.toS));
+    const howOf = (x, t) => x.extra.some(a => sameAcc(a, t.toS)) ? 'extra' : 'acc';
+    // A) salary account → listed account, amount equals what is still owed
+    for (const s of st) for (const x of s.P) for (const t of s.win){ if (used.has(t.id) || need(x) <= 1) continue;
+      if (sal.has(t.fromS) && toMine(x, t) && Math.abs(t.amount - need(x)) <= 1) take(s, x, t, howOf(x, t)); }
+    // B) salary account → listed account, several transfers adding up (oldest first)
+    for (const s of st) for (const x of s.P) for (const t of s.win){ if (used.has(t.id) || need(x) <= 1) continue;
+      if (sal.has(t.fromS) && toMine(x, t) && t.amount <= need(x) + 1) take(s, x, t, howOf(x, t)); }
+    // C) the rest must close the gap exactly: another source account, or another account carrying the person's name
+    for (const s of st) for (const x of s.P) for (const t of s.win){ if (used.has(t.id) || need(x) <= 1) continue;
+      const txt = (String(t.desc || '') + ' ' + String(t.toName || '')).toUpperCase();
+      if (x.p.key.length >= 8 && txt.includes(x.p.key) && t.amount <= need(x) + 1) { take(s, x, t, 'code'); continue; }
+      if (Math.abs(t.amount - need(x)) > 1) continue;
+      if (toMine(x, t)) { take(s, x, t, howOf(x, t)); continue; }
+      if (sal.has(t.fromS) && x.core.length >= 4 && wordIn(txt, x.core)) take(s, x, t, 'name'); }
+    // D) late payments after the next list arrived: only an exact amount to a listed account
+    for (const s of st) for (const x of s.P) for (const t of s.late){ if (used.has(t.id) || need(x) <= 1) continue;
+      if (toMine(x, t) && Math.abs(t.amount - need(x)) <= 1) take(s, x, t, howOf(x, t)); }
+    const out = {};
+    for (const s of st){
+      const res = {};
+      for (const x of s.P){
+        const diff = r2(x.sum - x.p.amt);
+        const others = s.win.filter(t => !used.has(t.id) && toMine(x, t)).map(t => ({id: t.id, dt: t.dt, from: t.from, amount: t.amount, desc: t.desc}));
+        res[x.p.key] = {st: Math.abs(diff) <= 1 ? 'paid' : x.sum > 0 ? (diff < 0 ? 'part' : 'over') : 'none', sum: x.sum, diff, got: x.got,
+          cash: x.mark && x.mark.type === 'cash' ? x.mark : null, others,
+          otherAcc: x.got.some(g => g.how === 'name' || g.how === 'extra' || g.how === 'code'), nonSal: x.got.some(g => !sal.has(accShort(g.from)))};
+      }
+      const n = s.P.length, paidN = s.P.filter(x => res[x.p.key].st === 'paid').length;
+      out[s.L.id] = {people: res, paidN, n, paidSum: r2(s.P.reduce((a, x) => a + Math.min(x.p.amt, x.sum), 0)), closed: n > 0 && paidN === n, d0: s.d0, d1: s.d1};
+    }
+    // salary-account transfers that no list explains
+    const listAccs = []; for (const L of lists) for (const p of L.people) for (const a of [...p.accs, ...((L.extra || {})[p.key] || [])]) listAccs.push(a);
+    const OWNSET = opts.own || new Set();
+    const loose = T.filter(t => sal.has(t.fromS) && !used.has(t.id) && !OWNSET.has(t.toS) && !sal.has(t.toS) && t.amount >= 1000)
+      .map(t => { const ex = Object.keys(exempt).find(a => sameAcc(a, t.toS));
+        return {...t, exempt: ex ? exempt[ex] : '', dayWorker: /\/\s*\d{1,2}\.\d{1,2}/.test(String(t.desc || '')), onList: listAccs.some(a => sameAcc(a, t.toS))}; });
+    return {lists: out, loose, used};
+  }
+
+  // employee debts (Ажилчидаас авах авлага / Авлага хаах дүн) across final lists, oldest first
+  function debts(finals){
+    const rows = new Map();
+    const L = finals.slice().sort((a, b) => String(a.per).localeCompare(String(b.per)) || String(a.at).localeCompare(String(b.at)));
+    for (const l of L) for (const p of l.people){
+      if (!(p.owed > 0) && !(p.closed > 0) && !rows.has(p.key)) continue;
+      const o = rows.get(p.key) || {key: p.key, name: p.name, pos: p.pos, hist: []};
+      o.name = p.name; o.pos = p.pos;
+      o.hist.push({per: l.per, owed: p.owed || 0, closed: p.closed || 0, left: r2((p.owed || 0) - (p.closed || 0))});
+      rows.set(p.key, o);
+    }
+    const last = L.length ? L[L.length - 1].per : '';
+    const out = [...rows.values()].map(o => {
+      const h = o.hist, cur = h[h.length - 1], prev = h.length > 1 ? h[h.length - 2] : null;
+      const isCur = cur.per === last;
+      const opening = prev ? prev.left : null;                    // what was left after the previous list
+      const added = prev ? r2(Math.max(0, cur.owed - prev.left)) : null;   // new money taken since then
+      const outside = prev ? r2(Math.max(0, prev.left - cur.owed)) : null; // paid back outside the payroll
+      return {...o, per: cur.per, current: isCur, owed: cur.owed, closed: cur.closed, left: isCur ? cur.left : 0, opening, added, outside,
+        repaidAll: r2(h.reduce((s, x) => s + x.closed, 0))};
+    }).filter(o => o.current || o.hist.some(x => x.owed > 0));
+    return out.sort((a, b) => b.left - a.left);
+  }
+
+  const R = {SAL_ACCS, KIND_LABEL, accShort, accBank, sameAcc, baseCode, nameCore, parse, compare, match, debts};
+  if (typeof module !== 'undefined') module.exports = R;
+  return R;
+})();
+
 </script>
 <script>
 (() => {
@@ -935,7 +1193,7 @@ const FROM_ACCS = [
   ['1735159300','Голомт – Вивекавикториа (цалин) 1735159300'],['5174139482','Хаан – Мөнхдорж 5174139482'],['2106025813','Ариг – Вивекавикториа 2106025813']];
 const ACC_LABEL = Object.fromEntries(FROM_ACCS.map(([a,l]) => [a,l]));
 const BAL_ACCS = [['tdb','ХХБанк'],['khan','Хаан банк'],['arig','Ариг банк'],['khan_md','Хаан – Мөнхдорж'],['khan_et','Хаан – Энхтөр'],['khan_eb','Хаан – Энхбаатар'],['golomt_erka','Голомт – Эрка']];
-const STORE_CODE = {'Food city':'FC','Драгон':'DR','Дархан Үзэсгэлэн':'DZ','Е март баянгол-3 давхар':'EM','Эрдэнэт салбар':'ER','Хан-Уул 1 давхар':'HU','Онлайн дэлгүүр':'ON','Сандэй плаза':'SP'};
+const STORE_CODE = {'Food city':'FC','Драгон':'DR','Дархан Үзэсгэлэн':'DZ','Е март баянгол-3 давхар':'EM','Эрдэнэт салбар':'ER','Хан-Уул 1 давхар':'HU','Онлайн дэлгүүр':'ON','Сандэй плаза':'SP','Дархан / Сандэй плаза':'DZ'};
 const ST_LABEL = {BRAK:['Тушаагаагүй','c-bad'], MNIEJ:['Дутуу тушаасан','c-warn'], WIECEJ:['Илүү тушаасан','c-grey'], OK:['Зөв','c-ok'], BEZ_DNIA:['Өдөр тодорхойгүй','c-grey']};
 
 let db = null, user = null, me = null, isOwner = false, canWrite = true, assets = null;
@@ -1005,6 +1263,7 @@ function matchBank(){
     if (appr.length){ used.add(appr[0].id); res[t.id] = {st:'ok', label:'Зөвшөөрөлтэй', cls:'c-ok', req: appr[0].id}; continue; }
     if (same.length){ res[t.id] = {st:'warn', label: reqStatus(same[0]) === 'rejected' ? 'Татгалзсан хүсэлт' : 'Зөвшөөрөөгүй', cls:'c-warn', req: same[0].id}; continue; }
     if (cands.length){ res[t.id] = {st:'warn', label:'Дүн зөрүүтэй', cls:'c-warn', req: cands[0].id}; continue; }
+    { const pl = payUsedLabel(t); if (pl){ res[t.id] = pl; continue; } }
     if (/\s(ФС|ДР|АГ|ОФ|НС|Н|ОХ)\s*$/i.test(t.desc||'')) { res[t.id] = {st:'warn', label:'Цалин? Жагсаалттай тулга', cls:'c-warn'}; continue; }
     res[t.id] = {st:'none', label:'Хүсэлтгүй', cls:'c-bad'};
   }
@@ -1063,6 +1322,7 @@ function renderInner(){
   try{ renderRev(); }catch(e){ console.warn('rev', e); }
   // balances
   renderBal();
+  try{ renderPay(); }catch(e){ console.warn('pay', e); }
 }
 function reqCard(r, matches){
   const s = reqStatus(r), a = S.approvals[r.id];
@@ -1422,10 +1682,283 @@ function printHTML(html){
   setTimeout(() => { try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){ console.warn(e); } setTimeout(() => f.remove(), 60000); }, 300);
 }
 
+// ---------- payroll (Цалин) ----------
+const PS = {lists: [], decs: {}, cfg: {exempt: {}}, tx: [], sel: null, filter: 'all', draft: null};
+const PAY_SAL_LABEL = {'5224167073':'Хаан 7073 (цалин)', '405096868':'ХХБ 6868 (цалин)', '4002636496':'ХХБ 6496 (цалин)', '1735159300':'Голомт 9300 (цалин)'};
+const accLabel = a => PAY_SAL_LABEL[PAY.accShort(a)] || ACC_LABEL[PAY.accShort(a)] || a || '';
+const perLabel = l => `${String(l.per || '').replace('-', '.')} · ${PAY.KIND_LABEL[l.kind] || l.kind}`;
+function payStatus(l){ const d = PS.decs[l.id]; if (d && d.decision === 'approved') return 'approved'; if (d && d.decision === 'rejected') return 'rejected'; if (d && d.decision === 'hold' && !(l.resentAt && l.resentAt > d.at)) return 'hold'; return 'pending'; }
+const PAY_ST = {pending:['Хүлээгдэж буй','c-warn'], hold:['⏸ Хүлээлгэсэн','c-hold'], approved:['Зөвшөөрсөн','c-ok'], rejected:['Татгалзсан','c-bad']};
+// every transfer we know: e-mails (owner: all accounts, last 45 days; salary accounts: all time) + statements uploaded to a list
+function payTx(){
+  const m = new Map();
+  for (const t of S.banktx.concat(PS.tx)) if (t && t.id && +t.amount > 0) m.set(t.id, {id: t.id, dt: String(t.dt || ''), from: t.fromAcc, to: t.toAcc, toName: t.toName || '', desc: t.desc || '', amount: +t.amount, src: 'email'});
+  for (const l of PS.lists) for (const t of (l.stmtTx || [])){
+    const dup = [...m.values()].some(x => Math.abs(x.amount - t.amount) <= 1 && PAY.sameAcc(PAY.accShort(x.to), PAY.accShort(t.to)) && x.dt.slice(0, 10) === String(t.dt).slice(0, 10));
+    if (!dup) m.set(t.id, {...t, src: 'stmt'});
+  }
+  return [...m.values()];
+}
+let payCache = null;
+function payModel(){
+  const key = PS.lists.length + '|' + Object.keys(PS.decs).length + '|' + S.banktx.length + '|' + PS.tx.length + '|' + JSON.stringify(PS.cfg.exempt || {}) + '|' + PS.lists.map(l => (l.stmtTx || []).length + ':' + JSON.stringify(l.marks || {}) + JSON.stringify(l.extra || {})).join(',') + '|' + JSON.stringify(PS.decs);
+  if (payCache && payCache.key === key) return payCache.m;
+  const lists = PS.lists.filter(l => payStatus(l) !== 'rejected').map(l => ({...l, decidedAt: (PS.decs[l.id] || {}).decision === 'approved' ? PS.decs[l.id].at : null}));
+  const m = PAY.match(lists, payTx(), {exempt: PS.cfg.exempt || {}, own: VIVI.OWN});
+  payCache = {key, m}; return m;
+}
+const listsSorted = () => PS.lists.slice().sort((a, b) => String(b.per).localeCompare(String(a.per)) || (a.kind === b.kind ? String(b.at).localeCompare(String(a.at)) : a.kind === 'final' ? -1 : 1));
+
+// ----- upload -----
+$('#pay-file').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return; $('#pay-msg').textContent = 'Уншиж байна…';
+  try{
+    const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'});
+    const sheets = wb.SheetNames.map(n => ({name: n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null})}));
+    const p = PAY.parse(sheets, f.name);
+    if (p.error){ PS.draft = null; $('#pay-msg').textContent = p.error; renderPay(); return; }
+    PS.draft = {...p, file: f.name};
+    $('#pay-per').value = p.per || today().slice(0, 7); $('#pay-kind').value = p.kind;
+    $('#pay-msg').textContent = '';
+  }catch(err){ console.warn(err); PS.draft = null; $('#pay-msg').textContent = 'Файлыг уншиж чадсангүй.'; }
+  renderPay();
+});
+['#pay-per', '#pay-kind'].forEach(s => $(s).addEventListener('change', () => { if (PS.draft){ PS.draft.per = $('#pay-per').value; PS.draft.kind = $('#pay-kind').value; renderPay(); } }));
+function draftFlags(d){
+  const hist = PS.lists.filter(l => payStatus(l) !== 'rejected' && (l.per < d.per || (l.per === d.per && l.kind === 'adv' && d.kind === 'final'))).sort((a, b) => String(a.per).localeCompare(String(b.per)) || (a.kind === 'adv' ? -1 : 1));
+  const prev = hist.filter(l => l.kind === d.kind).pop();
+  return PAY.compare(d, prev, hist);
+}
+$('#pay-send').addEventListener('click', async () => {
+  const d = PS.draft; if (!d || !db) return;
+  if (!/^\d{4}-\d{2}$/.test(d.per)){ $('#pay-msg').textContent = 'Сарыг сонгоно уу.'; return; }
+  const id = d.per + '-' + d.kind + (PS.lists.some(l => l.id === d.per + '-' + d.kind) ? '-' + Date.now().toString(36) : '');
+  $('#pay-send').disabled = true; $('#pay-msg').textContent = 'Илгээж байна…';
+  try{
+    const flags = draftFlags(d);
+    const people = d.people.map(p => ({key: p.key, name: p.name, ovog: p.ovog, pos: p.pos, dept: p.dept, amt: p.amt, accs: p.accs, owed: p.owed, closed: p.closed,
+      parts: p.parts.map(q => { const o = {sheet: q.sheet, code: q.code, acc: q.acc, accRaw: q.accRaw, bank: q.bank, amt: q.amt, base: q.base, fund: q.fund, worked: q.worked, ins: q.ins, owed: q.owed, closed: q.closed};
+        if (q.expected != null){ o.expected = q.expected; o.ruleDiff = q.ruleDiff; } return o; })}));
+    await db.doc('payroll/' + id).set({per: d.per, kind: d.kind, file: d.file, by: me, at: new Date().toISOString(), people, total: d.total, count: d.count, nTotal: d.nTotal,
+      warnings: d.warnings || [], flags, accs: [...new Set(people.flatMap(p => p.accs))], marks: {}, extra: {}, stmtTx: [], ownerNotified: false});
+    PS.draft = null; $('#pay-file').value = ''; PS.sel = id; $('#pay-msg').textContent = 'Илгээгдлээ. Эзэмшигч зөвшөөрсний дараа шилжүүлнэ үү.';
+  }catch(err){ console.warn(err); $('#pay-msg').textContent = 'Илгээж чадсангүй: ' + (err.code || err.message || ''); }
+  finally{ $('#pay-send').disabled = false; renderPay(); }
+});
+
+// ----- statements for accounts that send no e-mail (e.g. ХХБ salary account) -----
+$('#pay-stmt').addEventListener('change', async e => {
+  const l = PS.lists.find(x => x.id === PS.sel); const fl = [...e.target.files]; if (!l || !fl.length) return;
+  $('#pay-stmt-msg').textContent = 'Уншиж байна…';
+  try{
+    const accs = new Set(l.people.flatMap(p => p.accs)); const sal = new Set(PAY.SAL_ACCS);
+    const have = new Set((l.stmtTx || []).map(t => t.id)); const add = [];
+    for (const f of fl){
+      const wb = XLSX.read(await f.arrayBuffer(), {type: 'array', cellDates: false}); let got = null;
+      for (const sn of wb.SheetNames){ const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header: 1, raw: true, defval: null}); const p = VIVI.parseRows(rows, f.name); if (p.type === 'bank'){ got = p; break; } }
+      if (!got) continue;
+      for (const r of got.rows){ if (!(r.dr > 0)) continue;
+        const to = PAY.accShort(r.cp), from = PAY.accShort(r.acc || got.acc);
+        const dsc = String(r.desc || '').toUpperCase();
+        if (!sal.has(from) && ![...accs].some(a => PAY.sameAcc(a, to)) && !l.people.some(p => p.key.length >= 8 && dsc.includes(p.key))) continue;
+        const dt = typeof r.dt === 'string' ? r.dt : new Date(r.dt).toISOString();
+        const id = 'st-' + from + '-' + dt.replace(/\D/g, '').slice(0, 14) + '-' + Math.round(r.dr);
+        if (have.has(id)) continue; have.add(id);
+        add.push({id, dt: dt.slice(0, 19), from, to, toName: r.cpName || '', desc: String(r.desc || '').slice(0, 120), amount: Math.round(r.dr * 100) / 100});
+      }
+    }
+    if (add.length) await db.doc('payroll/' + l.id).update({stmtTx: (l.stmtTx || []).concat(add).slice(-1500)});
+    $('#pay-stmt-msg').textContent = add.length ? `${add.length} гүйлгээ нэмэгдлээ.` : 'Шинэ цалингийн гүйлгээ олдсонгүй (банкны хуулга мөн эсэхийг шалгана уу).';
+  }catch(err){ console.warn(err); $('#pay-stmt-msg').textContent = 'Хуулгыг уншиж чадсангүй.'; }
+  e.target.value = '';
+});
+
+// ----- clicks -----
+bindFilter('#pay-filter', f => PS.filter = f);
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-pay]'); if (!b || !db) return;
+  const act = b.dataset.pay, l = PS.lists.find(x => x.id === (b.dataset.list || PS.sel));
+  if (act === 'sel'){ PS.sel = b.dataset.list; renderPay(); return; }
+  if (act === 'xlsx'){ payExcel(l); return; }
+  b.disabled = true;
+  try{
+    if (act === 'approve' || act === 'reject' || act === 'hold'){
+      const cm = ($('#pay-cm') || {}).value || '';
+      await db.doc('paydec/' + l.id).set({decision: act === 'approve' ? 'approved' : act === 'reject' ? 'rejected' : 'hold', comment: cm, at: new Date().toISOString(), by: me,
+        to: l.by, per: l.per, kind: l.kind, total: l.total, count: l.count, notified: false});
+    } else if (act === 'resend'){
+      await db.doc('payroll/' + l.id).update({resentAt: new Date().toISOString(), ownerNotified: false});
+    } else if (act === 'delete'){
+      if (confirm('Энэ жагсаалтыг устгах уу?')){ await db.doc('payroll/' + l.id).delete(); PS.sel = null; }
+    } else if (act === 'cash'){
+      const p = l.people.find(x => x.key === b.dataset.key); const r = payModel().lists[l.id].people[p.key];
+      const left = Math.round((p.amt - (r ? r.sum : 0)) * 100) / 100;
+      const v = prompt(`${p.name}: бэлнээр / өөр аргаар олгосон дүн (₮)`, String(left)); if (v == null) return;
+      const note = prompt('Тайлбар (хэзээ, хэн олгосон)', '') || '';
+      const amount = parseFloat(String(v).replace(/[\s,]/g, '')) || 0;
+      const marks = {...(l.marks || {})}; if (amount > 0) marks[p.key] = {type: 'cash', amount, note, by: me, at: new Date().toISOString()}; else delete marks[p.key];
+      await db.doc('payroll/' + l.id).update({marks});
+    } else if (act === 'link'){
+      const extra = {...(l.extra || {})}; const k = b.dataset.key; extra[k] = [...new Set([...(extra[k] || []), PAY.accShort(b.dataset.acc)])];
+      await db.doc('payroll/' + l.id).update({extra});
+    } else if (act === 'exempt'){
+      const label = prompt('Энэ данс хэний вэ? (жишээ: Гэрийн туслах – Б.Болорчулуун)', b.dataset.name || ''); if (!label) return;
+      await db.doc('config/payroll').set({exempt: {...(PS.cfg.exempt || {}), [PAY.accShort(b.dataset.acc)]: label}}, {merge: true});
+    } else if (act === 'unexempt'){
+      const ex = {...(PS.cfg.exempt || {})}; delete ex[b.dataset.acc]; await db.doc('config/payroll').set({exempt: ex});
+    }
+  }catch(err){ console.warn(err); alert('Хадгалж чадсангүй: ' + (err.code || err.message || '')); }
+  finally{ b.disabled = false; }
+});
+
+// ----- render -----
+const HOW = {acc:'', extra:['баталгаажсан өөр данс','c-acc'], name:['өөр данс (нэрээр)','c-warn'], code:['ажилтны кодоор (3-р этгээд)','c-acc']};
+function renderPay(){
+  if (!$('#pay-lists')) return;
+  const m = payModel();
+  // draft preview
+  const d = PS.draft;
+  $('#pay-draft').hidden = !d; $('#pay-send').disabled = !d;
+  if (d){
+    const fl = draftFlags(d), nb = fl.filter(f => f.lvl === 'bad').length, nw = fl.filter(f => f.lvl === 'warn').length;
+    $('#pay-draft').innerHTML = `<div class="daysum"><b>${esc(perLabel(d))}</b> · ${d.count} хүн · <b>${fmt(d.total)} ₮</b>${d.nTotal != null ? (Math.abs(d.nTotal - d.total) <= 1 ? ' · <span class="chip c-ok">Нэгтгэл таарсан</span>' : ' · <span class="chip c-bad">Нэгтгэл таарахгүй</span>') : ''}</div>
+      ${(d.warnings || []).map(w => `<div class="banner bad" style="margin-bottom:6px">${esc(w)}</div>`).join('')}
+      <div class="chips">${nb ? `<span class="chip c-bad">Анхаарах ${nb}</span>` : ''}${nw ? `<span class="chip c-warn">Шалгах ${nw}</span>` : ''}${!nb && !nw ? '<span class="chip c-ok">Өмнөх жагсаалттай харьцуулахад асуудалгүй</span>' : ''}</div>
+      ${fl.length ? `<details style="margin-top:6px"><summary class="note">Дэлгэрэнгүй</summary>${flagList(fl)}</details>` : ''}`;
+  }
+  // list chips
+  const L = listsSorted();
+  if (!PS.sel || !L.some(l => l.id === PS.sel)) PS.sel = L.length ? L[0].id : null;
+  $('#pay-lists').innerHTML = L.length ? L.map(l => { const s = payStatus(l), r = m.lists[l.id]; const st = PAY_ST[s];
+    return `<button class="btn" data-pay="sel" data-list="${esc(l.id)}" aria-pressed="${l.id === PS.sel}" style="${l.id === PS.sel ? 'outline:2px solid var(--accent)' : ''}">${esc(perLabel(l))} <span class="chip ${st[1]}">${st[0]}</span>${r ? ` <span class="chip ${r.closed ? 'c-ok' : 'c-grey'}">${r.closed ? '✓ хаагдсан' : r.paidN + '/' + r.n}</span>` : ''}</button>`; }).join('')
+    : '<div class="empty">Цалингийн жагсаалт оруулаагүй байна.</div>';
+  const pend = PS.lists.filter(l => payStatus(l) === 'pending').length;
+  const loose = m.loose.filter(t => !t.exempt && !t.dayWorker && Date.parse(t.dt) > Date.now() - 60 * 86400e3);
+  const badge = isOwner ? pend + loose.length : PS.lists.filter(l => payStatus(l) === 'hold').length;
+  $('#t-pay').hidden = !badge; $('#t-pay').textContent = badge;
+  const l = PS.lists.find(x => x.id === PS.sel);
+  $('#pay-detail').hidden = !l;
+  if (l) renderPayList(l, m);
+  renderPayLoose(m);
+  renderPayDebts();
+}
+function flagList(fl){
+  const g = {bad: [], warn: [], info: []}; fl.forEach(f => g[f.lvl].push(f));
+  const item = f => `<div><b>${esc(f.name)}</b> — ${esc(f.text)}</div>`;
+  return (g.bad.length ? `<div class="banner bad" style="margin-top:6px">${g.bad.map(item).join('')}</div>` : '')
+    + (g.warn.length ? `<div class="banner" style="margin-top:6px;background:var(--warn-soft)">${g.warn.map(item).join('')}</div>` : '')
+    + (g.info.length ? `<details style="margin-top:6px"><summary class="note">Мэдээлэл (${g.info.length})</summary><div class="note">${g.info.map(item).join('')}</div></details>` : '');
+}
+function renderPayList(l, m){
+  const s = payStatus(l), dec = PS.decs[l.id], r = m.lists[l.id] || {people: {}, paidN: 0, n: l.count, paidSum: 0};
+  const st = PAY_ST[s];
+  let acts = '';
+  if (isOwner && (s === 'pending' || s === 'hold')) acts = `<input id="pay-cm" placeholder="Тайлбар (заавал биш)" style="max-width:300px"><button class="btn ok" data-pay="approve">Зөвшөөрөх</button><button class="btn hold" data-pay="hold">⏸ Хүлээлгэх</button><button class="btn bad" data-pay="reject">Татгалзах</button>`;
+  if (!isOwner && s === 'hold') acts += `<button class="btn primary" data-pay="resend">↻ Дахин илгээх</button>`;
+  if ((isOwner || l.by === me) && s !== 'approved') acts += `<button class="btn" data-pay="delete">Устгах</button>`;
+  acts += `<button class="btn" data-pay="xlsx">📥 Excel</button>`;
+  const pct = l.total ? Math.round(r.paidSum / l.total * 100) : 0;
+  $('#pay-head').innerHTML = `<div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(perLabel(l))}</h2><span class="chip ${st[1]}">${st[0]}</span></div>
+    <div class="daysum" style="margin-top:6px">Жагсаалт <b>${fmt(l.total)} ₮</b> · ${l.count} хүн · шилжсэн <b>${fmt(r.paidSum)} ₮</b> (${pct}%) · бүрэн шилжсэн ${r.paidN}/${r.n}${r.closed ? ' · <span class="chip c-ok">✓ Жагсаалт хаагдсан</span>' : ''}</div>
+    <div class="note">Оруулсан: ${esc(nameOf(l.by))} · ${esc(fmtDT(l.at))} · ${esc(l.file || '')}${dec ? ` · Шийдвэр: ${esc(fmtDT(dec.at))}${dec.comment ? ' · ' + esc(dec.comment) : ''}` : ''}${l.resentAt ? ` · ↻ дахин илгээсэн ${esc(fmtDT(l.resentAt))}` : ''}</div>
+    ${(l.warnings || []).map(w => `<div class="banner bad" style="margin-top:6px">${esc(w)}</div>`).join('')}
+    ${flagList(l.flags || [])}
+    <div class="acts row" style="margin-top:10px">${acts}</div>`;
+  const rows = l.people.filter(p => p.amt > 0).map(p => ({p, x: r.people[p.key] || {st: 'none', sum: 0, diff: -p.amt, got: [], others: []}, fl: (l.flags || []).filter(f => f.key === p.key && f.lvl !== 'info')}));
+  const want = {all: () => true, todo: o => o.x.st !== 'paid', diff: o => o.x.st === 'part' || o.x.st === 'over', warn: o => o.fl.length || o.x.otherAcc || o.x.nonSal || o.x.got.some(g => g.early), paid: o => o.x.st === 'paid'}[PS.filter] || (() => true);
+  const cnt = k => rows.filter({all: () => true, todo: o => o.x.st !== 'paid', diff: o => o.x.st === 'part' || o.x.st === 'over', warn: o => o.fl.length || o.x.otherAcc || o.x.nonSal || o.x.got.some(g => g.early), paid: o => o.x.st === 'paid'}[k]).length;
+  for (const [k, lb] of [['all','Бүгд'],['todo','Шилжээгүй'],['diff','Зөрүүтэй'],['warn','Анхаарах'],['paid','Шилжсэн']]){ const bt = document.querySelector(`#pay-filter button[data-f="${k}"]`); if (bt) bt.textContent = `${lb} (${cnt(k)})`; }
+  const list = rows.filter(want).sort((a, b) => String(a.p.dept).localeCompare(String(b.p.dept)) || a.p.name.localeCompare(b.p.name));
+  const STX = {paid: ['Шилжсэн', 'c-ok', 'sev-ok'], part: ['Дутуу', 'c-warn', 'sev-warn'], over: ['Илүү', 'c-bad', 'sev-bad'], none: ['Шилжээгүй', s === 'approved' ? 'c-bad' : 'c-grey', s === 'approved' ? 'sev-bad' : '']};
+  $('#pay-body').innerHTML = list.length ? list.map(({p, x, fl}) => { const t = STX[x.st];
+    const accs = p.parts.filter(q => q.amt > 0).map(q => `<div class="mono">${esc(q.acc || '—')}${q.bank ? ' <span class="note">' + esc(q.bank) + '</span>' : ''}${p.parts.length > 1 ? ` <span class="note">${fmt(q.amt)}</span>` : ''}</div>`).join('');
+    const got = x.got.map(g => { const h = HOW[g.how];
+      return `<div class="note mono">${esc(String(g.dt).slice(5, 16).replace('T', ' '))} · ${fmt(g.amount)} · ${esc(accLabel(g.from))}${g.how === 'name' || g.how === 'code' ? ' → ' + esc(g.to) : ''}${h ? ` <span class="chip ${h[1]}">${h[0]}</span>` : ''}${!PAY.SAL_ACCS.includes(PAY.accShort(g.from)) ? ' <span class="chip c-warn">цалингийн бус данснаас</span>' : ''}${g.early && s === 'approved' ? ' <span class="chip c-warn">зөвшөөрөхөөс өмнө</span>' : ''}${g.src === 'stmt' ? ' <span class="chip c-grey">хуулгаар</span>' : ''}${isOwner && g.how === 'name' ? ` <button class="btn" data-pay="link" data-key="${esc(p.key)}" data-acc="${esc(g.to)}" style="padding:1px 6px">✓ данс баталгаажуулах</button>` : ''}</div>`; }).join('')
+      + (x.cash ? `<div class="note">💵 Бэлнээр/өөрөөр ${fmt(x.cash.amount)}${x.cash.note ? ' · ' + esc(x.cash.note) : ''} · ${esc(nameOf(x.cash.by))}</div>` : '')
+      + (x.others && x.others.length ? `<div class="note">Тооцоогүй бусад шилжүүлэг: ${x.others.map(o => `${esc(String(o.dt).slice(5, 10))} ${fmt(o.amount)} (${esc(accLabel(o.from))})`).join(', ')}</div>` : '');
+    const act = s === 'approved' && x.st !== 'paid' ? `<button class="btn" data-pay="cash" data-key="${esc(p.key)}" style="margin-top:4px">💵 Бэлнээр олгосон</button>` : '';
+    return `<tr class="${t[2]}"><td>${esc(p.dept || '')}</td><td><b>${esc(p.name)}</b><div class="note">${esc(p.pos || '')} · ${esc(p.key)}</div>${fl.map(f => `<div><span class="chip ${f.lvl === 'bad' ? 'c-bad' : 'c-warn'}">${esc(f.text)}</span></div>`).join('')}</td>
+      <td>${accs}</td><td class="n">${fmt(p.amt)}</td><td class="n">${fmt(x.sum)}</td><td class="n">${Math.abs(x.diff) <= 1 ? '0' : sgn(x.diff)}</td><td><span class="chip ${t[1]}">${t[0]}</span>${got}${act}</td></tr>`; }).join('')
+    : `<tr><td colspan="7" class="empty">Энэ шүүлтүүрт мөр алга.</td></tr>`;
+}
+function renderPayLoose(m){
+  const since = Date.now() - 60 * 86400e3;
+  const rows = m.loose.filter(t => Date.parse(t.dt) > since).sort((a, b) => String(b.dt).localeCompare(String(a.dt)));
+  const kind = t => t.exempt ? ['✓ ' + t.exempt, 'c-grey'] : t.onList && t.dayWorker ? ['Жагсаалтын ажилтан – өдрийн хөлс', 'c-warn'] : t.onList ? ['Жагсаалтын ажилтанд илүү', 'c-bad'] : t.dayWorker ? ['Түр ажилтан (өдрөөр)', 'c-warn'] : ['Жагсаалтад байхгүй', 'c-bad'];
+  const bad = rows.filter(t => !t.exempt && !t.dayWorker);
+  $('#pay-loose-sum').innerHTML = `Сүүлийн 60 хоногт цалингийн данснаас жагсаалтаар тайлбарлагдаагүй <b>${rows.length}</b> гүйлгээ · ${fmt(rows.reduce((a, t) => a + t.amount, 0))} ₮` + (bad.length ? ` · <span style="color:var(--bad)">тодруулах ${bad.length} (${fmt(bad.reduce((a, t) => a + t.amount, 0))} ₮)</span>` : '');
+  $('#pay-loose').innerHTML = rows.length ? rows.slice(0, 200).map(t => { const k = kind(t);
+    return `<tr class="${k[1] === 'c-bad' ? 'sev-bad' : k[1] === 'c-warn' ? 'sev-warn' : ''}"><td class="mono">${esc(t.dt.slice(0, 16).replace('T', ' '))}</td><td>${esc(accLabel(t.from))}</td><td>${esc(t.toName || '')}<div class="note mono">${esc(t.to || '')}</div></td><td class="n">${fmt(t.amount)}</td><td>${esc(t.desc || '')}</td>
+      <td><span class="chip ${k[1]}">${esc(k[0])}</span>${isOwner ? (t.exempt ? ` <button class="btn" data-pay="unexempt" data-acc="${esc(PAY.accShort(t.to))}" style="padding:1px 6px">буцаах</button>` : ` <button class="btn" data-pay="exempt" data-acc="${esc(t.to)}" data-name="${esc(t.toName || '')}" style="padding:1px 6px">✓ Зөвшөөрөгдсөн данс</button>`) : ''}</td></tr>`; }).join('')
+    : '<tr><td colspan="6" class="empty">Бүх цалингийн шилжүүлэг жагсаалтаар тайлбарлагдсан.</td></tr>';
+}
+function renderPayDebts(){
+  const finals = PS.lists.filter(l => l.kind === 'final' && payStatus(l) !== 'rejected');
+  const D = PAY.debts(finals);
+  const cur = D.filter(x => x.current && (x.left > 0 || x.closed > 0 || x.owed > 0));
+  const per = finals.length ? finals.map(l => l.per).sort().pop() : '';
+  $('#pay-debt-title').textContent = per ? `Ажилчдын авлага · ${per.replace('-', '.')} сүүл цалингийн жагсаалтаар` : 'Ажилчдын авлага';
+  if (!cur.length){ $('#pay-debt').innerHTML = `<tr><td colspan="8" class="empty">${finals.length ? 'Авлагатай ажилтан алга.' : 'Сүүл цалингийн жагсаалт оруулсны дараа харагдана.'}</td></tr>`; return; }
+  const T = cur.reduce((a, x) => ({open: a.open + (x.opening || 0), add: a.add + (x.added || 0), closed: a.closed + x.closed, out: a.out + (x.outside || 0), left: a.left + x.left}), {open: 0, add: 0, closed: 0, out: 0, left: 0});
+  const n = v => v == null ? '<span class="note">–</span>' : fmt(v);
+  $('#pay-debt').innerHTML = cur.map(x => `<tr class="${x.added > 0 && x.left > x.opening ? 'sev-warn' : x.left <= 0 ? 'sev-ok' : ''}"><td><b>${esc(x.name)}</b><div class="note">${esc(x.pos || '')}</div></td><td class="n">${n(x.opening)}</td><td class="n">${x.added ? '+' + fmt(x.added) : n(x.added)}</td><td class="n">${x.closed ? '−' + fmt(x.closed) : '0'}</td><td class="n">${x.outside ? '−' + fmt(x.outside) : n(x.outside)}</td><td class="n"><b>${fmt(x.left)}</b></td><td class="n">${fmt(x.repaidAll)}</td>
+    <td>${x.left <= 0 ? '<span class="chip c-ok">Хаагдсан</span>' : x.added > 0 && x.left > (x.opening || 0) ? '<span class="chip c-warn">Өссөн</span>' : x.closed > 0 || x.outside > 0 ? '<span class="chip c-acc">Буурч байна</span>' : '<span class="chip c-grey">Хөдөлгөөнгүй</span>'}</td></tr>`).join('')
+    + `<tr><td><b>Нийт</b></td><td class="n"><b>${fmt(T.open)}</b></td><td class="n"><b>+${fmt(T.add)}</b></td><td class="n"><b>−${fmt(T.closed)}</b></td><td class="n"><b>−${fmt(T.out)}</b></td><td class="n"><b>${fmt(T.left)}</b></td><td></td><td></td></tr>`;
+}
+
+// ----- Excel -----
+function payExcel(l){
+  if (!l) return;
+  loadStyledXLSX().then(XS => {
+    try{
+      const m = payModel(), r = m.lists[l.id] || {people: {}};
+      const H = {font: {bold: true, color: {rgb: 'FFFFFF'}}, fill: {fgColor: {rgb: '1F5F8B'}}, alignment: {wrapText: true, vertical: 'center'}};
+      const C = {paid: 'E2F2E8', part: 'FBF0D6', over: 'F8E1DE', none: 'F8E1DE'}, LB = {paid: 'Шилжсэн', part: 'Дутуу', over: 'Илүү', none: 'Шилжээгүй'};
+      const sheet = (rows, widths) => { const ws = XS.utils.aoa_to_sheet(rows); ws['!cols'] = widths.map(w => ({wch: w})); for (let c = 0; c < rows[0].length; c++){ const a = XS.utils.encode_cell({r: 0, c}); if (ws[a]) ws[a].s = H; } ws['!freeze'] = {xSplit: 0, ySplit: 1}; return ws; };
+      const paint = (ws, ri, n, rgb) => { for (let c = 0; c < n; c++){ const a = XS.utils.encode_cell({r: ri, c}); if (ws[a]) ws[a].s = {...(ws[a].s || {}), fill: {fgColor: {rgb}}}; } };
+      const wb = XS.utils.book_new();
+      const rows1 = [['Хэлтэс', 'Ажилтан', 'Код', 'Албан тушаал', 'Данс (жагсаалт)', 'Жагсаалтын дүн', 'Шилжсэн', 'Зөрүү', 'Төлөв', 'Гүйлгээ (огноо · дүн · данснаас)', 'Анхааруулга']];
+      const ppl = l.people.filter(p => p.amt > 0).sort((a, b) => String(a.dept).localeCompare(String(b.dept)) || a.name.localeCompare(b.name));
+      for (const p of ppl){ const x = r.people[p.key] || {st: 'none', sum: 0, diff: -p.amt, got: []};
+        rows1.push([p.dept, p.name, p.key, p.pos, p.accs.join(', '), Math.round(p.amt * 100) / 100, x.sum, Math.abs(x.diff) <= 1 ? 0 : x.diff, LB[x.st],
+          x.got.map(g => `${String(g.dt).slice(0, 10)} · ${Math.round(g.amount)} · ${accLabel(g.from)}${g.how === 'name' || g.how === 'code' ? ' → ' + g.to : ''}`).join('\n') + (x.cash ? `\nБэлнээр ${Math.round(x.cash.amount)} ${x.cash.note || ''}` : ''),
+          (l.flags || []).filter(f => f.key === p.key && f.lvl !== 'info').map(f => f.text).join('; ')]); }
+      rows1.push(['', 'НИЙТ', '', '', '', l.total, r.paidSum || 0, (r.paidSum || 0) - l.total, `${r.paidN || 0}/${r.n || ppl.length}`, '', '']);
+      const ws1 = sheet(rows1, [14, 22, 13, 24, 26, 14, 14, 12, 11, 52, 40]);
+      ppl.forEach((p, i) => { const x = r.people[p.key]; paint(ws1, i + 1, 9, C[(x && x.st) || 'none']); });
+      for (let i = 1; i < rows1.length; i++) for (const c of [5, 6, 7]){ const a = XS.utils.encode_cell({r: i, c}); if (ws1[a]){ ws1[a].z = '#,##0'; } }
+      XS.utils.book_append_sheet(wb, ws1, 'Тулгалт');
+      const fl = l.flags || [];
+      const ws2 = sheet([['Түвшин', 'Ажилтан', 'Тайлбар'], ...fl.map(f => [{bad: 'Анхаарах', warn: 'Шалгах', info: 'Мэдээлэл'}[f.lvl], f.name, f.text])], [12, 24, 70]);
+      fl.forEach((f, i) => paint(ws2, i + 1, 3, f.lvl === 'bad' ? 'F8E1DE' : f.lvl === 'warn' ? 'FBF0D6' : 'ECEEEA'));
+      XS.utils.book_append_sheet(wb, ws2, 'Анхааруулга');
+      const loose = m.loose.filter(t => t.day >= (r.d0 || '') && t.day <= (r.d1 || '9'));
+      const ws3 = sheet([['Огноо', 'Данснаас', 'Хүлээн авагч', 'Данс', 'Дүн', 'Утга', 'Төрөл'], ...loose.map(t => [t.dt.slice(0, 16).replace('T', ' '), accLabel(t.from), t.toName || '', t.to, t.amount, t.desc, t.exempt ? t.exempt : t.onList ? 'Жагсаалтын ажилтанд илүү' : t.dayWorker ? 'Түр ажилтан' : 'Жагсаалтад байхгүй'])], [17, 20, 24, 16, 14, 40, 26]);
+      loose.forEach((t, i) => paint(ws3, i + 1, 7, t.exempt ? 'ECEEEA' : t.dayWorker ? 'FBF0D6' : 'F8E1DE'));
+      XS.utils.book_append_sheet(wb, ws3, 'Жагсаалтгүй гүйлгээ');
+      const D = PAY.debts(PS.lists.filter(x => x.kind === 'final' && payStatus(x) !== 'rejected' && x.per <= l.per)).filter(x => x.current);
+      if (D.length){
+        const ws4 = sheet([['Ажилтан', 'Албан тушаал', 'Өмнөх үлдэгдэл', 'Шинээр авсан', 'Цалингаас хаасан', 'Өөрөөр төлсөн', 'Үлдэгдэл', 'Нийт хаасан (бүх жагсаалт)'], ...D.map(x => [x.name, x.pos, x.opening, x.added, x.closed, x.outside, x.left, x.repaidAll])], [24, 26, 15, 15, 15, 15, 15, 18]);
+        D.forEach((x, i) => paint(ws4, i + 1, 8, x.left <= 0 ? 'E2F2E8' : x.added > 0 && x.left > (x.opening || 0) ? 'FBF0D6' : 'FFFFFF'));
+        XS.utils.book_append_sheet(wb, ws4, 'Авлага');
+      }
+      XS.writeFile(wb, `VIVI_tsalin_${l.per}_${l.kind === 'adv' ? 'uridchilgaa' : 'suul'}.xlsx`);
+    }catch(err){ console.warn(err); alert('Excel үүсгэж чадсангүй: ' + (err.message || err)); }
+  });
+}
+
+function payUsedLabel(t){                     // bank tab: salary transfers explained by an approved payroll list
+  if (!PS.lists.length && !Object.keys(PS.cfg.exempt || {}).length) return null;
+  const m = payModel(), u = m.used.get(t.id);
+  if (u){ const l = PS.lists.find(x => x.id === u.list); return {st: payStatus(l) === 'approved' ? 'ok' : 'warn', label: 'Цалин: ' + perLabel(l) + (payStatus(l) === 'approved' ? '' : ' (зөвшөөрөөгүй)'), cls: payStatus(l) === 'approved' ? 'c-ok' : 'c-warn'}; }
+  const ex = Object.keys(PS.cfg.exempt || {}).find(a => PAY.sameAcc(a, PAY.accShort(t.toAcc)));
+  if (ex && PAY.SAL_ACCS.includes(PAY.accShort(t.fromAcc))) return {st: 'ok', label: '✓ ' + PS.cfg.exempt[ex], cls: 'c-grey'};
+  return null;
+}
 // ---------- settings (owner) ----------
 let ACCESS = {emails: [], perms: {}};
-const SECTIONS = [['req','Төлбөрийн хүсэлт'],['bank','Банкны гүйлгээ'],['rev','Орлого тулгалт'],['cash','Бэлэн мөнгө'],['bal','Дансны үлдэгдэл']];
-const DEFAULT_PERMS = {req:true, bank:true, rev:false, cash:true, bal:true};
+const SECTIONS = [['req','Төлбөрийн хүсэлт'],['bank','Банкны гүйлгээ'],['rev','Орлого тулгалт'],['cash','Бэлэн мөнгө'],['bal','Дансны үлдэгдэл'],['pay','Цалин']];
+const DEFAULT_PERMS = {req:true, bank:true, rev:false, cash:true, bal:true, pay:false};
 const permsOf = e => ({...DEFAULT_PERMS, ...((ACCESS.perms || {})[e] || {})});
 function renderAccess(){
   $('#acc-list').innerHTML = ACCESS.emails.length ? ACCESS.emails.map(e => { const p = permsOf(e);
@@ -1477,11 +2010,11 @@ else VIVIFB.start(async () => {
   $('#req-form-card').hidden = !canWrite;
   $('#tab-set').hidden = !isOwner;
   const onErr = e => console.warn('db', e);
-  let ALLOW = {req:true, bank:true, rev:true, cash:true, bal:true};
+  let ALLOW = {req:true, bank:true, rev:true, cash:true, bal:true, pay:true};
   if (!isOwner){
     try{ const a = await db.doc('config/access').get(); const x = a.exists ? a.data() : {}; ALLOW = {...DEFAULT_PERMS, ...((x.perms || {})[String(user.email()).toLowerCase()] || {})}; }catch(e){ console.warn(e); }
   }
-  const TABS = {req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
+  const TABS = {req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
   for (const k in TABS){ const b = document.querySelector(`nav.tabs button[data-tab="${TABS[k]}"]`); if (b) b.hidden = !ALLOW[k]; if (KPI[k]) $(KPI[k]).closest('.kpi').hidden = !ALLOW[k]; }
   { const cur = document.querySelector('nav.tabs button[aria-selected="true"]'); if (!cur || cur.hidden){ const first = [...document.querySelectorAll('nav.tabs button')].find(b => !b.hidden); if (first) showTab(first.dataset.tab); } }
   if (!Object.values(ALLOW).some(Boolean)) gate('Танд харах хэсэг сонгогдоогүй байна. Эзэмшигчид хандана уу.', true);
@@ -1501,6 +2034,13 @@ else VIVIFB.start(async () => {
   if (ALLOW.cash || ALLOW.rev) db.doc('cash/latest').onSnapshot(d => { S.cash = d.exists ? d.data() : null; render(); }, onErr);
   if (ALLOW.cash) db.collection('cashnotes').onSnapshot(s => { S.notes = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); resolveNames(Object.values(S.notes).map(n => n.by)); render(); }, onErr);
   if (ALLOW.bal) db.collection('balances').onSnapshot(s => { S.balances = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.balances.map(b => b.by)); render(); }, onErr);
+  if (ALLOW.pay){
+    db.collection('payroll').onSnapshot(s => { PS.lists = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(PS.lists.map(l => l.by)); render(); }, onErr);
+    db.collection('paydec').onSnapshot(s => { PS.decs = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
+    db.doc('config/payroll').onSnapshot(d => { PS.cfg = {exempt: {}, ...(d.exists ? d.data() : {})}; render(); }, onErr);
+    const payTxBy = {};
+    for (const acc of PAY.SAL_ACCS) db.collection('banktx').where('fromAcc', '==', acc).onSnapshot(s => { payTxBy[acc] = s.docs.map(d => ({id:d.id, ...d.data()})); PS.tx = [].concat(...Object.values(payTxBy)); render(); }, onErr);
+  }
   // push button
   const pushLabel = st => ({on:'🔔 Мэдэгдэл асаалттай', denied:'🔕 Мэдэгдэл хаалттай', unsupported:'🔔 Мэдэгдэл', off:'🔔 Мэдэгдэл асаах'})[st] || '🔔 Мэдэгдэл асаах';
   const setPush = st => { $('#push-btn').textContent = pushLabel(st); $('#push-btn').dataset.state = st; };
