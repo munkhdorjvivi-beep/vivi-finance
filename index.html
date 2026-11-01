@@ -147,12 +147,12 @@ body{margin:0;background:var(--bg)}
       <h2>Шинэ төлбөрийн хүсэлт</h2>
       <form class="grid" id="req-form" autocomplete="off">
         <label class="f">Хүлээн авагчийн нэр *<input id="rq-payee" required placeholder="Жишээ: Эрдэнэтулга"></label>
-        <label class="f">Дансны дугаар / IBAN *<input id="rq-acc" required inputmode="numeric" placeholder="5005781234"></label>
+        <label class="f">Дансны дугаар / IBAN *<input id="rq-acc" required inputmode="numeric" placeholder="5005781234"><span class="note" id="rq-pb" style="color:var(--accent)"></span></label>
         <label class="f">Банк<select id="rq-bank"><option>Хаан банк</option><option>Голомт банк</option><option>Худалдаа хөгжлийн банк</option><option>Хас банк</option><option>Төрийн банк</option><option>Капитрон банк</option><option>Ариг банк</option><option>М банк</option><option>Бусад</option></select></label>
         <label class="f">Дүн (₮) *<input id="rq-amt" required inputmode="decimal" placeholder="150000"></label>
         <label class="f">Аль данснаас<select id="rq-from"></select></label>
         <label class="f">Ангилал<select id="rq-cat"><option>Барааны төлбөр</option><option>Түрээс</option><option>Цалин</option><option>Зээл, хүү</option><option>Тээвэр, карго</option><option>Татвар, НДШ</option><option>Цахилгаан, ашиглалт</option><option>Засвар, үйлчилгээ</option><option>Буцаалт</option><option>Бусад</option></select></label>
-        <label class="f">Салбар (дотоод тайланд)<select id="rq-store"><option value="">— сонгоогүй —</option><option>Фүүд сити</option><option>Драгон</option><option>Е-март Баянгол</option><option>Эрдэнэт</option><option>Дархан / Сандэй плаза</option><option>УИД</option><option>Нийслэл</option><option>Хан-Уул</option><option>Онлайн дэлгүүр</option><option>Оффис</option><option>Агуулах</option></select></label>
+        <label class="f">Салбар (дотоод тайланд)<select id="rq-store"><option value="">— сонгоогүй —</option><option>Фүүд сити</option><option>Драгон</option><option>Онлайн дэлгүүр</option><option>Нийслэл</option><option>Оффис</option><option>Агуулах</option></select></label>
         <label class="f full">Гүйлгээний утга / тайлбар<textarea id="rq-note" rows="2" placeholder="Жишээ: Хоосон хайрцаг, гадна оффсет хэвлэл, нэхэмжлэх №…"></textarea></label>
         <label class="f">Баримт (нэхэмжлэх, хүсэлтийн зураг)<input id="rq-file" type="file" accept="image/*,application/pdf"></label>
         <div class="f full row"><button class="btn primary" id="rq-submit" type="submit">Хүсэлт илгээх</button><span class="note" id="rq-msg"></span></div>
@@ -272,6 +272,17 @@ body{margin:0;background:var(--bg)}
       <p class="note" style="margin:0 0 10px">Энд бүртгэсэн Google имэйлээр нэвтэрсэн хүн зөвхөн чагталсан хэсгүүдээ харна. Зөвшөөрөх, бэлэн мөнгөний хяналт хадгалах, тохиргоо эрх зөвхөн эзэмшигчид.</p>
       <div id="acc-list" class="files"></div>
       <form id="acc-form" class="row" style="margin-top:10px"><input id="acc-email" type="email" placeholder="нягтлан@gmail.com" style="max-width:320px"><button class="btn primary">Нэмэх</button><span class="note" id="acc-msg"></span></form>
+    </div>
+    <div class="card">
+      <h2>Зардлын ангиллыг дотоод тайланд хэрхэн тооцох</h2>
+      <p class="note" style="margin:0 0 8px">Зээлийн төлбөр, эзэмшигчийн хувийн шилжүүлгийг ашгаас хасахгүй тусад нь харуулна; бараа, дотоод шилжүүлэг зардал биш. Нэг удаа тохируулна.</p>
+      <div class="tbl"><table><thead><tr><th>Ангилал</th><th class="n">Дотоод тайлангийн хугацаанд</th><th>Тайланд</th></tr></thead><tbody id="pl-cats"></tbody></table></div>
+    </div>
+    <div class="card">
+      <h2>Харилцагчийн сан</h2>
+      <p class="note" style="margin:0 0 10px">Түрээс, зээл, нийлүүлэгч, бусад зардлын хүлээн авагчдын данс. Гүйлгээ бүрийн ангилал, салбарыг эндээс таньж, төлбөрийн хүсэлтэд дансны дугаар оруулахад нэр, ангиллыг автоматаар бөглөнө. Шинэчилсэн Excel файлаа («Харилцагч», «Ажилтан» хуудастай) оруулбал солигдоно.</p>
+      <div class="row"><input id="pb-file" type="file" accept=".xls,.xlsx" style="max-width:320px"><span class="note" id="pb-msg"></span></div>
+      <details style="margin-top:8px"><summary class="note" id="pb-sum"></summary><div class="tbl" style="margin-top:6px"><table><thead><tr><th>Бүлэг</th><th>Харилцагч</th><th>Данс</th><th>Ангилал</th><th>Салбар</th></tr></thead><tbody id="pb-list"></tbody></table></div></details>
     </div>
     <div class="card">
       <h2>Мэдэгдэл</h2>
@@ -434,15 +445,16 @@ body{margin:0;background:var(--bg)}
       <div class="tbl"><table><thead><tr><th>Нийлүүлэгч</th><th class="n">Борлуулалт</th><th class="n">Өртөг</th><th class="n">Бохир ашиг</th><th class="n">Маржин %</th><th class="n">Эзлэх %</th><th class="n">Тоо</th></tr></thead><tbody id="pl-sup"></tbody></table></div>
       <p class="note" style="margin:8px 0 0">Мөр дээр дарвал барааны бүлгээр задарна.</p>
     </div>
+    <div class="card" id="pl-unk-card" hidden>
+      <h2>Тодруулах — танигдаагүй зарлага</h2>
+      <div class="daysum" id="pl-unk-sum"></div>
+      <div class="tbl"><table><thead><tr><th>Хүлээн авагч</th><th>Гүйлгээний утга</th><th class="n">Гүйлгээ</th><th class="n">Дүн</th><th>Ангилал</th><th>Салбар</th><th></th></tr></thead><tbody id="pl-unk"></tbody></table></div>
+      <p class="note" style="margin:8px 0 0">Ангилал, салбарыг сонгоод «Сан руу нэмэх» дарвал хүлээн авагч «Харилцагчийн сан»-д нэмэгдэж, цаашид бүх хэсэгт (банк, өдрийн ба дотоод тайлан, төлбөрийн хүсэлт) автоматаар танигдана.</p>
+    </div>
     <div class="card">
-      <h2>Зардал — хүлээн авагчаар (салбарт хуваарилах)</h2>
-      <p class="note" style="margin:0 0 8px">Хүлээн авагч бүрийг салбарт оноовол (жишээ нь Драгоны түрээслүүлэгч → Драгон) цаашдын бүх сард автоматаар тухайн салбарын зардал болно. Төлбөрийн хүсэлтэд «Салбар» сонгосон бол хүсэлтээр нь оноогдоно.</p>
-      <div class="tbl"><table><thead><tr><th>Хүлээн авагч</th><th>Ангилал</th><th class="n">Гүйлгээ</th><th class="n">Дүн</th><th>Салбар</th></tr></thead><tbody id="pl-recv"></tbody></table></div>
-      <h2 style="margin-top:14px">Ангиллыг хэрхэн тооцох</h2>
-      <div class="tbl"><table><thead><tr><th>Ангилал</th><th class="n">Энэ сард</th><th>Тайланд</th></tr></thead><tbody id="pl-cats"></tbody></table></div>
-      <h2 style="margin-top:14px">Гараар нэмэх зардал</h2>
-      <form id="pl-man" class="row"><select id="pl-man-unit" style="width:auto"></select><select id="pl-man-cat" style="width:auto"></select><input id="pl-man-amt" inputmode="decimal" placeholder="Дүн ₮" style="width:130px"><input id="pl-man-note" placeholder="Тайлбар (жишээ: бэлнээр төлсөн түрээс)" style="max-width:300px"><button class="btn primary">Нэмэх</button></form>
-      <div id="pl-man-list" class="files" style="margin-top:8px"></div>
+      <details><summary><b>Гараар нэмэх зардал</b> <span class="note">— бэлнээр төлсөн, шилжүүлэггүй зардал</span></summary>
+      <form id="pl-man" class="row" style="margin-top:8px"><select id="pl-man-unit" style="width:auto"></select><select id="pl-man-cat" style="width:auto"></select><input id="pl-man-amt" inputmode="decimal" placeholder="Сарын дүн ₮" style="width:130px"><input id="pl-man-note" placeholder="Тайлбар (жишээ: бэлнээр төлсөн түрээс)" style="max-width:300px"><button class="btn primary">Нэмэх</button></form>
+      <div id="pl-man-list" class="files" style="margin-top:8px"></div></details>
     </div>
   </section>
 
@@ -925,12 +937,14 @@ const VIVI = (() => {
     fee:'Банкны шимтгэл / Prowizje', hipay:'hipay (хэтэвч / portfel)', refund:'Буцаалт / Zwroty klientom', salary:'Цалин / Wynagrodzenia', tax:'Татвар, гааль, НДШ / Podatki, cło, ZUS',
     repair:'Засвар, үйлчилгээ / Remonty', travel:'Томилолт / Delegacje', media:'Цахилгаан, интернэт / Media', rent:'Түрээс / Czynsz', ploan:'Хувийн зээл + хүү / Pożyczki prywatne',
     bank:'Зээл, ББСБ / Kredyty', f1:'F1 (Энхбаатар)', fx:'Арилжаа / Wymiana walut', cargo:'Тээвэр, карго / Transport', fuel:'Шатахуун / Paliwo', goods:'Бараа, нийлүүлэгч / Towar',
-    other:'Тодруулах / Do wyjaśnienia'};
+    other:'Тодруулах / Do wyjaśnienia', ops:'Үйл ажиллагааны бусад / Pozostałe operacyjne'};
+  let BASE = null; const setBase = fn => { BASE = fn; };
   function outCat(t){
     const s = String(t.desc||'').toLowerCase(), nm = String(t.cpName||'').toLowerCase(), cp = norm(t.cp);
     let recv = cp && OWN.has(cp) ? cp : '';
     if (!recv){ const m = String(t.desc||'').replace(/\s/g,'').match(/MN\d{18}/); if (m && OWN.has(norm(m[0]))) recv = norm(m[0]); }
     if (recv){ const o = ACC_NAME[recv] || ''; if (/Мөнхдорж/.test(o)) return 'own_md'; if (/Хэрэглээ/.test(o)) return 'own_eb'; return 'internal'; }
+    if (BASE){ const b = BASE(t.cp, t.desc) || (() => { const m = String(t.desc||'').replace(/\s/g,'').match(/MN\d{18,19}/); return m ? BASE(m[0], t.desc) : null; })(); if (b) return b; }   // counterparty base (Харилцагчийн сан)
     if (/хураамж|хөтөлсний/.test(s) || (/шимтгэл/.test(s) && t.dr < 20000)) return 'fee';
     if (/hipay/.test(s)) return 'hipay';
     if (/буцаалт|butsaalt/.test(s)) return 'refund';
@@ -1085,7 +1099,7 @@ const VIVI = (() => {
     return wb;
   }
 
-  return {parseRows, build, parseDates, matchCash, classifyCredit, iso, OWN, norm, parseMail, mailLocal, report, outCat, toWorkbook};
+  return {parseRows, build, parseDates, matchCash, classifyCredit, iso, OWN, norm, parseMail, mailLocal, report, outCat, setBase, toWorkbook};
 })();
 
 
@@ -1407,14 +1421,14 @@ const PL = (() => {
   // rent accounts given by the owner (receiver account → store)
   const ACC_STORE_DEFAULT = {'444017046':'Фүүд сити', '5581001313':'Фүүд сити', '5128024567':'Фүүд сити', '1205266311':'Драгон'};
   const CAT_DEFAULT = {rent:'cost', f1:'cost', media:'cost', repair:'cost', travel:'cost', cargo:'cost', fuel:'cost', fee:'cost', tax:'cost', other:'cost', bank:'debt', ploan:'debt',
-    salary:'skip', goods:'skip', internal:'skip', own_md:'owner', own_eb:'owner', hipay:'owner', fx:'skip', refund:'skip'};
+    ops:'cost', salary:'skip', goods:'skip', internal:'skip', own_md:'owner', own_eb:'owner', hipay:'owner', fx:'skip', refund:'skip'};
   const CAT_MODE_LABEL = {cost:'Зардал', debt:'Зээлийн төлбөр (тусад нь)', owner:'Эзэмшигч (тусад нь)', skip:'Тооцохгүй'};
 
   // pl = saved month (sales + stmtTx), payCost = PAY.costs month entry, extTx = e-mail transfers of the month
   // opts: {catMode:{cat:mode}, accStore:{acc:unit}, manual:[{unit, cat, amount, note}], officeUnits:Set}
   function build(pl, payCost, extTx, opts){
     opts = opts || {};
-    const catMode = {...CAT_DEFAULT, ...(opts.catMode || {})}, accStore = {...ACC_STORE_DEFAULT, ...(opts.accStore || {})}, OFF = opts.officeUnits || new Set(['Оффис']);
+    const catMode = {...CAT_DEFAULT, ...(opts.catMode || {})}, accStore = {...ACC_STORE_DEFAULT, ...(opts.baseStore || {}), ...(opts.accStore || {})}, OFF = opts.officeUnits || new Set(['Оффис']);
     const units = {};
     const U = u => units[u] = units[u] || {unit: u, office: OFF.has(u), sales: 0, cost: 0, payroll: 0, payrollAdvOnly: false, direct: 0, directBy: {}, lines: []};
     for (const S of Object.values(pl.stores || {})){ const x = U(S.unit); x.sales = S.sales; x.cost = S.cost; x.qty = S.qty; }
@@ -1612,6 +1626,73 @@ const DAILY = (() => {
   return R;
 })();
 
+// ===== Counterparty base (Харилцагчийн сан): known receiving accounts → category, store, name =====
+const PAYEES = (() => {
+  const accShort = a => { let s = String(a == null ? '' : a).toUpperCase().replace(/\s/g, ''); const m = s.match(/^(?:MN)?(\d{2})(\d{4})(\d{12,13})$/); if (m) return m[3].replace(/^0+/, ''); s = s.replace(/\D/g, ''); if (s.length >= 18) return s.slice(-10).replace(/^0+/, ''); return s.replace(/^0+/, ''); };
+  // business unit from the counterparty's name
+  const STORE_RE = [[/фүүд\s*сити|food\s*city/i, 'Фүүд сити'], [/драгон|dragon/i, 'Драгон'], [/хүннү|оффис/i, 'Оффис'], [/имарт|e-?mart|10-р хороолол/i, 'Е-март Баянгол'],
+    [/сандай|сандэй|sunday|дархан/i, 'Дархан / Сандэй плаза'], [/эрдэнэт\s*салбар|эрдэнэт$/i, 'Эрдэнэт'], [/нийслэл/i, 'Нийслэл'], [/агуулах/i, 'Агуулах'], [/онлайн/i, 'Онлайн дэлгүүр']];
+  const storeOf = n => { for (const [re, u] of STORE_RE) if (re.test(n || '')) return u; return ''; };
+  // category from the group and the cash-flow code («Мөнгөн гүйлгээний үзүүлэлтийн код»)
+  function catOf(group, code, name){
+    const c = String(code || '').trim(), n = String(name || '');
+    if (c === '1.2.1') return 'salary';
+    if (c === '1.2.2' || c === '1.2.7') return 'tax';
+    if (c === '1.2.3') return 'goods';
+    if (c === '1.2.4') return 'media';
+    if (c === '1.2.5') return /шатахуун/i.test(n) ? 'fuel' : 'cargo';
+    if (c === '1.2.6') return 'ploan';
+    if (c === '3.2.1') return /ббсб|финанс|банк/i.test(n) ? 'bank' : 'ploan';
+    if (c === '1.2.8') return 'ops';
+    if (/түрээс/i.test(group || '')) return 'rent';
+    return 'ops';
+  }
+  // rows: Excel «Харилцагч» sheet rows (header included) → list
+  function fromSheet(rows){
+    const hi = rows.findIndex(r => r && r.some(c => String(c || '').trim() === 'Дансны дугаар'));
+    if (hi < 0) return {error: '«Дансны дугаар» баганатай «Харилцагч» хуудас олдсонгүй.'};
+    const H = rows[hi].map(c => String(c == null ? '' : c).trim()), ix = n => H.indexOf(n);
+    const c = {grp: ix('Бүлэг'), code: ix('Код'), name: ix('Харилцагч'), bank: ix('Банк'), acc: ix('Дансны дугаар'), holder: ix('Данс эзэмшигч'), cf: ix('Мөнгөн гүйлгээний үзүүлэлтийн код')};
+    const out = []; let group = '';
+    for (const r of rows.slice(hi + 1)){ if (!r) continue;
+      if (c.grp >= 0 && r[c.grp]) group = String(r[c.grp]).trim();
+      const acc = accShort(r[c.acc]); if (!acc) continue;
+      const name = String((c.name >= 0 && r[c.name]) || '').trim() || String((c.holder >= 0 && r[c.holder]) || '').trim();
+      const cf = c.cf >= 0 ? String(r[c.cf] || '').trim() : '';
+      out.push({acc, name, group, code: c.code >= 0 ? String(r[c.code] == null ? '' : r[c.code]).trim() : '', bank: c.bank >= 0 ? String(r[c.bank] || '').trim() : '',
+        holder: c.holder >= 0 ? String(r[c.holder] || '').trim() : '', cf, cat: catOf(group, cf, name), store: storeOf(name)});
+    }
+    return {list: out};
+  }
+  // «Ажилтан» sheet → employees with their accounts
+  function empFromSheet(rows){
+    const hi = rows.findIndex(r => r && r.some(c => String(c || '').trim() === 'Дансны дугаар') && r.some(c => String(c || '').trim() === 'Нэр'));
+    if (hi < 0) return [];
+    const H = rows[hi].map(c => String(c == null ? '' : c).trim()), ix = n => H.indexOf(n);
+    return rows.slice(hi + 1).filter(r => r && r[ix('Дансны дугаар')]).map(r => ({code: String(r[ix('Код')] || '').trim(), name: String(r[ix('Нэр')] || '').trim(), acc: accShort(r[ix('Дансны дугаар')]),
+      note: String(r[ix('Тайлбар')] || '').trim(), pos: String(r[ix('Албан тушаал')] || '').trim()}));
+  }
+  let MAP = {};
+  // one account can serve several purposes (e.g. a lender who also supplies goods): keep every entry as «alts»
+  function set(list){ MAP = {}; for (const p of list || []){ if (!p.acc) continue;
+      if (!MAP[p.acc]) MAP[p.acc] = {...p, alts: [p]};
+      else if (!MAP[p.acc].alts.some(x => x.cat === p.cat)){ MAP[p.acc].alts.push(p); MAP[p.acc].name = MAP[p.acc].alts.map(x => x.name).filter((v, i, a) => a.indexOf(v) === i).join(' / '); MAP[p.acc].group = MAP[p.acc].alts.map(x => x.group).filter((v, i, a) => v && a.indexOf(v) === i).join(' / '); } }
+    return MAP; }
+  // category of a transfer: by the account; when the account has several purposes, by the words in the description
+  const WORDS = {ploan: /зээл|хүү/i, bank: /зээл|хүү/i, goods: /бараа|нийлүүл/i, rent: /түрээс/i, tax: /татвар|ндш|нөат|ххоат/i, media: /цахилгаан|интернэт|утас|ашиглалт/i, cargo: /карго|тээвэр|хүргэлт/i, fuel: /шатахуун/i, salary: /цалин/i};
+  let DEF = {};
+  const setDefaults = m => { DEF = m || {}; };
+  function catFor(acc, desc){ const b = get(acc); if (!b) return null; if (b.alts.length < 2) return b.cat;
+    const hit = b.alts.find(x => WORDS[x.cat] && WORDS[x.cat].test(String(desc || ''))); return hit ? hit.cat : (DEF[b.acc] || 'other'); }
+  const get = acc => { const a = accShort(acc); if (!a) return null; if (MAP[a]) return MAP[a]; const k = Object.keys(MAP).find(x => x.length >= 9 && a.length >= 9 && x.slice(-9) === a.slice(-9)); return k ? MAP[k] : null; };
+  const R = {accShort, storeOf, catOf, fromSheet, empFromSheet, set, get, catFor, setDefaults, all: () => MAP};
+  if (typeof module !== 'undefined') module.exports = R;
+  return R;
+})();
+
+const PAYEES_DEFAULT = {"list": [{"acc": "444017046", "name": "Фүүдсити - Хувь гэрээ", "group": "Түрээс", "code": "2565935-1", "bank": "ХХБ", "holder": "ЦОГТГЭРЭЛ ДАШДОНДОВ", "cf": "1.2.9", "cat": "rent", "store": "Фүүд сити"}, {"acc": "5581001313", "name": "Фүүдсити - Байгууллагын гэрээ", "group": "Түрээс", "code": "2565935", "bank": "Хаан", "holder": "БӨХБАТ", "cf": "1.2.9", "cat": "rent", "store": "Фүүд сити"}, {"acc": "1205266311", "name": "Драгон салбар", "group": "Түрээс", "code": "5118395", "bank": "Голомт", "holder": "ПУНСАНЦОГВОО ГУНГААЖАНЦАН", "cf": "1.2.9", "cat": "rent", "store": "Драгон"}, {"acc": "9015118395", "name": "Драгон цахилгаан", "group": "Түрээс", "code": "5118395", "bank": "М Банк", "holder": "ДРАГОНХОЛДИНГ", "cf": "1.2.4", "cat": "media", "store": "Драгон"}, {"acc": "5598039337", "name": "Хүннү тауэр оффис - Нэргүй", "group": "Түрээс", "code": "УГ86031668", "bank": "Хаан", "holder": "ЦООЖ НЭРГҮЙ", "cf": "1.2.9", "cat": "rent", "store": "Оффис"}, {"acc": "1705134686", "name": "Belmonte TV", "group": "Түрээс", "code": "Белмонте ТВ", "bank": "Голомт", "holder": "МӨНХСАРАН ДАГВАСҮРЭН", "cf": "1.2.9", "cat": "rent", "store": ""}, {"acc": "461084545", "name": "БГД 10-р хороолол Имарт салбар", "group": "Түрээс", "code": "5811651-23", "bank": "ХХБ", "holder": "СКАЙХАЙПЕРМАРКЕТ ХХК", "cf": "1.2.9", "cat": "rent", "store": "Е-март Баянгол"}, {"acc": "456095088", "name": "Камдер ХХК", "group": "Түрээс", "code": "5169038", "bank": "ХХБ", "holder": "КАМДЕР ХХК", "cf": "1.2.9", "cat": "rent", "store": ""}, {"acc": "5029946765", "name": "Н.Отгонтуяа", "group": "Зээл", "code": "99098046", "bank": "Хаан", "holder": "ОТГОНТУЯА НАНЖАА", "cf": "1.2.6", "cat": "ploan", "store": ""}, {"acc": "499201039", "name": "П.Цэнгэл", "group": "Зээл", "code": "111", "bank": "ХХБ", "holder": "ЦЭНГЭЛ ПҮРЭВДОРЖ", "cf": "1.2.6", "cat": "ploan", "store": ""}, {"acc": "5038159494", "name": "Маркетингийн камер", "group": "Зээл", "code": "7105273", "bank": "Хаан", "holder": "Могул финанс ХХК", "cf": "3.2.1", "cat": "ploan", "store": ""}, {"acc": "5222163944", "name": "Соёолон Капитал ББСБ - 135сая + 100сая зээл", "group": "Зээл", "code": "5935253", "bank": "Хаан", "holder": "Соёолон Капитал ББСБ", "cf": "3.2.1", "cat": "bank", "store": ""}, {"acc": "5034332645", "name": "О.Эрдэнэтулга - хувь зээл", "group": "Зээл", "code": "99919956", "bank": "Хаан", "holder": "ЭРДЭНЭТУЛГА ОТГОН", "cf": "3.2.1", "cat": "ploan", "store": ""}, {"acc": "5401270409", "name": "Б.Болортунгалаг - хувь зээл", "group": "Зээл", "code": "99840081", "bank": "Хаан", "holder": "БОЛОРТУНГАЛАГ БАЛЖИННЯМ", "cf": "3.2.1", "cat": "ploan", "store": ""}, {"acc": "451065110", "name": "З.Банзрагч - Datoy", "group": "Бараа нийлүүлэгч", "code": "020", "bank": "ХХБ", "holder": "БАНЗРАГЧ ЗОЛБАЯР", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5067059086", "name": "Luvly shop", "group": "Бараа нийлүүлэгч", "code": "025", "bank": "Хаан", "holder": "БЯМБАХИШИГ ЖАРГАЛСАЙХАН", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "421056407", "name": "Шива энэтхэг бараа", "group": "Бараа нийлүүлэгч", "code": "050", "bank": "ХХБ", "holder": "ЭНХМАА БАТБАЯР", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "456172742", "name": "Жанжийжаваалий бараа", "group": "Бараа нийлүүлэгч", "code": "016", "bank": "ХХБ", "holder": "ЖАНЖИЙЖАВААЛИЙ БЯМБАДОРЖ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5075006191", "name": "Б.Хатанбаатар /00-н цаас/", "group": "Бараа нийлүүлэгч", "code": "047", "bank": "Хаан", "holder": "ХАТАНБААТАР БАЯРЦЭНГЭЛ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5403930726", "name": "Б.Эрдэнэжаргал /гадаад пас/", "group": "Бараа нийлүүлэгч", "code": "049", "bank": "Хаан", "holder": "ОЮУНДЭЛГЭР ЧИМЭДЦЭРЭН", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5063774317", "name": "Юргана индастри ХХК", "group": "Бараа нийлүүлэгч", "code": "6839754", "bank": "Хаан", "holder": "ЮРГАНА ИНДАСТРИ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5700579867", "name": "Энари гоо сайхан", "group": "Бараа нийлүүлэгч", "code": "022", "bank": "Хаан", "holder": "АДЪЯАХҮҮ ОНГООБОР", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5035274680", "name": "Ариунзул", "group": "Бараа нийлүүлэгч", "code": "006", "bank": "Хаан", "holder": "АРИУНЗУЛ ЦООДОЛ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5034911688", "name": "Евро косметикс", "group": "Бараа нийлүүлэгч", "code": "048", "bank": "Хаан", "holder": "ХИШИГДОРЖ НАРАНГЭРЭЛ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5085174777", "name": "Жи Эс коммерс", "group": "Бараа нийлүүлэгч", "code": "035", "bank": "Хаан", "holder": "ГАНХУЯГ ГАНБОЛД", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5082065115", "name": "Сэрвэн Ундрага ХХК /БТ хувцас", "group": "Бараа нийлүүлэгч", "code": "6926126", "bank": "Хаан", "holder": "МӨНХЗУЛ ДҮГЭЭ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5029946765", "name": "Н.Отгонтуяа", "group": "Бараа нийлүүлэгч", "code": "034", "bank": "Хаан", "holder": "ОТГОНТУЯА НАНЖАА", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5026885341", "name": "Цахиур төмөр ХХК -НӨАТтэй", "group": "Бараа нийлүүлэгч", "code": "2645319", "bank": "Хаан", "holder": "ЦАХИУРТӨМӨР", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "456262858", "name": "Энхтайван", "group": "Бараа нийлүүлэгч", "code": "033", "bank": "ХХБ", "holder": "ЭНХТАЙВАН СҮХ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "453131737", "name": "Янмал ХХК", "group": "Бараа нийлүүлэгч", "code": "044", "bank": "ХХБ", "holder": "ЯНМАЛ ХХК", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5035115733", "name": "Хишигтогтох", "group": "Бараа нийлүүлэгч", "code": "001", "bank": "Хаан", "holder": "БАЯРМАА БАВУУХҮҮ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5007910879", "name": "Бээжин Баяраа", "group": "Бараа нийлүүлэгч", "code": "58585856", "bank": "Хаан", "holder": "БАТМӨНХ БАЯНСАН", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5077208652", "name": "Д.Чимидмаа", "group": "Бараа нийлүүлэгч", "code": "027", "bank": "Хаан", "holder": "ЧИМИДМАА ДАВАА", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5308524725", "name": "Б.Одончимэг - гутал D43", "group": "Бараа нийлүүлэгч", "code": "", "bank": "Хаан", "holder": "ОДОНЧИМЭГ БАТБАЯР", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5305588115", "name": "Хадаа гутал", "group": "Бараа нийлүүлэгч", "code": "014", "bank": "Хаан", "holder": "БАТЦЭЦЭГ ЧИЛГЭР", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5072086738", "name": "Ө.Урангуя - Аялал", "group": "Бараа нийлүүлэгч", "code": "052", "bank": "Хаан", "holder": "УРАНГУА ӨЛЗИЙ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5039860137", "name": "Удшижан", "group": "Бараа нийлүүлэгч", "code": "ХГ86100713", "bank": "Хаан", "holder": "БАТНАСАН ВАНДАНТҮГЖ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5024507314", "name": "Карго төлбөр", "group": "Бусад", "code": "ХГ86100713", "bank": "Хаан", "holder": "МӨНХБАТ ОТГОНБАЯР", "cf": "1.2.5", "cat": "cargo", "store": ""}, {"acc": "5002058966", "name": "Шатахуун", "group": "Бусад", "code": "ХГ84021311", "bank": "Хас", "holder": "Даваахүү ЭНХБААТАР", "cf": "1.2.5", "cat": "fuel", "store": ""}, {"acc": "405097565", "name": "Энхбаатар - цалин", "group": "Бусад", "code": "ХГ84021311", "bank": "ХХБ", "holder": "ЭНХБААТАР ДАВААХҮҮ", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5176120446", "name": "Д.Энхбаатар - ХХОАТ", "group": "Бусад", "code": "ХГ84021311", "bank": "Хаан", "holder": "ТАТВАРЫН ЕРӨНХИЙ ГАЗАР", "cf": "1.2.7", "cat": "tax", "store": ""}, {"acc": "5176120446", "name": "Д.Энхбаатар - НӨАТ", "group": "Бусад", "code": "ХГ84021311", "bank": "Хаан", "holder": "ТАТВАРЫН ЕРӨНХИЙ ГАЗАР", "cf": "1.2.7", "cat": "tax", "store": ""}, {"acc": "499071483", "name": "Д.Энхбаатар - НДШ", "group": "Бусад", "code": "ХГ84021311", "bank": "ХХБ", "holder": "БАЯНГОЛ ДҮҮРГИЙН НИЙГМИЙН ДААТГАЛЫН ГАЗАР", "cf": "1.2.2", "cat": "tax", "store": ""}, {"acc": "9025036895", "name": "Э.Энхтөр - утасны төлбөр", "group": "Бусад", "code": "ХГ84021311", "bank": "М Банк", "holder": "ЮНИТЕЛ ХХК", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5026814471", "name": "Өмгөөлөгчийн төлбөр - Ц.Ариунзул", "group": "Бусад", "code": "006", "bank": "Хаан", "holder": "ДАВААНЯМ ЖАЛБУУ", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5020599412", "name": "Харуул хамгаалалтын төлбөр", "group": "Бусад", "code": "5271746", "bank": "Хаан", "holder": "ИХ ХАР СҮЛД", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5114330398", "name": "62004836 КОДтой ашиглалтын төлбөр", "group": "Бусад", "code": "5234433", "bank": "Хаан", "holder": "ХҮРЭЭХАУС", "cf": "1.2.4", "cat": "media", "store": ""}, {"acc": "8008001001367", "name": "Бодь даатгал ХК /хөрөнгийн болон БМ/", "group": "Бусад", "code": "2088606", "bank": "Богд", "holder": "Бодь даатгал ХК", "cf": "1.2.8", "cat": "ops", "store": ""}, {"acc": "5131130536", "name": "Хүннү тауэр - ашиглалтын төлбөр", "group": "Бусад", "code": "УГ86031668", "bank": "Хаан", "holder": "БИНДЭГНОРОВ", "cf": "1.2.4", "cat": "media", "store": "Оффис"}, {"acc": "5040357967", "name": "Хүннү тауэр - СӨХ-н төлбөр 4*70,000₮", "group": "Бусад", "code": "УГ86031668", "bank": "Хаан", "holder": "ХҮННҮ ВИЛЛА СӨХ", "cf": "1.2.4", "cat": "media", "store": "Оффис"}, {"acc": "5114426977", "name": "Сандай ашиглалт 6 сар, цахилгааны төлбөр 5сар", "group": "Бусад", "code": "8295824", "bank": "Хаан", "holder": "САНДЭЙ ПЛАЗАД БИЗНЕС ЭРХЛЭГЧИД ЦЭЛМЭГ ТӨВ", "cf": "1.2.4", "cat": "media", "store": "Дархан / Сандэй плаза"}, {"acc": "499007597", "name": "Цахилгааны төлбөр 3035671", "group": "Бусад", "code": "2646161", "bank": "ХХБ", "holder": "УБЦТС ТӨХК БАЯНГОЛ ХҮТ", "cf": "1.2.4", "cat": "media", "store": ""}, {"acc": "432023265", "name": "Онлайн хүргэлт PP-26-0897", "group": "Бусад", "code": "6612784", "bank": "ХХБ", "holder": "ПИК ПАК ГРУПП ХХК", "cf": "1.2.5", "cat": "cargo", "store": "Онлайн дэлгүүр"}, {"acc": "1410016178", "name": "КоллПро 77051818", "group": "Бусад", "code": "5827787", "bank": "Голомт", "holder": "КОЛЛПРО ХХК", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5111645381", "name": "Вивекавикториа ххк-с 5915198; Timely", "group": "Бусад", "code": "6675654", "bank": "Хаан", "holder": "ТЕК СТРИМ", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "9015388457", "name": "Интернэтийн төлбөр", "group": "Бусад", "code": "5388457", "bank": "М Банк", "holder": "ЮНИВИШН ХХК", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "9025036895", "name": "Утасны дугаарын төлбөр", "group": "Бусад", "code": "5036895", "bank": "М Банк", "holder": "ЮНИТЕЛ", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5097048829", "name": "Эрдэнэт салбар Портерийн тээврийн хөлс", "group": "Бусад", "code": "ФМ78050769", "bank": "Хаан", "holder": "ӨЛЗИЙБАЯР ЁНДОНСАМБУУ", "cf": "1.2.5", "cat": "cargo", "store": "Эрдэнэт"}, {"acc": "5026595377", "name": "Эрдэнэт салбар - Тээш төлбөр", "group": "Бусад", "code": "2076675", "bank": "Хаан", "holder": "БАТСАЙХАН ГОМБОРАГЧАА", "cf": "1.2.5", "cat": "cargo", "store": "Эрдэнэт"}, {"acc": "3665109094", "name": "Портер шатахуун", "group": "Бусад", "code": "", "bank": "Голомт", "holder": "ЭНХТУЛГА ДАВААХҮҮ", "cf": "1.2.5", "cat": "fuel", "store": ""}, {"acc": "5753811879", "name": "САНДАГ-ОЧИР ЭНХБОЛД", "group": "Бусад", "code": "", "bank": "Хаан", "holder": "САНДАГ-ОЧИР ЭНХБОЛД", "cf": "1.2.5", "cat": "cargo", "store": ""}, {"acc": "5030482980", "name": "ЭКОС төлбөр", "group": "Бусад", "code": "5915195", "bank": "Хаан", "holder": "НИНА ЭРДЭНЭЧИМЭГ", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "2611208076", "name": "Гэрийн үйлчлэгчийн цалин", "group": "Бусад", "code": "ЧМ73032564", "bank": "ХХБ", "holder": "ЭРДЭНЭЧУЛУУН БЯМБАА", "cf": "1.2.1", "cat": "salary", "store": ""}, {"acc": "2602036637", "name": "Гэрийн үйлчлэгчийн цалин", "group": "Бусад", "code": "ЧМ78013069", "bank": "ХХБ", "holder": "БОЛОРЧУЛУУН БЯМБАА", "cf": "1.2.1", "cat": "salary", "store": ""}, {"acc": "5040171494", "name": "Тор, скоч, Пос цаас г,м", "group": "Бусад", "code": "6278957", "bank": "Хаан", "holder": "ОБ ТРЕЙДИНГ", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5039742363", "name": "Хангамж - Оффис", "group": "Бусад", "code": "5915195", "bank": "Хаан", "holder": "БОР ОЮУНТУНГАЛАГ", "cf": "1.2.9", "cat": "ops", "store": "Оффис"}, {"acc": "9005159954", "name": "Хэвлэл", "group": "Бусад", "code": "5159954", "bank": "М Банк", "holder": "МӨНГӨН ГАНЗАЙ ХХК", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5021476161", "name": "Хангамж - Салбарууд", "group": "Бусад", "code": "940004000", "bank": "Хаан", "holder": "ПҮРЭВЖАВ ЦЭДЭНЖИЙМАА", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5090715290", "name": "Эрдэнэт салбар - Баллонтой ус", "group": "Бусад", "code": "5915195", "bank": "Хаан", "holder": "ЭНЭБИШ БАЯРМАГНАЙ", "cf": "1.2.9", "cat": "ops", "store": "Эрдэнэт"}, {"acc": "5657071875", "name": "Драгон салбар - Баллонтой ус", "group": "Бусад", "code": "5915195", "bank": "Хаан", "holder": "ЗАНДРАА БААСАНДОРЖ", "cf": "1.2.9", "cat": "ops", "store": "Драгон"}, {"acc": "5039201516", "name": "Хүннү тауэр - Баллонтой ус", "group": "Бусад", "code": "5915195", "bank": "хаан", "holder": "ТӨГСБУЯНДЭЛГЭР САМЪЯА", "cf": "1.2.9", "cat": "ops", "store": "Оффис"}], "emps": [{"code": "РЕ98051307", "name": "Бя.Оюун-Эрдэнэ", "acc": "1735156525", "note": "НДШ төлдөг", "pos": "Дэлгүүрийн ЗБ"}, {"code": "МЕ90080601", "name": "Солонго", "acc": "458055838", "note": "НДШ төлдөг", "pos": "Тооцооны нягтлан бодогч"}, {"code": "ОО94092721", "name": "Оюунбилэг", "acc": "1735156286", "note": "НДШ төлдөг", "pos": "Ахлах нягтлан бодогч"}, {"code": "УК97022408", "name": "Халиунаа", "acc": "1735156289", "note": "НДШ төлдөг", "pos": "Маркетингийн менежер"}, {"code": "УП89063046", "name": "Ариунжаргал", "acc": "1735156284", "note": "НДШ төлдөг", "pos": "Ерөнхий нягтлан бодогч"}, {"code": "ХГ86100713", "name": "Мөнхдорж", "acc": "1735156283", "note": "НДШ төлдөг", "pos": "Ерөнхий захирал"}, {"code": "ЧМ73032564", "name": "Эрдэнэчулуун", "acc": "1735156288", "note": "НДШ төлдөг", "pos": "Үйлчлэгч"}, {"code": "ЧМ78013069", "name": "Болорчулуун", "acc": "2602036637", "note": "НДШ төлдөг", "pos": "Үйлчлэгч"}, {"code": "ВЗ69100618", "name": "Баатар", "acc": "1735156571", "note": "НДШ төлдөг", "pos": "Үйлчлэгч"}, {"code": "ДЖ98070809", "name": "Уранзаяа", "acc": "1905125044", "note": "НДШ төлдөг", "pos": "Нярав"}, {"code": "КЮ76042206", "name": "Буяндэлгэр", "acc": "1735156293", "note": "НДШ төлдөг", "pos": "Дэлгүүрийн ЗБ"}, {"code": "ТХ98072401", "name": "Элбэгзаяа", "acc": "1735156295", "note": "НДШ төлдөг", "pos": "Нярав"}, {"code": "СП94083006", "name": "О.Золжаргал", "acc": "1735156297", "note": "НДШ төлдөг", "pos": "Дэлгүүрийн менежер"}, {"code": "АЮ87040403", "name": "Буянжаргал", "acc": "1735156291", "note": "НДШ төлдөг", "pos": "Онлайн худалдааны мэргэжилтэн"}, {"code": "АМ02241503", "name": "Б.Эрдэнэцэцэг", "acc": "5251418414", "note": "төлдөггүй", "pos": "Касс"}, {"code": "ГН87092400", "name": "Х.Уянга", "acc": "5284076229", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ДЖ03292006", "name": "Ц.Мөнхзул", "acc": "109500167338", "note": "төлдөггүй", "pos": "Касс"}, {"code": "ЗЖ75012801", "name": "А.Уранцэцэг", "acc": "5619052521", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "НЭ92101818", "name": "М.Мөнгөндорж", "acc": "192200046273", "note": "төлдөггүй", "pos": "Камер хянагч"}, {"code": "ОЭ80121161", "name": "З.Сүрэнжав", "acc": "5622790325", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ПЙ73112061", "name": "Д.Өсөхжаргал", "acc": "5845541170", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ТА70070763", "name": "Т.Уранцэцэг", "acc": "5056029019", "note": "төлдөггүй", "pos": "Үйл ажиллагааны менежер"}, {"code": "УП01301241", "name": "Ану-Үржин", "acc": "1735156292", "note": "төлдөггүй", "pos": "Касс"}, {"code": "ЧД73120503", "name": "Н.Лхамсүрэн", "acc": "5059435223", "note": "төлдөггүй", "pos": "Камер хянагч"}, {"code": "ЧЕ81091600", "name": "Д.Мандах", "acc": "5057669311", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ЧО71061262", "name": "С.Алтантуул", "acc": "5019558822", "note": "төлдөггүй", "pos": "Үйлчлэгч"}, {"code": "ШД88031808", "name": "Рэ.Баасансүрэн", "acc": "5171391025", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "БВ92011207", "name": "А.Төлеу", "acc": "5058528471", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "СЮ02250901", "name": "Ц.Хонгорзул", "acc": "5926293828", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "УП96070572", "name": "Д.Энхтулга", "acc": "3665109094", "note": "төлдөггүй", "pos": "Камер хянагч"}, {"code": "ФД04262948", "name": "Б.Хувьзаяа", "acc": "5653105823", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ЙЮ70022606-", "name": "П.Цэдэнжиймаа", "acc": "5021476161", "note": "төлдөггүй", "pos": "Нягтлан бодогч"}, {"code": "МЕ90080601-1", "name": "Б.Солонго", "acc": "8200005364", "note": "төлдөггүй", "pos": "Тооцооны нягтлан бодогч"}, {"code": "МН83030164", "name": "Б.Оюун-эрдэнэ", "acc": "5111054591", "note": "төлдөггүй", "pos": "Нярав"}, {"code": "ОЮ98043042", "name": "Х.Золбоо", "acc": "2715159415", "note": "төлдөггүй", "pos": "Хүний нөөцийн менежер"}, {"code": "ТА82022262-2", "name": "Т.Цээнэ", "acc": "405126369", "note": "төлдөггүй", "pos": "Дэд захирал"}, {"code": "УЖ03280621", "name": "Г.Номин-Эрдэнэ", "acc": "5071683237", "note": "төлдөггүй", "pos": "Маркетингийн мэргэжилтэн"}, {"code": "УП89063046-1", "name": "Н.Ариунжаргал", "acc": "1105249287", "note": "төлдөггүй", "pos": "Ерөнхий нягтлан бодогч"}, {"code": "УХ59112088", "name": "С.Энхтайван", "acc": "5026814493", "note": "төлдөггүй", "pos": "Менежер"}, {"code": "УХ97100451", "name": "Э.Сандаг-Очир", "acc": "5753811879", "note": "төлдөггүй", "pos": "Агуулахын жолооч"}, {"code": "ХЙ84110302", "name": "М.Цацрал", "acc": "5037266101", "note": "төлдөггүй", "pos": "Ахлах нярав"}, {"code": "ЧЖ75120216", "name": "Г.Батсайхан", "acc": "5026595377", "note": "төлдөггүй", "pos": "Агуулахын жолооч"}, {"code": "1-МЮ06211901", "name": "М.Энхчимэг", "acc": "5692387378", "note": "төлдөггүй", "pos": "Ахлах касс"}, {"code": "ЖЯ84062762", "name": "Ц.Наранчимэг", "acc": "5675291358", "note": "төлдөггүй", "pos": "Бараа материалын нягтлан бодогч"}, {"code": "ЗА06291105", "name": "Г.Цэвэлсүрэн", "acc": "1305143697", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ИА79052819", "name": "Х.Дашцоймбол", "acc": "5020906060", "note": "төлдөггүй", "pos": "Камер хянагч"}, {"code": "ЙВ79081509", "name": "Б.Энхмэнд", "acc": "5543020794", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ОА79101506", "name": "Б.Байгалмаа", "acc": "5801038369", "note": "төлдөггүй", "pos": "Касс"}, {"code": "ПБ78102601", "name": "Г.Болормаа", "acc": "405099752", "note": "төлдөггүй", "pos": "Дэлгүүрийн ЗБ"}, {"code": "ПМ99031405", "name": "О.Бямбаням", "acc": "5859083983", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "РМ08221805", "name": "Д.Мөнх-Учрал", "acc": "5157244556", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "УС58052501", "name": "Х.Гэрэл", "acc": "5001676491", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "УС64030638", "name": "Д.Амгаланбаяр", "acc": "5014232703", "note": "төлдөггүй", "pos": "Камер хянагч"}, {"code": "ХВ81081900", "name": "Б.Дуламжав", "acc": "5033608561", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ЧБ65103171", "name": "Н.Зууннаст", "acc": "5598243388", "note": "төлдөггүй", "pos": "Агуулахын туслах ажилтан"}, {"code": "ЧГ82021403", "name": "Д.Одонтунгалаг", "acc": "5166146682", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ЧЛ69101302", "name": "Л.Даваа", "acc": "5033294847", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ШЕ78042403", "name": "Х.Өнөржаргал", "acc": "5039343277", "note": "төлдөггүй", "pos": "Касс"}, {"code": "ШЖ63111401", "name": "Д.Цэцэгмаа", "acc": "5027299990", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}], "added": [{"acc": "5005782912", "name": "Мөнгөнганзай ХХК – хэвлэл", "group": "Нэмсэн", "code": "", "bank": "", "holder": "", "cf": "", "cat": "ops", "store": ""}, {"acc": "5084553122", "name": "Т.Энхзориг – үйлчилгээний төлбөр", "group": "Нэмсэн", "code": "", "bank": "", "holder": "", "cf": "", "cat": "ops", "store": ""}, {"acc": "5002843189", "name": "Портер ачааны мөнгө (Самнордов Тэгшзаяа)", "group": "Нэмсэн", "code": "", "bank": "", "holder": "", "cf": "", "cat": "cargo", "store": ""}, {"acc": "2725103070", "name": "Премиум нэксус ХК – Си Юү захиалга", "group": "Нэмсэн", "code": "", "bank": "", "holder": "", "cf": "", "cat": "ops", "store": ""}, {"acc": "4003358983", "name": "TSEENE", "group": "Нэмсэн", "code": "", "bank": "", "holder": "", "cf": "", "cat": "ops", "store": ""}, {"acc": "3405133858", "name": "НШШГГ – цалингийн суутгал (шүүхийн шийдвэр)", "group": "Нэмсэн", "code": "", "bank": "", "holder": "", "cf": "", "cat": "salary", "store": ""}]};
+PAYEES.set((PAYEES_DEFAULT.added || []).concat(PAYEES_DEFAULT.list)); VIVI.setBase(PAYEES.catFor);
+
 </script>
 <script>
 (() => {
@@ -1749,7 +1830,7 @@ function renderInner(){
     $('#day-next').disabled = !bankDay || bankDay >= today(); $('#day-today').disabled = bankDay === today(); $('#day-all').disabled = !bankDay; }
   const rows = dayRows.filter(t => bankFilter === 'all' || (mt[t.id] && mt[t.id].st === bankFilter)).sort((a,b) => String(b.dt).localeCompare(String(a.dt)));
   $('#bank-body').innerHTML = rows.length ? rows.map(t => { const m = mt[t.id] || {}; const sev = m.st === 'none' ? 'sev-bad' : m.st === 'warn' ? 'sev-warn' : m.st === 'ok' ? 'sev-ok' : '';
-    return `<tr class="${sev}"><td class="mono">${esc(bankDay ? String(t.dt).slice(11,16) : String(t.dt).replace('T',' ').slice(0,16))}</td><td>${esc(ACC_LABEL[normAcc(t.fromAcc)] || t.fromAcc)}<div class="note">${esc(t.fromName||'')}</div></td><td>${esc(t.toName||'')}<div class="note mono">${esc(t.toAcc||'')} · ${esc(t.toBank||'')}</div></td><td class="n">${fmt(t.amount)}</td><td>${esc(t.desc||'')}</td><td><span class="chip ${m.cls||'c-grey'}">${esc(m.label||'')}</span></td></tr>`; }).join('')
+    return `<tr class="${sev}"><td class="mono">${esc(bankDay ? String(t.dt).slice(11,16) : String(t.dt).replace('T',' ').slice(0,16))}</td><td>${esc(ACC_LABEL[normAcc(t.fromAcc)] || t.fromAcc)}<div class="note">${esc(t.fromName||'')}</div></td><td>${esc(t.toName||'')}${(b => b ? `<div><span class="chip c-acc" title="Харилцагчийн сан">${esc(b.name)}${b.group ? ' · ' + esc(b.group) : ''}</span></div>` : '')(PAYEES.get(t.toAcc))}<div class="note mono">${esc(t.toAcc||'')} · ${esc(t.toBank||'')}</div></td><td class="n">${fmt(t.amount)}</td><td>${esc(t.desc||'')}</td><td><span class="chip ${m.cls||'c-grey'}">${esc(m.label||'')}</span></td></tr>`; }).join('')
     : `<tr><td colspan="6" class="empty">${bankDay && !dayRows.length ? 'Энэ өдөр гүйлгээ алга.' : S.banktx.length ? 'Энэ шүүлтүүрт гүйлгээ алга.' : 'Банкны гүйлгээ хараахан ороогүй байна.'}</td></tr>`;
   // cash
   try{ renderCash(); }catch(e){ console.warn('cash', e); }
@@ -2136,11 +2217,13 @@ function payTx(){
   return [...m.values()];
 }
 let payCache = null;
+// allowed accounts: owner's list + the base's salary entries (household help)
+const payExempt = () => ({...Object.fromEntries(Object.values(PAYEES.all()).filter(p => p.cat === 'salary').map(p => [p.acc, p.name + (p.holder ? ' – ' + p.holder : '')])), ...(PS.cfg.exempt || {})});
 function payModel(){
-  const key = PS.lists.length + '|' + Object.keys(PS.decs).length + '|' + S.banktx.length + '|' + PS.tx.length + '|' + JSON.stringify(PS.cfg.exempt || {}) + '|' + PS.lists.map(l => (l.stmtTx || []).length + ':' + JSON.stringify(l.marks || {}) + JSON.stringify(l.extra || {})).join(',') + '|' + JSON.stringify(PS.decs);
+  const key = PS.lists.length + '|' + Object.keys(PS.decs).length + '|' + S.banktx.length + '|' + PS.tx.length + '|' + JSON.stringify(payExempt()) + '|' + PS.lists.map(l => (l.stmtTx || []).length + ':' + JSON.stringify(l.marks || {}) + JSON.stringify(l.extra || {})).join(',') + '|' + JSON.stringify(PS.decs);
   if (payCache && payCache.key === key) return payCache.m;
   const lists = PS.lists.filter(l => !['rejected', 'archive'].includes(payStatus(l))).map(l => ({...l, decidedAt: (PS.decs[l.id] || {}).decision === 'approved' ? PS.decs[l.id].at : null}));
-  const m = PAY.match(lists, payTx(), {exempt: PS.cfg.exempt || {}, own: VIVI.OWN});
+  const m = PAY.match(lists, payTx(), {exempt: payExempt(), own: VIVI.OWN});
   payCache = {key, m}; return m;
 }
 const listsSorted = () => PS.lists.slice().sort((a, b) => String(b.per).localeCompare(String(a.per)) || (a.kind === b.kind ? String(b.at).localeCompare(String(a.at)) : a.kind === 'final' ? -1 : 1));
@@ -2480,7 +2563,8 @@ $('#pc-xlsx').addEventListener('click', () => {
 });
 // ---------- internal report (Дотоод тайлан) ----------
 const PLS = {months: {}, sel: '', cfg: {catMode: {}}, fixedCfg: {units: {}}, accStore: {}, ext: {}, draft: null, supUnit: '', open: {}};
-const PL_UNITS = ['Фүүд сити','Драгон','Е-март Баянгол','Эрдэнэт','Дархан / Сандэй плаза','УИД','Нийслэл','Хан-Уул','Онлайн дэлгүүр','Оффис','Агуулах'];
+// active units (Nov 2026): Food City, Dragon, Online; Нийслэл opening; closed stores still show when a period has their data
+const PL_UNITS = ['Фүүд сити','Драгон','Онлайн дэлгүүр','Нийслэл','Оффис','Агуулах'];
 const N2O = {'4002594661':'405095875','4002639706':'405096869','4002636496':'405096868','4002599151':'405095877'};
 const plUnits = () => [...new Set([...PL_UNITS, ...Object.values(DR.days).flatMap(d => Object.keys(d.stores || {}))])];
 const pct = v => v == null || !isFinite(v) ? '–' : v.toFixed(1) + '%';
@@ -2547,7 +2631,8 @@ function plModel(){
   const manual = []; for (const m of months) for (const x of ((PLS.months[m.per] || {}).manual || [])) manual.push({...x, amount: (+x.amount || 0) * m.share});
   const pl = {stores, suppliers, stmtTx: []};
   const tx = plTx(a, z);
-  const out = PL.build(pl, Object.keys(pay.units).length ? pay : null, tx, {catMode: PLS.cfg.catMode || {}, accStore: PLS.accStore || {}, manual, officeUnits: PAY.OFFICE_UNITS, fixed});
+  const baseStore = Object.fromEntries(Object.values(PAYEES.all()).filter(p => p.store).map(p => [p.acc, p.store]));
+  const out = PL.build(pl, Object.keys(pay.units).length ? pay : null, tx, {catMode: PLS.cfg.catMode || {}, accStore: PLS.accStore || {}, baseStore, manual, officeUnits: PAY.OFFICE_UNITS, fixed});
   return {...out, a, z, months, pl, tx, A, docs, payMissing, payAdv, hasStmt: months.some(m => ((PLS.months[m.per] || {}).stmtAccs || []).length)};
 }
 // period bar shared with «Өдрийн тайлан»
@@ -2625,23 +2710,30 @@ function renderPL(){
   $('#pl-sup').innerHTML = sr.length ? sr.map(x => `<tr data-sup="${esc(x.supplier)}" style="cursor:pointer"><td><b>${esc(x.supplier)}</b>${x.brands.length > 1 ? ` <span class="note">${PLS.open[x.supplier] ? '▾' : '▸'} ${x.brands.length} бүлэг</span>` : ''}</td><td class="n">${fmt(x.s)}</td><td class="n">${fmt(x.c)}</td><td class="n">${sgnC(x.gp)}</td><td class="n"><span class="chip ${mcls(x.m)}">${pct(x.m)}</span></td><td class="n">${pct(x.share)}</td><td class="n">${fmt(x.q)}</td></tr>`
     + (PLS.open[x.supplier] && x.brands.length > 1 ? x.brands.map(b => `<tr><td style="padding-left:24px" class="note">${esc(b.brand)}</td><td class="n note">${fmt(b.s)}</td><td class="n note">${fmt(b.c)}</td><td class="n note">${fmt(b.gp)}</td><td class="n note">${pct(b.m)}</td><td class="n note">${pct(b.share)}</td><td class="n note">${fmt(b.q)}</td></tr>`).join('') : '')).join('')
     : '<tr><td colspan="7" class="empty">Нийлүүлэгч алга.</td></tr>';
-  // receivers
-  const all = M.tx; const byR = {};
-  for (const t of all){ const mode = (PLS.cfg.catMode || {})[t.cat] || PL.CAT_DEFAULT[t.cat] || 'cost'; if (mode !== 'cost') continue;
-    const k = t.cp || ('name:' + t.name); const o = byR[k] = byR[k] || {k, cp: t.cp, name: t.name, cats: {}, n: 0, amt: 0, store: ''}; o.n++; o.amt += t.amount; o.cats[t.cat] = (o.cats[t.cat] || 0) + t.amount; if (t.store) o.store = t.store; if (!o.name && t.name) o.name = t.name; }
-  const recv = Object.values(byR).sort((a, b) => b.amt - a.amt).slice(0, 120);
-  const uopts = sel => `<option value="">— хуваарилаагүй —</option>` + plUnits().map(u => `<option ${u === sel ? 'selected' : ''}>${esc(u)}</option>`).join('');
-  $('#pl-recv').innerHTML = recv.length ? recv.map(o => { const cat = Object.entries(o.cats).sort((a, b) => b[1] - a[1])[0][0]; const cur = PLS.accStore[o.cp] || PL.ACC_STORE_DEFAULT[o.cp] || '';
-    return `<tr><td>${esc(o.name || o.cp)}<div class="note mono">${esc(o.cp || '')}</div></td><td><span class="chip c-grey">${esc(VIVI_CAT_LABEL(cat))}</span></td><td class="n">${o.n}</td><td class="n">${fmt(o.amt)}</td><td>${o.cp ? `<select data-plstore="${esc(o.cp)}" style="width:auto">${uopts(cur)}</select>` : '<span class="note">дансгүй</span>'}${o.store && !cur ? `<div class="note">хүсэлтээр: ${esc(o.store)}</div>` : ''}</td></tr>`; }).join('')
-    : '<tr><td colspan="5" class="empty">Энэ хугацаанд зарлагын гүйлгээ алга.</td></tr>';
+  // unknown expenses (category «other»): add the receiver to the counterparty base
+  const all = M.tx; const unk = {};
+  for (const t of all){ if (t.cat !== 'other') continue; const k = t.cp || ('name:' + t.name);
+    const o = unk[k] = unk[k] || {k, cp: t.cp, name: t.name, n: 0, amt: 0, descs: []}; o.n++; o.amt += t.amount; if (t.desc && o.descs.length < 3 && !o.descs.includes(t.desc)) o.descs.push(t.desc); }
+  const U = Object.values(unk).sort((x, y) => y.amt - x.amt);
+  $('#pl-unk-card').hidden = !U.length;
+  $('#pl-unk-sum').innerHTML = U.length ? `Энэ хугацаанд ангилал тодорхойгүй <b>${U.reduce((q, o) => q + o.n, 0)}</b> гүйлгээ · <b>${fmt(U.reduce((q, o) => q + o.amt, 0))} ₮</b> («Бусад / тодруулах»-д орсон)` : '';
+  const CATS = ['rent', 'media', 'ops', 'goods', 'ploan', 'bank', 'cargo', 'fuel', 'tax', 'repair', 'travel', 'salary', 'own_md', 'other'];
+  const uo2 = '<option value="">— компани —</option>' + plUnits().map(u => `<option>${esc(u)}</option>`).join('');
+  $('#pl-unk').innerHTML = U.map((o, i) => { const b = o.cp ? PAYEES.get(o.cp) : null;
+    const amb = b && b.alts && b.alts.length > 1;
+    return `<tr><td><b>${esc(o.name || o.cp || '?')}</b>${b ? `<div><span class="chip c-acc">${esc(b.name)}</span></div>` : ''}<div class="note mono">${esc(o.cp || 'данс тодорхойгүй')}</div></td><td class="note">${o.descs.map(esc).join('<br>')}</td><td class="n">${o.n}</td><td class="n">${fmt(o.amt)}</td>
+      <td>${o.cp ? `<select id="unk-cat-${i}" style="width:auto"><option value="">— ангилал —</option>${(amb ? b.alts.map(x => x.cat) : CATS).map(c => `<option value="${c}">${esc(VIVI_CAT_LABEL(c))}</option>`).join('')}</select>` : ''}</td>
+      <td>${o.cp && !amb ? `<select id="unk-store-${i}" style="width:auto">${uo2}</select>` : ''}</td>
+      <td>${!o.cp ? '' : amb ? `<button class="btn" data-unkdef="${i}" data-acc="${esc(b.acc)}" title="Утгад «зээл»/«бараа» гэж бичээгүй үед энэ ангиллаар тооцно">Анхдагч болгох</button><div class="note">эсвэл утгад «зээл» / «бараа» гэж бичүүлнэ</div>`
+        : `<button class="btn primary" data-unkadd="${i}" data-acc="${esc(o.cp)}" data-name="${esc(o.name || '')}">Сан руу нэмэх</button>`}</td></tr>`; }).join('');
   const catTot = {}; for (const t of all) catTot[t.cat] = (catTot[t.cat] || 0) + t.amount;
   $('#pl-cats').innerHTML = Object.keys({...PL.CAT_DEFAULT, ...catTot}).filter(k => k !== 'internal').sort((a, b) => (catTot[b] || 0) - (catTot[a] || 0)).map(k => { const mode = (PLS.cfg.catMode || {})[k] || PL.CAT_DEFAULT[k] || 'cost';
     return `<tr><td>${esc(VIVI_CAT_LABEL(k))}</td><td class="n">${catTot[k] ? fmt(catTot[k]) : '–'}</td><td><select data-plcat="${esc(k)}" style="width:auto">${Object.entries(PL.CAT_MODE_LABEL).map(([v, l]) => `<option value="${v}" ${v === mode ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></td></tr>`; }).join('');
   const mu = $('#pl-man-unit'); const uo = '<option value="">Компани (хуваарилаагүй)</option>' + plUnits().map(u => `<option>${esc(u)}</option>`).join(''); if (mu.innerHTML !== uo) mu.innerHTML = uo;
-  const mc = $('#pl-man-cat'); const co = ['rent', 'media', 'repair', 'cargo', 'fuel', 'tax', 'other'].map(k => `<option value="${k}">${esc(VIVI_CAT_LABEL(k))}</option>`).join(''); if (mc.innerHTML !== co) mc.innerHTML = co;
+  const mc = $('#pl-man-cat'); const co = ['rent', 'media', 'ops', 'repair', 'cargo', 'fuel', 'tax', 'other'].map(k => `<option value="${k}">${esc(VIVI_CAT_LABEL(k))}</option>`).join(''); if (mc.innerHTML !== co) mc.innerHTML = co;
   $('#pl-man-list').innerHTML = M.months.flatMap(m => ((PLS.months[m.per] || {}).manual || []).map((x, i) => `<div>${esc(m.per)} · ${esc(x.unit || 'Компани')} · ${esc(VIVI_CAT_LABEL(x.cat))} · <b>${fmt(x.amount)} ₮</b>/сар${m.share < 1 ? ` <span class="note">(энэ хугацаанд ${fmt(x.amount * m.share)})</span>` : ''} ${esc(x.note || '')} <button class="btn" data-rm="${i}" data-per="${esc(m.per)}" style="padding:1px 6px">✕</button></div>`)).join('') || '<div class="note">Гараар нэмсэн зардал алга. Сарын дүнгээр оруулна (хугацаа богино бол хоногоор хуваагдана).</div>';
 }
-const VIVI_CAT_LABEL = k => (({rent:'Түрээс', f1:'F1 (Фүүд сити түрээс)', media:'Цахилгаан, интернэт, ашиглалт', repair:'Засвар, үйлчилгээ', travel:'Томилолт', cargo:'Тээвэр, карго', fuel:'Шатахуун', fee:'Банкны шимтгэл', tax:'Татвар, гааль, НДШ', other:'Бусад / тодруулах', bank:'Зээл, ББСБ', ploan:'Хувийн зээл, хүү', salary:'Цалин (банкнаас)', goods:'Бараа, нийлүүлэгч', own_md:'Эзэмшигч – хувийн', own_eb:'Энхбаатар хэрэглээ', hipay:'HiPay хэтэвч', fx:'Валют арилжаа', refund:'Буцаалт', internal:'Дотоод'})[k] || k);
+const VIVI_CAT_LABEL = k => (({rent:'Түрээс', f1:'F1 (Фүүд сити түрээс)', media:'Цахилгаан, интернэт, ашиглалт', repair:'Засвар, үйлчилгээ', travel:'Томилолт', cargo:'Тээвэр, карго', fuel:'Шатахуун', fee:'Банкны шимтгэл', tax:'Татвар, гааль, НДШ', other:'Бусад / тодруулах', bank:'Зээл, ББСБ', ploan:'Хувийн зээл, хүү', salary:'Цалин (банкнаас)', goods:'Бараа, нийлүүлэгч', own_md:'Эзэмшигч – хувийн', own_eb:'Энхбаатар хэрэглээ', hipay:'HiPay хэтэвч', fx:'Валют арилжаа', refund:'Буцаалт', internal:'Дотоод', ops:'Үйл ажиллагааны бусад (хангамж, үйлчилгээ)'})[k] || k);
 // ----- Excel -----
 $('#pl-xlsx').addEventListener('click', () => { const M = plModel(); const pl = M.pl;
   loadStyledXLSX().then(XS => {
@@ -2661,6 +2753,18 @@ $('#pl-xlsx').addEventListener('click', () => { const M = plModel(); const pl = 
     ws3['!cols'] = [16, 12, 24, 14, 40, 22, 18, 16, 14, 10].map(w => ({wch: w})); head(ws3); XS.utils.book_append_sheet(wb, ws3, 'Зардал');
     XS.writeFile(wb, `VIVI_dotood_tailan_${M.a === M.z ? M.a : M.a + '_' + M.z}.xlsx`);
   }); });
+
+document.addEventListener('click', async e => {
+  const add = e.target.closest('button[data-unkadd]'), def = e.target.closest('button[data-unkdef]'); if (!add && !def) return;
+  const i = (add || def).dataset[add ? 'unkadd' : 'unkdef'], cat = ($('#unk-cat-' + i) || {}).value;
+  if (!cat){ alert('Ангилал сонгоно уу.'); return; }
+  try{
+    if (add){ const store = ($('#unk-store-' + i) || {}).value || '', acc = add.dataset.acc, name = add.dataset.name || acc;
+      const extra = (PBINFO.extra || []).filter(x => x.acc !== acc).concat([{acc, name, holder: name, group: 'Нэмсэн', cat, store, cf: '', by: me, at: new Date().toISOString()}]);
+      await db.doc('config/payees').set({extra}, {merge: true}); }
+    else { await db.doc('config/payees').set({defaults: {...(PBINFO.defaults || {}), [def.dataset.acc]: cat}}, {merge: true}); }
+  }catch(err){ console.warn(err); alert('Хадгалж чадсангүй'); }
+});
 // ---------- daily report (Өдрийн тайлан) ----------
 const DR = {cfg: {}, canFlow: false, txExtra: {}, days: {}, day: '', range: 'day', from: '', to: '', supUnit: '', open: {}, groups: ['ORION WOJCIECH BARANKIEWICZ', 'Мөнхдорж'], parsed: null};
 const MN_WD2 = ['Ням','Даваа','Мягмар','Лхагва','Пүрэв','Баасан','Бямба'];
@@ -2821,7 +2925,7 @@ function drFlowTx(a, z){
   if (a < since){ const key = a + '|' + z;
     if (!DR.txExtra[key]){ DR.txExtra[key] = {tx: []}; db.collection('banktx').where('dt', '>=', a).where('dt', '<', shiftDay(z, 1)).get().then(s => { DR.txExtra[key] = {tx: s.docs.map(d => ({id: d.id, ...d.data()}))}; render(); }).catch(e => console.warn(e)); }
     const seen = new Set(tx.map(t => t.id)); tx = tx.concat(DR.txExtra[key].tx.filter(t => !seen.has(t.id))); }
-  return tx.filter(t => { const d = String(t.dt || '').slice(0, 10); return d >= a && d <= z && +t.amount > 0 && !VIVI.OWN.has(VIVI.norm(t.toAcc)); })
+  return tx.filter(t => { const d = String(t.dt || '').slice(0, 10); return d >= a && d <= z && +t.amount > 0 && !VIVI.OWN.has(VIVI.norm(t.toAcc)) && !['4002622637', '5026747956'].includes(String(t.fromAcc)); })
     .map(t => ({...t, date: String(t.dt).slice(0, 10), amount: +t.amount, cat: VIVI.outCat({desc: t.desc, cpName: t.toName, cp: t.toAcc, dr: +t.amount})}));
 }
 function renderFlow(a, z){
@@ -2843,13 +2947,35 @@ function renderFlow(a, z){
 }
 
 function payUsedLabel(t){                     // bank tab: salary transfers explained by an approved payroll list
-  if (!PS.lists.length && !Object.keys(PS.cfg.exempt || {}).length) return null;
+  if (!PS.lists.length && !Object.keys(payExempt()).length) return null;
   const m = payModel(), u = m.used.get(t.id);
   if (u){ const l = PS.lists.find(x => x.id === u.list); return {st: payStatus(l) === 'approved' ? 'ok' : 'warn', label: 'Цалин: ' + perLabel(l) + (payStatus(l) === 'approved' ? '' : ' (зөвшөөрөөгүй)'), cls: payStatus(l) === 'approved' ? 'c-ok' : 'c-warn'}; }
-  const ex = Object.keys(PS.cfg.exempt || {}).find(a => PAY.sameAcc(a, PAY.accShort(t.toAcc)));
-  if (ex && PAY.SAL_ACCS.includes(PAY.accShort(t.fromAcc))) return {st: 'ok', label: '✓ ' + PS.cfg.exempt[ex], cls: 'c-grey'};
+  const EX = payExempt(); const ex = Object.keys(EX).find(a => PAY.sameAcc(a, PAY.accShort(t.toAcc)));
+  if (ex && PAY.SAL_ACCS.includes(PAY.accShort(t.fromAcc))) return {st: 'ok', label: '✓ ' + EX[ex], cls: 'c-grey'};
   return null;
 }
+// ---------- counterparty base ----------
+let PBINFO = {file: 'суулгасан (2026.11.01)', emps: PAYEES_DEFAULT.emps || []};
+function renderPayees(){
+  if (!$('#pb-list')) return; const all = Object.values(PAYEES.all());
+  $('#pb-sum').textContent = `${all.length} харилцагч · ${PBINFO.emps.length} ажилтан · эх: ${PBINFO.file}`;
+  $('#pb-list').innerHTML = all.map(p => `<tr><td>${esc(p.group || '')}</td><td>${esc(p.name)}<div class="note">${esc(p.holder || '')}</div></td><td class="mono">${esc(p.acc)} <span class="note">${esc(p.bank || '')}</span></td><td>${esc(VIVI_CAT_LABEL(p.cat))}</td><td>${esc(p.store || '')}</td></tr>`).join('');
+}
+$('#pb-file').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; $('#pb-msg').textContent = 'Уншиж байна…';
+  try{ const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let list = null, emps = [];
+    for (const n of wb.SheetNames){ const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null});
+      const r = PAYEES.fromSheet(rows); if (!r.error && r.list.length && !list && !rows.some(x => x && x.some(c => String(c || '').trim() === 'Нэр'))) list = r.list;
+      const em = PAYEES.empFromSheet(rows); if (em.length) emps = em; }
+    if (!list){ $('#pb-msg').textContent = '«Харилцагч» хуудас (Дансны дугаар баганатай) олдсонгүй.'; return; }
+    await db.doc('config/payees').set({list, emps, file: f.name, at: new Date().toISOString()}); $('#pb-msg').textContent = `${list.length} харилцагч хадгаллаа.`;
+  }catch(err){ console.warn(err); $('#pb-msg').textContent = 'Хадгалж чадсангүй.'; } e.target.value = ''; });
+// request form: fill name / category / store from the base when a known account is typed
+const REQ_CAT = {rent:'Түрээс', goods:'Барааны төлбөр', salary:'Цалин', ploan:'Зээл, хүү', bank:'Зээл, хүү', cargo:'Тээвэр, карго', fuel:'Тээвэр, карго', tax:'Татвар, НДШ', media:'Цахилгаан, ашиглалт', ops:'Бусад'};
+$('#rq-acc').addEventListener('change', () => { const b = PAYEES.get($('#rq-acc').value); const n = $('#rq-pb'); if (!b){ if (n) n.textContent = ''; return; }
+  if (!$('#rq-payee').value.trim()) $('#rq-payee').value = b.name;
+  if (REQ_CAT[b.cat]) $('#rq-cat').value = REQ_CAT[b.cat]; if (b.store) $('#rq-store').value = b.store;
+  const bk = [...$('#rq-bank').options].find(o => b.bank && o.text.toLowerCase().startsWith(b.bank.toLowerCase().slice(0, 4))); if (bk) $('#rq-bank').value = bk.value;
+  if (n) n.textContent = `Сангаас: ${b.name}${b.group ? ' · ' + b.group : ''}${b.holder ? ' · эзэмшигч ' + b.holder : ''}`; });
 // ---------- settings (owner) ----------
 let ACCESS = {emails: [], perms: {}};
 const SECTIONS = [['req','Төлбөрийн хүсэлт'],['daily','Өдрийн тайлан'],['bank','Банкны гүйлгээ'],['rev','Орлого тулгалт'],['cash','Бэлэн мөнгө'],['bal','Дансны үлдэгдэл'],['pay','Цалин'],['pl','Дотоод тайлан']];
@@ -2917,7 +3043,8 @@ else VIVIFB.start(async () => {
   if (ALLOW.req) db.collection('approvals').onSnapshot(s => { S.approvals = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
   const since = new Date(Date.now() - 45*86400e3).toISOString().slice(0,10);  // last 45 days keeps reads inside the free plan
   let bankRecent = [], bankOld = {};
-  const mergeBank = () => { const seen = new Set(bankRecent.map(t => t.id)); S.banktx = bankRecent.concat(...Object.values(bankOld).map(a => a.filter(t => !seen.has(t.id)))); render(); };
+  const IGNORE_FROM = new Set(['4002622637', '5026747956']);   // private / brother's accounts that may still arrive by e-mail
+  const mergeBank = () => { const seen = new Set(bankRecent.map(t => t.id)); S.banktx = bankRecent.concat(...Object.values(bankOld).map(a => a.filter(t => !seen.has(t.id)))).filter(t => !IGNORE_FROM.has(String(t.fromAcc))); render(); };
   if (ALLOW.bank) db.collection('banktx').where('dt', '>=', since).onSnapshot(s => { bankRecent = s.docs.map(d => ({id:d.id, ...d.data()})); mergeBank(); }, onErr);
   loadBankDay = d => {                     // a day older than the live window: load it on demand
     if (!ALLOW.bank || !d || d >= since || bankOld[d]) return;
@@ -2936,6 +3063,8 @@ else VIVIFB.start(async () => {
     const payTxBy = {};
     for (const acc of PAY.SAL_ACCS) db.collection('banktx').where('fromAcc', '==', acc).onSnapshot(s => { payTxBy[acc] = s.docs.map(d => ({id:d.id, ...d.data()})); PS.tx = [].concat(...Object.values(payTxBy)); render(); }, onErr);
   }
+  db.doc('config/payees').onSnapshot(d => { const x = d.exists ? d.data() : {}; const base = (x.list || []).length ? x.list : PAYEES_DEFAULT.list;
+    PAYEES.set((x.extra || []).concat(PAYEES_DEFAULT.added || [], base)); PAYEES.setDefaults(x.defaults || {}); PBINFO = {file: (x.list || []).length ? (x.file || '') : PBINFO.file, emps: x.emps || PBINFO.emps, extra: x.extra || [], defaults: x.defaults || {}}; renderPayees(); render(); }, onErr);
   if (ALLOW.daily) db.collection('daily').onSnapshot(s => { DR.days = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
   $('#dr-upload').hidden = !ALLOW.daily; DR.canFlow = isOwner || (ALLOW.bank && ALLOW.bal);
   if (ALLOW.pl){
