@@ -1511,9 +1511,9 @@ const DAILY = (() => {
     const hi = rows.findIndex(r => r && r.some(c => String(c || '').trim() === 'Өртөг') && r.some(c => String(c || '').trim() === 'Байршил'));
     if (hi < 0) return {error: 'Борлуулалтын жагсаалт /бараагаар/ (Өртөг баганатай) биш байна.'};
     const H = rows[hi].map(c => String(c == null ? '' : c).trim()), ix = n => H.indexOf(n);
-    const c = {d: ix('Огноо'), loc: ix('Байршил'), sup: ix('Бэлтгэн нийлүүлэгчийн нэр'), grp: ix('Барааны бүлэг'), brand: ix('Брендийн нэр'), qty: ix('Тоо хэмжээ'), net: ix('Цэвэр борлуулалт'), cost: ix('Өртөг')};
+    const c = {d: ix('Огноо'), loc: ix('Байршил'), sup: ix('Бэлтгэн нийлүүлэгчийн нэр'), grp: ix('Барааны бүлэг'), brand: ix('Брендийн нэр'), name: ix('Барааны нэр'), qty: ix('Тоо хэмжээ'), net: ix('Цэвэр борлуулалт'), cost: ix('Өртөг')};
     if (c.net < 0 || c.cost < 0 || c.d < 0) return {error: '«Огноо», «Цэвэр борлуулалт», «Өртөг» багана олдсонгүй.'};
-    const days = {}; let n = 0, adjN = 0;
+    const days = {}; let n = 0, adjN = 0, skipped = null;
     for (const r of rows.slice(hi + 1)){
       if (!r || !r[c.loc]) continue;
       const d = toDate(r[c.d]); if (!d) continue;
@@ -1521,6 +1521,7 @@ const DAILY = (() => {
       const sup = String(r[c.sup] || '').trim() || '(нийлүүлэгчгүй)';
       const grp = String((c.grp >= 0 && r[c.grp]) || '').trim().replace(/\.$/, '') || '–';
       const qty = num(r[c.qty]), net = num(r[c.net]); let cost = num(r[c.cost]);
+      if (Math.abs(qty) >= 10000){ (skipped = skipped || []).push({d: day, loc: String(r[c.loc]).trim(), name: String(r[c.name] == null ? '' : r[c.name]).trim(), qty, net, cost}); continue; }   // typo in Smart (barcode typed as quantity)
       if (!cost && /ORION/i.test(sup) && qty){ cost = ORION_COST * qty; adjN++; }
       const D = days[day] = days[day] || {date: day, stores: {}, sup: {}, lines: 0, adjN: 0};
       D.lines++; if (!num(r[c.cost]) && cost) D.adjN++;
@@ -1537,7 +1538,7 @@ const DAILY = (() => {
       for (const S of Object.values(D.stores)){ S.s = r2(S.s); S.c = r2(S.c); }
       for (const U of Object.values(D.sup)) for (const X of Object.values(U)){ X.s = r2(X.s); X.c = r2(X.c); for (const G of Object.values(X.g)){ G.s = r2(G.s); G.c = r2(G.c); } }
     }
-    return {days, lines: n, adjN};
+    return {days, lines: n, adjN, skipped: skipped || []};
   }
   // payment-form rows from core's Smart parser ({d, store, form, bank, amt}) → {date: {unit: {form: {a, n}}}}
   const formOf = r => r.form === 'Банкаар' ? (r.bank || 'Банкаар') : (r.form || '?');
@@ -2753,7 +2754,7 @@ function renderPL(){
     + row('Бусад тогтмол', c => c.otherFixed ? fmt(c.otherFixed) + 'ᵀ' : '–') + row('Бусад зардал (гүйлгээ, гараар)', c => c.rest ? fmt(c.rest) : '–')
     + row('<b>Салбарын ашиг</b>', c => `<b>${sgnC(c.result)}</b>`, {b: 1}) + row('Ашгийн %', c => pct(c.resultPct));
   const CL = M.office.find(x => x.unit === PAY.CLOSED), closedCost = CL ? Math.round((CL.payroll || 0) + (CL.direct || 0) - (CL.gp || 0)) : 0;
-  const cmp = [['Дэлгүүрүүдийн ашиг', M.storeTot.result], ['− Оффисын зардал (цалин, оффист оноосон)', -(M.officeCost - closedCost)], ...(closedCost ? [['− Хаагдсан салбарын үлдэгдэл зардал (Е-март, Эрдэнэт г.м.)', -closedCost]] : []), ...Object.entries(M.company.byCat).sort((a, b) => b[1] - a[1]).map(([k, v]) => [`− ${esc(VIVI_CAT_LABEL(k))} (салбарт хуваарилаагүй)`, -v])];
+  const cmp = [['Дэлгүүрүүдийн ашиг', M.storeTot.result], ['− Оффисын зардал (цалин, оффист оноосон)', -(M.officeCost - closedCost)], ...(closedCost ? [['± Хаагдсан салбарууд (Е-март, Эрдэнэт, УИД, Хан-Уул, Кинг тауэр): бохир ашиг − зардал', -closedCost]] : []), ...Object.entries(M.company.byCat).sort((a, b) => b[1] - a[1]).map(([k, v]) => [`− ${esc(VIVI_CAT_LABEL(k))} (салбарт хуваарилаагүй)`, -v])];
   $('#pl-company').innerHTML = cmp.map(([l, v]) => `<tr><td>${l}</td><td class="n">${sgnC(v)}</td></tr>`).join('')
     + `<tr style="font-weight:700"><td>Компанийн цэвэр ашиг</td><td class="n">${sgnC(M.net)} <span class="note">(${pct(M.netPct)})</span></td></tr>`
     + `<tr><td class="note">Тусад нь: зээл, хүүгийн төлбөр</td><td class="n note">${fmt(M.company.debt)}</td></tr><tr><td class="note">Тусад нь: эзэмшигч рүү (хувийн)</td><td class="n note">${fmt(M.company.owner)}</td></tr>`;
@@ -2839,6 +2840,7 @@ const DR = {cfg: {}, canFlow: false, txExtra: {}, days: {}, day: '', range: 'day
 const MN_WD2 = ['Ням','Даваа','Мягмар','Лхагва','Пүрэв','Баасан','Бямба'];
 const wdOf2 = d => { const [y, m, dd] = d.split('-').map(Number); return MN_WD2[new Date(y, m - 1, dd).getDay()]; };
 const pc1 = v => v == null || !isFinite(v) ? '–' : v.toFixed(1) + '%';
+const drDaysLabel = ds => { ds = ds.slice().sort(); return ds.length > 3 ? `${ds[0]} – ${ds[ds.length - 1]} (${ds.length} өдөр)` : ds.join(', '); };
 // ----- upload -----
 $('#dr-files').addEventListener('change', async e => {
   const fl = [...e.target.files]; if (!fl.length) return; $('#dr-msg').textContent = 'Уншиж байна…';
@@ -2848,18 +2850,27 @@ $('#dr-files').addEventListener('change', async e => {
       const wb = XLSX.read(await f.arrayBuffer(), {type: 'array', cellDates: false});
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1, raw: true, defval: null});
       const s = DAILY.salesDays(rows, PAY.unitOf);
-      if (!s.error){ P.sales = s; P.info.push(`<div><span class="chip c-ok">✓</span> Бараагаар · ${Object.keys(s.days).sort().join(', ')} · ${s.lines} мөр${s.adjN ? ` · ORION өртөггүй ${s.adjN} мөр → 6 500 ₮/ш` : ''} · ${esc(f.name)}</div>`); continue; }
+      if (!s.error){ P.sales = s; P.info.push(`<div><span class="chip c-ok">✓</span> Бараагаар · ${drDaysLabel(Object.keys(s.days))} · ${fmt(s.lines)} мөр${s.adjN ? ` · ORION өртөггүй ${s.adjN} мөр → 6 500 ₮/ш` : ''} · ${esc(f.name)}</div>`);
+        for (const k of s.skipped) P.info.push(`<div><span class="chip c-warn">Алгассан</span> ${k.d} · ${esc(k.loc)} · ${esc(k.name)} — тоо хэмжээ ${fmt(k.qty)} (Smart-д алдаатай бичигдсэн, өртөг ${fmt(k.cost)} ₮). Smart дээр засуулна уу.</div>`);
+        continue; }
       const p = VIVI.parseRows(rows, f.name);
-      if (p.type === 'smart' && p.rows.length){ P.pay = DAILY.payDays(p.rows, PAY.unitOf); P.info.push(`<div><span class="chip c-ok">✓</span> Төлбөрийн хэлбэрээр · ${Object.keys(P.pay).sort().join(', ')} · ${p.rows.length} гүйлгээ · ${esc(f.name)}</div>`); continue; }
+      if (p.type === 'smart' && p.rows.length){ P.pay = DAILY.payDays(p.rows, PAY.unitOf); P.info.push(`<div><span class="chip c-ok">✓</span> Төлбөрийн хэлбэрээр · ${drDaysLabel(Object.keys(P.pay))} · ${fmt(p.rows.length)} гүйлгээ · ${esc(f.name)}</div>`); continue; }
       P.info.push(`<div><span class="chip c-bad">?</span> Танигдсангүй · ${esc(f.name)}</div>`);
     }catch(err){ console.warn(err); P.info.push(`<div><span class="chip c-bad">?</span> Уншиж чадсангүй · ${esc(f.name)}</div>`); }
   }
-  // check: sales = payments per day
+  // check: sales = payments per day; long uploads get a summary + per-store difference instead of one line per day
   const dates = [...new Set([...Object.keys((P.sales || {}).days || {}), ...Object.keys(P.pay || {})])].sort();
-  for (const d of dates){ const s = P.sales && P.sales.days[d] ? Object.values(P.sales.days[d].stores).reduce((a, x) => a + x.s, 0) : null;
-    const p = P.pay && P.pay[d] ? Object.values(P.pay[d]).reduce((a, U) => a + Object.values(U).reduce((b, F) => b + F.a, 0), 0) : null;
-    if (s != null && p != null) P.info.push(Math.abs(s - p) <= 1 ? `<div><span class="chip c-ok">Тулгалт зөв</span> ${d}: борлуулалт ${fmt(s)} ₮ = төлбөр ${fmt(p)} ₮</div>` : `<div><span class="chip c-bad">Зөрүүтэй</span> ${d}: борлуулалт ${fmt(s)} ₮ ≠ төлбөр ${fmt(p)} ₮ (зөрүү ${sgn(p - s)})</div>`);
-    else P.info.push(`<div><span class="chip c-warn">Дутуу</span> ${d}: ${s == null ? 'бараагаар тайлан' : 'төлбөрийн тайлан'} алга${DR.days[d] ? ' — өмнө хадгалсныг ашиглана' : ''}</div>`); }
+  const okD = [], badD = [], missD = [], diffU = {};
+  for (const d of dates){ const SD = P.sales && P.sales.days[d], PD = P.pay && P.pay[d];
+    if (!SD || !PD){ missD.push(`${d}: ${!SD ? 'бараагаар тайлан' : 'төлбөрийн тайлан'} алга${DR.days[d] ? ' — өмнө хадгалсныг ашиглана' : ''}`); continue; }
+    const s = Object.values(SD.stores).reduce((a, x) => a + x.s, 0), p = Object.values(PD).reduce((a, U) => a + Object.values(U).reduce((b, F) => b + F.a, 0), 0);
+    if (Math.abs(s - p) <= 1){ okD.push(d); continue; }
+    badD.push(`${d}: борлуулалт ${fmt(s)} ₮, төлбөр ${fmt(p)} ₮ (${fmt(s - p)})`);
+    for (const u of new Set([...Object.keys(SD.stores), ...Object.keys(PD)])){ const a = (SD.stores[u] || {}).s || 0, b = PD[u] ? Object.values(PD[u]).reduce((x, F) => x + F.a, 0) : 0; if (Math.abs(a - b) > 1) diffU[u] = (diffU[u] || 0) + a - b; } }
+  if (okD.length) P.info.push(`<div><span class="chip c-ok">Тулгалт зөв</span> ${dates.length === 1 ? `${okD[0]}: борлуулалт = төлбөр` : `${okD.length} өдөр борлуулалт = төлбөр`}</div>`);
+  if (badD.length){ const du = Object.entries(diffU).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).map(([u, v]) => `${esc(u)} ${v > 0 ? '+' : ''}${fmt(v)}`).join(' · ');
+    P.info.push(`<div><span class="chip c-bad">Зөрүүтэй</span> ${badD.length} өдөр борлуулалт ≠ төлбөр. Дэлгүүрээр (борлуулалт − төлбөр): ${du}${badD.length <= 5 ? '<br>' + badD.map(esc).join('<br>') : ''}</div>`); }
+  for (const m of missD) P.info.push(`<div><span class="chip c-warn">Дутуу</span> ${esc(m)}</div>`);
   DR.parsed = dates.length ? {...P, dates} : null;
   $('#dr-filelist').innerHTML = P.info.join(''); $('#dr-save').disabled = !DR.parsed; $('#dr-msg').textContent = '';
 });
@@ -3074,6 +3085,7 @@ $('#imp-file').addEventListener('change', async e => {
     const data = JSON.parse(await f.text()); let n = 0;
     for (const [col, docs] of Object.entries(data)) for (const [id, d] of Object.entries(docs)){
       if (!/^[A-Za-z0-9_-]+$/.test(col) || !/^[A-Za-z0-9_.:@+-]+$/.test(id)) continue;
+      if (col === 'daily'){ d.by = me; d.ownerNotified = true; }   // history import: no push per day
       await db.collection(col).doc(id).set(d); n++; if (n % 20 === 0) $('#imp-msg').textContent = `Импортолж байна… ${n}`;
     }
     $('#imp-msg').textContent = `${n} бичлэг орлоо.`;
