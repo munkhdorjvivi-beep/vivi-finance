@@ -1519,7 +1519,8 @@ const DAILY = (() => {
   function payDays(rows, unitOf){
     const days = {};
     for (const r of rows){ if (!r.d) continue; const unit = unitOf(String(r.store || '').trim()), f = formOf(r);
-      const D = days[r.d] = days[r.d] || {}; const U = D[unit] = D[unit] || {}; const F = U[f] = U[f] || {a: 0, n: 0}; F.a = r2(F.a + (+r.amt || 0)); F.n++; }
+      const k = /бэлэн|бэлн/i.test(r.form || '') ? 'cash' : /зээл/i.test(r.form || '') ? 'credit' : 'bank';   // kind from the «Төлбөрийн хэлбэр» column only
+      const D = days[r.d] = days[r.d] || {}; const U = D[unit] = D[unit] || {}; const F = U[f] = U[f] || {a: 0, n: 0, k}; F.a = r2(F.a + (+r.amt || 0)); F.n++; }
     return days;
   }
 
@@ -1569,24 +1570,27 @@ const DAILY = (() => {
   function storeTable(agg){ const tot = agg.total.s; return Object.values(agg.stores).map(x => fin(x, tot)).sort((a, b) => b.s - a.s); }
   function payTable(agg){
     const forms = {}, byStore = {};
-    for (const [u, U] of Object.entries(agg.pay)) for (const [f, F] of Object.entries(U)){ const o = forms[f] = forms[f] || {form: f, a: 0, n: 0}; o.a += F.a; o.n += F.n; (byStore[u] = byStore[u] || {})[f] = F.a; }
+    for (const [u, U] of Object.entries(agg.pay)) for (const [f, F] of Object.entries(U)){ const o = forms[f] = forms[f] || {form: f, a: 0, n: 0, k: F.k || ''}; o.a += F.a; o.n += F.n; (byStore[u] = byStore[u] || {})[f] = F.a; }
     const tot = Object.values(forms).reduce((a, x) => a + x.a, 0);
     const list = Object.values(forms).map(x => ({...x, a: r2(x.a), share: tot ? x.a / tot * 100 : 0, feeRate: FEES[x.form] || 0, fee: r2(x.a * (FEES[x.form] || 0)), net: r2(x.a * (1 - (FEES[x.form] || 0)))})).sort((a, b) => b.a - a.a);
     return {forms: list, byStore, total: r2(tot), fee: r2(list.reduce((a, x) => a + x.fee, 0))};
   }
   // ----- money flow: what should arrive (from Smart payment forms) minus what left (bank e-mails) -----
-  const KIND = f => /бэлн|бэлэн|cash/i.test(f) ? 'cash' : /зээл|store\s*pay|pocket|storepay/i.test(f) ? 'credit' : 'bank';
+  // kind comes from Smart's «Төлбөрийн хэлбэр» column (Бэлнээр / Банкаар / Зээлээр); a bank name such as «Store pay» under «Банкаар» is a bank payment
+  const KIND = (f, F) => F && F.k ? F.k : /бэлн|бэлэн|cash/i.test(f) ? 'cash' : /^зээл/i.test(f) ? 'credit' : 'bank';
   // days: [{date, pay}] ; out: [{date, amount, cat}] (already without own-account transfers) ; bals: [{date, total}] (morning balance of that date)
   function flow(days, out, bals, a, z){
+    const creditBy = {};
     const dayList = []; for (let d = a; d <= z; d = new Date(Date.parse(d + 'T00:00:00Z') + 86400e3).toISOString().slice(0, 10)) dayList.push(d);
     const byDay = {}; for (const D of days) byDay[D.date] = D;
     const outBy = {}; for (const t of out){ (outBy[t.date] = outBy[t.date] || []).push(t); }
     const row = d => { const D = byDay[d], o = (outBy[d] || []).reduce((q, t) => q + t.amount, 0);
       let bank = 0, fee = 0, cash = 0, credit = 0;
-      if (D && D.pay) for (const U of Object.values(D.pay)) for (const [f, F] of Object.entries(U)){ const k = KIND(f);
+      if (D && D.pay) for (const U of Object.values(D.pay)) for (const [f, F] of Object.entries(U)){ const k = KIND(f, F);
         if (k === 'cash') cash += F.a; else if (k === 'credit') credit += F.a; else { const r = FEES[f] || 0; bank += F.a * (1 - r); fee += F.a * r; } }
       return {date: d, has: !!(D && D.pay), bank: r2(bank), fee: r2(fee), cash: r2(cash), credit: r2(credit), out: r2(o), net: r2(bank + cash - o)}; };
     const rows = dayList.map(row);
+    for (const d of dayList){ const D = byDay[d]; if (D && D.pay) for (const U of Object.values(D.pay)) for (const [f, F] of Object.entries(U)) if (KIND(f, F) === 'credit') creditBy[f] = r2((creditBy[f] || 0) + F.a); }
     const tot = rows.reduce((q, r) => ({bank: q.bank + r.bank, fee: q.fee + r.fee, cash: q.cash + r.cash, credit: q.credit + r.credit, out: q.out + r.out, net: q.net + r.net}), {bank: 0, fee: 0, cash: 0, credit: 0, out: 0, net: 0});
     const cats = {}; for (const d of dayList) for (const t of (outBy[d] || [])){ const c = cats[t.cat] = cats[t.cat] || {cat: t.cat, n: 0, a: 0}; c.n++; c.a += t.amount; }
     // expected balance: last recorded balance on/before the first day, rolled forward day by day to the morning after the last day
@@ -1601,7 +1605,7 @@ const DAILY = (() => {
         const actual = B.find(b => b.date === d); if (actual && d > open.date) checks.push({date: d, expected: r2(run), actual: actual.total, diff: r2(actual.total - run)}); }
       exp = {from: open.date, open: open.total, at: end, value: r2(run), missing};
     }
-    return {rows, tot: Object.fromEntries(Object.entries(tot).map(([k, v]) => [k, r2(v)])), cats: Object.values(cats).map(c => ({...c, a: r2(c.a)})).sort((x, y) => y.a - x.a), exp, checks};
+    return {creditBy, rows, tot: Object.fromEntries(Object.entries(tot).map(([k, v]) => [k, r2(v)])), cats: Object.values(cats).map(c => ({...c, a: r2(c.a)})).sort((x, y) => y.a - x.a), exp, checks};
   }
   const R = {flow, FEES, salesDays, payDays, sum, supplierTable, storeTable, payTable};
   if (typeof module !== 'undefined') module.exports = R;
@@ -2778,7 +2782,7 @@ function renderDaily(){
   if ($('#dr-grp-add').innerHTML !== opts) $('#dr-grp-add').innerHTML = opts;
   // payments
   const PT = DAILY.payTable(A);
-  $('#dr-pay').innerHTML = PT.forms.length ? PT.forms.map(f => `<tr><td>${esc(f.form)}</td><td class="n">${fmt(f.n)}</td><td class="n">${fmt(f.a)}</td><td class="n">${pc1(f.share)}</td><td class="n">${f.fee ? fmt(f.fee) : '0'}</td><td class="n">${fmt(f.net)}</td></tr>`).join('')
+  $('#dr-pay').innerHTML = PT.forms.length ? PT.forms.map(f => `<tr><td>${esc(f.form)}${f.k === 'bank' && !/банк|qpay|шилжүүлэг|голомт|хаан/i.test(f.form) ? ' <span class="chip c-warn" title="Smart-д «Банкаар» хэлбэрээр бүртгэгдсэн">банкаар</span>' : ''}</td><td class="n">${fmt(f.n)}</td><td class="n">${fmt(f.a)}</td><td class="n">${pc1(f.share)}</td><td class="n">${f.fee ? fmt(f.fee) : '0'}</td><td class="n">${fmt(f.net)}</td></tr>`).join('')
     + `<tr style="font-weight:700"><td>Нийт</td><td class="n">${fmt(PT.forms.reduce((q, f) => q + f.n, 0))}</td><td class="n">${fmt(PT.total)}</td><td class="n">100%</td><td class="n">${fmt(PT.fee)}</td><td class="n">${fmt(PT.total - PT.fee)}</td></tr>` : '<tr><td colspan="6" class="empty">Төлбөрийн хэлбэрийн тайлан оруулаагүй.</td></tr>';
   const fs = PT.forms.map(f => f.form), su = Object.keys(PT.byStore).sort((x, y) => Object.values(PT.byStore[y]).reduce((q, v) => q + v, 0) - Object.values(PT.byStore[x]).reduce((q, v) => q + v, 0));
   $('#dr-paym-h').innerHTML = fs.length ? `<tr><th>Салбар</th>${fs.map(f => `<th class="n">${esc(f)}</th>`).join('')}<th class="n">Бүгд</th></tr>` : '';
@@ -2826,7 +2830,7 @@ function renderFlow(a, z){
   const bals = S.balances.map(b => ({date: b.date, total: BAL_ACCS.reduce((q, [k]) => q + (+((b.items || {})[k]) || 0), 0)}));
   const F = DAILY.flow(Object.values(DR.days), out, bals, a, z), T = F.tot;
   $('#dr-flow-kpis').innerHTML = `<div class="kpi"><div class="l">Банкинд орох ёстой (бэлэн бус)</div><div class="v">${fmt(T.bank)}</div><div class="s">шимтгэл ${fmt(T.fee)}</div></div>
-    <div class="kpi warn"><div class="l">Бэлэн — тушаагдах ёстой</div><div class="v">${fmt(T.cash)}</div><div class="s">зээлээр хойшид ${fmt(T.credit)}</div></div>
+    <div class="kpi warn"><div class="l">Бэлэн — тушаагдах ёстой</div><div class="v">${fmt(T.cash)}</div><div class="s">хойшид орох: ${Object.entries(F.creditBy).map(([f, v]) => `${esc(f)} ${fmt(v)}`).join(' · ') || '0'}</div></div>
     <div class="kpi bad"><div class="l">Гарсан шилжүүлэг</div><div class="v">${fmt(T.out)}</div><div class="s">${out.length} гүйлгээ</div></div>
     <div class="kpi ${T.net < 0 ? 'bad' : 'ok'}"><div class="l">Цэвэр урсгал</div><div class="v">${sgn(T.net)}</div><div class="s">орох − гарсан</div></div>`;
   const E = F.exp;
