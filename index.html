@@ -221,6 +221,7 @@ body{margin:0;background:var(--bg)}
       <h2>Шинэ хяналт хийх</h2>
       <p class="note" style="margin:0 0 10px">Тухайн хугацааны бүх банкны хуулгыг (Хаан, Голомт, ХХБ, Ариг) оруулна уу. Smart-ын төлбөрийн хэлбэрийн өгөгдлийг «Өдрийн тайлан»-д хадгалснаас автоматаар авна — Smart тайлан дахин оруулах шаардлагагүй (оруулбал түүнийг ашиглана). Бэлэн мөнгө, карт (POS), QPay/шилжүүлэг, зээлийн орлогыг нэг дор тулгана. Файлуудыг таны компьютер дээр тооцоолно.</p>
       <div class="drop" id="drop"><input id="cash-files" type="file" multiple accept=".xlsx,.xls" style="max-width:340px"><div style="margin-top:6px">эсвэл файлуудаа энд чирж оруулна уу</div></div>
+      <div class="banner" id="rev-cover" style="margin-top:10px"></div>
       <div class="files" id="cash-filelist" style="margin-top:10px"></div>
       <div class="row" style="margin-top:10px"><button class="btn primary" id="cash-save" disabled>Үр дүнг хадгалж нягтланд харуулах</button><span class="note" id="cash-msg"></span></div>
     </div>
@@ -1511,7 +1512,7 @@ const DAILY = (() => {
     const hi = rows.findIndex(r => r && r.some(c => String(c || '').trim() === 'Өртөг') && r.some(c => String(c || '').trim() === 'Байршил'));
     if (hi < 0) return {error: 'Борлуулалтын жагсаалт /бараагаар/ (Өртөг баганатай) биш байна.'};
     const H = rows[hi].map(c => String(c == null ? '' : c).trim()), ix = n => H.indexOf(n);
-    const c = {d: ix('Огноо'), loc: ix('Байршил'), sup: ix('Бэлтгэн нийлүүлэгчийн нэр'), grp: ix('Барааны бүлэг'), brand: ix('Брендийн нэр'), name: ix('Барааны нэр'), qty: ix('Тоо хэмжээ'), net: ix('Цэвэр борлуулалт'), cost: ix('Өртөг')};
+    const c = {d: ix('Огноо'), loc: ix('Байршил'), sup: ix('Бэлтгэн нийлүүлэгчийн нэр'), grp: ix('Барааны бүлэг'), brand: ix('Брендийн нэр'), name: ix('Барааны нэр'), ret: ix('Буцаалтын дүн'), qty: ix('Тоо хэмжээ'), net: ix('Цэвэр борлуулалт'), cost: ix('Өртөг')};
     if (c.net < 0 || c.cost < 0 || c.d < 0) return {error: '«Огноо», «Цэвэр борлуулалт», «Өртөг» багана олдсонгүй.'};
     const days = {}; let n = 0, adjN = 0, skipped = null;
     for (const r of rows.slice(hi + 1)){
@@ -1525,8 +1526,8 @@ const DAILY = (() => {
       if (!cost && /ORION/i.test(sup) && qty){ cost = ORION_COST * qty; adjN++; }
       const D = days[day] = days[day] || {date: day, stores: {}, sup: {}, lines: 0, adjN: 0};
       D.lines++; if (!num(r[c.cost]) && cost) D.adjN++;
-      const S = D.stores[unit] = D.stores[unit] || {s: 0, c: 0, q: 0};
-      S.s += net; S.c += cost; S.q += qty;
+      const S = D.stores[unit] = D.stores[unit] || {s: 0, c: 0, q: 0, r: 0};
+      S.s += net; S.c += cost; S.q += qty; if (c.ret >= 0) S.r += num(r[c.ret]);
       const U = D.sup[unit] = D.sup[unit] || {};
       const X = U[sup] = U[sup] || {s: 0, c: 0, q: 0, g: {}};
       X.s += net; X.c += cost; X.q += qty;
@@ -1535,7 +1536,7 @@ const DAILY = (() => {
     }
     if (!n) return {error: 'Борлуулалтын мөр олдсонгүй.'};
     for (const D of Object.values(days)){
-      for (const S of Object.values(D.stores)){ S.s = r2(S.s); S.c = r2(S.c); }
+      for (const S of Object.values(D.stores)){ S.s = r2(S.s); S.c = r2(S.c); S.r = r2(S.r); }
       for (const U of Object.values(D.sup)) for (const X of Object.values(U)){ X.s = r2(X.s); X.c = r2(X.c); for (const G of Object.values(X.g)){ G.s = r2(G.s); G.c = r2(G.c); } }
     }
     return {days, lines: n, adjN, skipped: skipped || []};
@@ -1576,7 +1577,7 @@ const DAILY = (() => {
     for (const D of dayDocs){
       lines += D.lines || 0; adjN += D.adjN || 0;
       let ds = 0, dc = 0, dq = 0;
-      for (const [u, S] of Object.entries(D.stores || {})){ const o = st[u] = st[u] || {unit: u, s: 0, c: 0, q: 0}; o.s += S.s; o.c += S.c; o.q += S.q; ds += S.s; dc += S.c; dq += S.q; }
+      for (const [u, S] of Object.entries(D.stores || {})){ const o = st[u] = st[u] || {unit: u, s: 0, c: 0, q: 0, r: 0}; o.s += S.s; o.c += S.c; o.q += S.q; o.r += S.r || 0; ds += S.s; dc += S.c; dq += S.q; }
       let dp = 0;
       for (const [u, U] of Object.entries(D.pay || {})) for (const [f, F] of Object.entries(U)){ const o = (pay[u] = pay[u] || {})[f] = (pay[u] || {})[f] || {a: 0, n: 0}; o.a += F.a; o.n += F.n; dp += F.a; }
       for (const [u, U] of Object.entries(D.sup || {})) for (const [s, X] of Object.entries(U)){
@@ -1931,7 +1932,18 @@ const CH_LABEL = {cash:'Бэлэн мөнгө', pos:'Карт (POS)', qpay:'QPay
 const CH_SHORT = {cash:'Бэлэн', pos:'Карт', qpay:'QPay/шилж.'};
 const sgn = n => (n > 0 ? '+' : '') + fmt(n);
 const diffCls = (d, base) => Math.abs(d) <= Math.max(10000, Math.abs(base) * 0.01) ? '' : d < 0 ? 'c-bad' : 'c-grey';
+function revCover(){
+  const el = $('#rev-cover'); if (!el) return; if (typeof DR === 'undefined'){ el.hidden = true; return; }
+  const ds = Object.values(DR.days).filter(d => d.pay).map(d => d.date).sort();
+  if (!ds.length){ el.innerHTML = '«Өдрийн тайлан»-д төлбөрийн хэлбэрийн өгөгдөл алга — эхлээд тэнд Smart тайлангаа оруулна уу.'; el.className = 'banner bad'; return; }
+  const a = ds[0], z = ds[ds.length - 1], have = new Set(ds), miss = [];
+  for (let t = new Date(z + 'T00:00:00Z'), k = 0; k < 60 && t.toISOString().slice(0, 10) >= a; k++, t.setUTCDate(t.getUTCDate() - 1)){ const d = t.toISOString().slice(0, 10); if (!have.has(d)) miss.push(d); }
+  const nx = new Date(z + 'T00:00:00Z'); nx.setUTCDate(nx.getUTCDate() + 1);
+  el.className = 'banner' + (miss.length ? ' bad' : '');
+  el.innerHTML = `<b>«Өдрийн тайлан»-гийн өгөгдөл: ${a} – ${z}</b> (${ds.length} өдөр). Банкны хуулгыг <b>${z}</b>-ны өдрийг дуустал, бэлэн мөнгө тушаалтыг харахын тулд <b>${nx.toISOString().slice(0, 10)}</b> хүртэл оруулна уу. Хуулгын ${z}-ээс хойших өдрүүд тулгалтад орохгүй.${miss.length ? `<br>Сүүлийн 60 хоногт тайлангүй өдөр: ${miss.reverse().join(', ')}` : ''}`;
+}
 function renderRev(){
+  revCover();
   $('#rev-xlsx').disabled = !(lastFiles && lastFiles.some(f => f.type === 'smart'));
   $('#rev-xlsx-note').hidden = !$('#rev-xlsx').disabled;
   const run = pendingRun || S.cash;
@@ -2928,7 +2940,17 @@ function renderDaily(){
     <div class="kpi"><div class="l">Дундаж маржин · цэг ${T.points}</div><div class="v">${pc1(T.m)}</div><div class="s">${T.m != null && P.m != null ? chTxt(T.m, P.m, true) : ''}</div></div>`;
   if (!docs.length){ $('#dr-check').innerHTML = `<div class="banner" style="margin-top:8px">Энэ хугацаанд тайлан оруулаагүй байна.</div>`; }
   else { const bad = A.days.filter(d => d.pay != null && Math.abs(d.pay - d.s) > 1), miss = A.days.filter(d => d.pay == null);
-    $('#dr-check').innerHTML = `<div class="banner ${bad.length ? 'bad' : ''}" style="margin-top:8px">${bad.length ? `Тулгалт зөрүүтэй: ${bad.map(d => `${d.date} (${sgn(d.pay - d.s)})`).join(', ')}` : `Тулгалт зөв: борлуулалт ${fmt(T.s)} ₮ = төлбөр ${fmt(T.pay)} ₮`}${miss.length ? ` · төлбөрийн тайлангүй өдөр: ${miss.map(d => d.date).join(', ')}` : ''}</div>`; }
+    // per store: sales vs payments over the period, with returns and the usual reason
+    const withPay = new Set(A.days.filter(d => d.pay != null).map(d => d.date));
+    const AP = withPay.size === A.days.length ? A : DAILY.sum(docs.filter(d => withPay.has(d.date)), DR.cfg);
+    const rows = [...new Set([...Object.keys(AP.stores), ...Object.keys(AP.pay)])].map(u => { const sv = (AP.stores[u] || {}).s || 0, rv = (AP.stores[u] || {}).r || 0, pv = Object.values(AP.pay[u] || {}).reduce((x, F) => x + F.a, 0);
+      const d = pv - sv; const why = Math.abs(d) <= 1 ? '' : (pv <= 1 && sv > 0) ? 'Төлбөрийн хэлбэр Smart-д бүртгэгддэггүй (онлайн / захиалга / түр цэг)' : d < 0 ? 'Зарим борлуулалтад төлбөр бүртгэгдээгүй (онлайн захиалга, УИД г.м.) — Smart дээр шалгах' : (d > 0 && rv > 0) ? `Буцаалт ${fmt(rv)} ₮: бараа буцаагдсан ч анхны төлбөр төлбөрийн тайланд үлддэг` : 'Төлбөр борлуулалтаас их — урьдчилгаа / буцаалт шалгах';
+      return {u, sv, pv, d, rv, why}; }).filter(x => Math.abs(x.d) > 1).sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
+    const tot = bad.reduce((x, d) => x + d.pay - d.s, 0);
+    $('#dr-check').innerHTML = !bad.length ? `<div class="banner" style="margin-top:8px">Тулгалт зөв: борлуулалт ${fmt(T.s)} ₮ = төлбөр ${fmt(T.pay)} ₮${miss.length ? ` · төлбөрийн тайлангүй өдөр: ${miss.map(d => d.date).join(', ')}` : ''}</div>`
+      : `<div class="banner bad" style="margin-top:8px"><b>Борлуулалт ≠ төлбөр:</b> ${bad.length} өдөр, нийт ${sgn(tot)} ₮ (төлбөр − борлуулалт). Хасах = борлуулалтаас бага төлбөр бүртгэгдсэн, нэмэх = илүү төлбөр бүртгэгдсэн.${miss.length ? ` · төлбөрийн тайлангүй өдөр: ${miss.length}` : ''}</div>
+        <div class="tbl" style="margin-top:6px"><table><thead><tr><th>Дэлгүүр</th><th class="n">Борлуулалт</th><th class="n">Төлбөр</th><th class="n">Зөрүү</th><th>Шалтгаан</th></tr></thead><tbody>${rows.map(x => `<tr><td>${esc(x.u)}</td><td class="n">${fmt(x.sv)}</td><td class="n">${fmt(x.pv)}</td><td class="n">${sgn(x.d)}</td><td class="note">${esc(x.why)}</td></tr>`).join('')}</tbody></table></div>
+        <details style="margin-top:6px"><summary class="note">Өдрөөр (${bad.length})</summary><div class="note" style="margin-top:4px">${bad.map(d => `${d.date} (${sgn(d.pay - d.s)})`).join(', ')}</div></details>`; }
   try{ renderFlow(a, z); }catch(e){ console.warn('flow', e); }
   // days
   $('#dr-days-card').hidden = A.days.length < 2;
