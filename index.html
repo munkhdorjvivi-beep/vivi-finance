@@ -206,8 +206,11 @@ body{margin:0;background:var(--bg)}
         <button class="btn" id="day-next" title="Дараагийн өдөр">▶</button>
         <button class="btn" id="day-today">Өнөөдөр</button>
         <button class="btn" id="day-all">Бүх өдөр</button>
+        <div class="filter chips" id="bank-range"><button data-f="day" aria-pressed="true">Өдөр</button><button data-f="5" aria-pressed="false">Сүүлийн 5 хоног</button><button data-f="7" aria-pressed="false">7 хоног</button><button data-f="month" aria-pressed="false">Энэ сар</button><button data-f="pmonth" aria-pressed="false">Өмнөх сар</button><button data-f="custom" aria-pressed="false">Хугацаа…</button></div>
+        <span id="bank-custom" class="row" hidden><input type="date" id="bank-from" style="width:auto"> – <input type="date" id="bank-to" style="width:auto"></span>
       </div>
       <div class="daysum" id="day-sum"></div>
+      <div class="chips" id="bank-cats" style="margin-bottom:8px"></div>
       <div class="tbl"><table><thead><tr><th>Огноо</th><th>Данснаас</th><th>Хүлээн авагч</th><th class="n">Дүн (₮)</th><th>Утга</th><th>Төлөв</th></tr></thead><tbody id="bank-body"><tr><td colspan="6" class="empty">Гүйлгээ ачаалж байна…</td></tr></tbody></table></div>
     </div>
   </section>
@@ -1713,7 +1716,7 @@ const ST_LABEL = {BRAK:['Тушаагаагүй','c-bad'], MNIEJ:['Дутуу т
 
 let db = null, user = null, me = null, isOwner = false, canWrite = true, assets = null;
 const S = { requests: [], approvals: {}, banktx: [], cash: null, notes: {}, balances: [], names: {} };
-let bankDay = today(), loadBankDay = null, reqDay = today();
+let bankDay = today(), loadBankDay = null, loadBankRange = null, reqDay = today(), bankRange = 'day', bankFrom = '', bankTo = '';
 let reqFilter = 'pending', bankFilter = 'all', cashFilter = 'open', cashStore = '', revCh = 'all', revOnly = 'diff', revStore = '';
 let pendingRun = null, lastFiles = null;
 
@@ -1727,11 +1730,30 @@ bindFilter('#rev-ch', f => revCh = f); bindFilter('#rev-only', f => revOnly = f)
 const MN_WD = ['Ням','Даваа','Мягмар','Лхагва','Пүрэв','Баасан','Бямба'];
 const dayLong = d => { const [y,m,dd] = d.split('-').map(Number); const wd = new Date(y, m-1, dd).getDay(); return `${y} оны ${m}-р сарын ${dd}, ${MN_WD[wd]} гараг`; };
 const shiftDay = (d, n) => { const [y,m,dd] = d.split('-').map(Number); const t = new Date(y, m-1, dd + n); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`; };
-function setBankDay(d){ bankDay = d; $('#day-pick').value = d || ''; if (d && loadBankDay) loadBankDay(d); render(); }
+function bankAB(){                                  // [from, to] of the bank tab, or null = every loaded day
+  const d = bankDay || today();
+  if (bankRange === 'all' || (bankRange === 'day' && !bankDay)) return null;
+  if (bankRange === 'day') return [d, d];
+  if (bankRange === '5') return [shiftDay(d, -4), d];
+  if (bankRange === '7') return [shiftDay(d, -6), d];
+  if (bankRange === 'month') return [d.slice(0, 8) + '01', d];
+  if (bankRange === 'pmonth'){ const [y, m] = d.split('-').map(Number); const a = new Date(y, m - 2, 1), b = new Date(y, m - 1, 0); const f = x => `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`; return [f(a), f(b)]; }
+  return [bankFrom || d, bankTo || d];
+}
+function syncBankBar(){ $$('#bank-range button').forEach(b => b.setAttribute('aria-pressed', b.dataset.f === bankRange)); $('#bank-custom').hidden = bankRange !== 'custom'; $('#day-pick').value = bankDay || ''; $('#bank-from').value = bankFrom; $('#bank-to').value = bankTo;
+  const ab = bankAB(); if (ab && ab[0] === ab[1] && loadBankDay) loadBankDay(ab[0]); else if (ab && loadBankRange) loadBankRange(ab[0], ab[1]); render(); }
+function setBankDay(d){ bankDay = d; if (!d) bankRange = 'all'; else if (bankRange === 'all' || bankRange === 'custom') bankRange = 'day'; syncBankBar(); }
+let bankCat = '';
 $('#day-pick').value = bankDay;
 $('#day-pick').addEventListener('change', e => setBankDay(e.target.value || ''));
-$('#day-prev').addEventListener('click', () => setBankDay(shiftDay(bankDay || today(), -1)));
-$('#day-next').addEventListener('click', () => { const n = shiftDay(bankDay || today(), 1); if (n <= today()) setBankDay(n); });
+const bankStep = () => bankRange === '5' ? 5 : bankRange === '7' ? 7 : 1;
+const monthEnd = (d, k) => { const [y, m] = d.split('-').map(Number); const t = new Date(y, m - 1 + k + 1, 0); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`; };
+$('#day-prev').addEventListener('click', () => { const d = bankDay || today(); setBankDay(bankRange === 'month' || bankRange === 'pmonth' ? monthEnd(d, -1) : shiftDay(d, -bankStep())); });
+$('#day-next').addEventListener('click', () => { const d = bankDay || today(); let n = bankRange === 'month' || bankRange === 'pmonth' ? monthEnd(d, 1) : shiftDay(d, bankStep()); if (n > today()) n = today(); if (n > d) setBankDay(n); });
+$('#bank-range').addEventListener('click', e => { const b = e.target.closest('button[data-f]'); if (!b) return; bankRange = b.dataset.f; if (!bankDay) bankDay = today();
+  if (bankRange === 'custom' && !bankFrom){ bankFrom = shiftDay(bankDay, -6); bankTo = bankDay; } syncBankBar(); });
+['#bank-from', '#bank-to'].forEach(s2 => $(s2).addEventListener('change', () => { bankFrom = $('#bank-from').value; bankTo = $('#bank-to').value; syncBankBar(); }));
+$('#bank-cats').addEventListener('click', e => { const b = e.target.closest('button[data-cat]'); if (!b) return; bankCat = bankCat === b.dataset.cat ? '' : b.dataset.cat; render(); });
 $('#day-today').addEventListener('click', () => setBankDay(today()));
 $('#day-all').addEventListener('click', () => setBankDay(''));
 // requests: same day picker
@@ -1822,16 +1844,24 @@ function renderInner(){
   const unm = S.banktx.filter(t => !t._old && mt[t.id] && mt[t.id].st === 'none');
   $('#k-unm').textContent = unm.length; $('#k-unm-s').textContent = unm.length ? fmt(unm.reduce((s,t)=>s+(+t.amount||0),0)) + ' ₮' : (S.banktx.length ? 'Бүгд тулгагдсан' : 'Гүйлгээ алга');
   $('#t-bank').hidden = !unm.length; $('#t-bank').textContent = unm.length;
-  const dayRows = S.banktx.filter(t => bankDay ? String(t.dt).slice(0,10) === bankDay : !t._old);
+  const AB = bankAB();
+  const catOf = t => VIVI.outCat({desc: t.desc, cpName: t.toName, cp: t.toAcc, dr: +t.amount || 0});
+  const periodRows = S.banktx.filter(t => AB ? (String(t.dt).slice(0,10) >= AB[0] && String(t.dt).slice(0,10) <= AB[1]) : !t._old);
+  // categories of the period (outgoing, not internal) as filter chips
+  { const ct = {}; for (const t of periodRows){ if (mt[t.id] && mt[t.id].st === 'internal') continue; const c = catOf(t); const o = ct[c] = ct[c] || {n: 0, a: 0}; o.n++; o.a += +t.amount || 0; }
+    const ks = Object.keys(ct).sort((a, b) => ct[b].a - ct[a].a); if (bankCat && !ct[bankCat]) bankCat = '';
+    $('#bank-cats').innerHTML = ks.length > 1 ? ks.map(k => `<button class="chip ${k === bankCat ? 'c-acc' : 'c-grey'}" data-cat="${esc(k)}" style="border:0;cursor:pointer" title="${ct[k].n} гүйлгээ">${esc(BANK_CAT[k] || k)} · ${fmt(ct[k].a)}</button>`).join('') : ''; }
+  const dayRows = periodRows.filter(t => !bankCat || (!(mt[t.id] && mt[t.id].st === 'internal') && catOf(t) === bankCat));
+  const bankDayMode = AB && AB[0] === AB[1];
   { const ext = dayRows.filter(t => mt[t.id] && mt[t.id].st !== 'internal'), bad = dayRows.filter(t => mt[t.id] && mt[t.id].st === 'none');
-    $('#day-sum').innerHTML = (bankDay ? `<b>${esc(dayLong(bankDay))}</b>` : '<b>Бүх өдөр</b> <span class="note">(сүүлийн 45 хоног)</span>')
+    $('#day-sum').innerHTML = (bankDayMode ? `<b>${esc(dayLong(AB[0]))}</b>` : AB ? `<b>${esc(AB[0])} – ${esc(AB[1])}</b> <span class="note">(${Math.round((Date.parse(AB[1]) - Date.parse(AB[0])) / 86400e3) + 1} хоног)</span>` : '<b>Бүх өдөр</b> <span class="note">(сүүлийн 45 хоног)</span>')
       + ` · ${dayRows.length} гүйлгээ · гадагш ${fmt(ext.reduce((s,t)=>s+(+t.amount||0),0))} ₮`
       + (bad.length ? ` · <span style="color:var(--bad)">зөвшөөрөлгүй ${bad.length} (${fmt(bad.reduce((s,t)=>s+(+t.amount||0),0))} ₮)</span>` : '');
-    $('#day-next').disabled = !bankDay || bankDay >= today(); $('#day-today').disabled = bankDay === today(); $('#day-all').disabled = !bankDay; }
+    $('#day-next').disabled = !bankDay || bankDay >= today(); $('#day-today').disabled = bankRange === 'day' && bankDay === today(); $('#day-all').disabled = !AB; }
   const rows = dayRows.filter(t => bankFilter === 'all' || (mt[t.id] && mt[t.id].st === bankFilter)).sort((a,b) => String(b.dt).localeCompare(String(a.dt)));
   $('#bank-body').innerHTML = rows.length ? rows.map(t => { const m = mt[t.id] || {}; const sev = m.st === 'none' ? 'sev-bad' : m.st === 'warn' ? 'sev-warn' : m.st === 'ok' ? 'sev-ok' : '';
-    return `<tr class="${sev}"><td class="mono">${esc(bankDay ? String(t.dt).slice(11,16) : String(t.dt).replace('T',' ').slice(0,16))}</td><td>${esc(ACC_LABEL[normAcc(t.fromAcc)] || t.fromAcc)}<div class="note">${esc(t.fromName||'')}</div></td><td>${esc(t.toName||'')}${(b => b ? `<div><span class="chip c-acc" title="Харилцагчийн сан">${esc(b.name)}${b.group ? ' · ' + esc(b.group) : ''}</span></div>` : '')(PAYEES.get(t.toAcc))}<div class="note mono">${esc(t.toAcc||'')} · ${esc(t.toBank||'')}</div></td><td class="n">${fmt(t.amount)}</td><td>${esc(t.desc||'')}</td><td><span class="chip ${m.cls||'c-grey'}">${esc(m.label||'')}</span></td></tr>`; }).join('')
-    : `<tr><td colspan="6" class="empty">${bankDay && !dayRows.length ? 'Энэ өдөр гүйлгээ алга.' : S.banktx.length ? 'Энэ шүүлтүүрт гүйлгээ алга.' : 'Банкны гүйлгээ хараахан ороогүй байна.'}</td></tr>`;
+    return `<tr class="${sev}"><td class="mono">${esc(bankDayMode ? String(t.dt).slice(11,16) : String(t.dt).replace('T',' ').slice(0,16))}</td><td>${esc(ACC_LABEL[normAcc(t.fromAcc)] || t.fromAcc)}<div class="note">${esc(t.fromName||'')}</div></td><td>${esc(t.toName||'')}${(b => b ? `<div><span class="chip c-acc" title="Харилцагчийн сан">${esc(b.name)}${b.group ? ' · ' + esc(b.group) : ''}</span></div>` : '')(PAYEES.get(t.toAcc))}<div class="note mono">${esc(t.toAcc||'')} · ${esc(t.toBank||'')}</div></td><td class="n">${fmt(t.amount)}</td><td>${esc(t.desc||'')}</td><td><span class="chip ${m.cls||'c-grey'}">${esc(m.label||'')}</span></td></tr>`; }).join('')
+    : `<tr><td colspan="6" class="empty">${AB && !dayRows.length ? 'Энэ хугацаанд гүйлгээ алга.' : S.banktx.length ? 'Энэ шүүлтүүрт гүйлгээ алга.' : 'Банкны гүйлгээ хараахан ороогүй байна.'}</td></tr>`;
   // cash
   try{ renderCash(); }catch(e){ console.warn('cash', e); }
   try{ renderRev(); }catch(e){ console.warn('rev', e); }
@@ -1878,6 +1908,7 @@ function remindTime(opt, custom){                  // reminder moment as UTC ISO
 }
 document.addEventListener('change', e => { const sel = e.target.closest('.rm-sel'); if (!sel) return; const c = document.getElementById('rmc-' + sel.id.slice(3)); if (c) c.hidden = sel.value !== 'custom'; });
 function rowId(g){ return (STORE_CODE[g.store] || 'X') + '_' + (g.first || 'x'); }
+const BANK_CAT = {rent:'Түрээс', f1:'F1 түрээс', media:'Ашиглалт, интернэт', ops:'Үйл ажиллагааны бусад', repair:'Засвар', travel:'Томилолт', cargo:'Тээвэр, карго', fuel:'Шатахуун', fee:'Шимтгэл', tax:'Татвар, НДШ', other:'Тодруулах', bank:'Зээл, ББСБ', ploan:'Хувийн зээл', salary:'Цалин', goods:'Бараа', own_md:'Эзэмшигч', own_eb:'Энхбаатар хэрэглээ', hipay:'HiPay', fx:'Валют', refund:'Буцаалт', internal:'Дотоод'};
 const CH_LABEL = {cash:'Бэлэн мөнгө', pos:'Карт (POS)', qpay:'QPay / шилжүүлэг', credit:'Зээл (StorePay, Pocket)'};
 const CH_SHORT = {cash:'Бэлэн', pos:'Карт', qpay:'QPay/шилж.'};
 const sgn = n => (n > 0 ? '+' : '') + fmt(n);
@@ -3050,6 +3081,11 @@ else VIVIFB.start(async () => {
     if (!ALLOW.bank || !d || d >= since || bankOld[d]) return;
     bankOld[d] = [];
     db.collection('banktx').where('dt', '>=', d).where('dt', '<', shiftDay(d, 1)).onSnapshot(s => { bankOld[d] = s.docs.map(x => ({id:x.id, ...x.data(), _old:true})); mergeBank(); }, onErr);
+  };
+  loadBankRange = (a, z) => {               // a period that reaches before the live window: load the older part once
+    if (!ALLOW.bank || !a || a >= since) return;
+    const end = z < since ? shiftDay(z, 1) : since, key = a + '|' + end; if (bankOld[key]) return; bankOld[key] = [];
+    db.collection('banktx').where('dt', '>=', a).where('dt', '<', end).onSnapshot(s => { bankOld[key] = s.docs.map(x => ({id:x.id, ...x.data(), _old:true})); mergeBank(); }, onErr);
   };
   $('#sync-row').hidden = false; $('#sync-btn').hidden = true; syncMsg('Имэйл автоматаар шалгагдана.');
   if (ALLOW.bank) db.doc('meta/sync').onSnapshot(d => { if (!d.exists) return; const m = d.data(); if (m.lastRun) syncMsg(`Имэйл автоматаар шалгасан ${hhmm(m.lastRun)}${m.lastAdded ? ' · сүүлийн шинэ гүйлгээ ' + hhmm(m.lastAdded) : ''}`); }, onErr);
