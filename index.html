@@ -219,7 +219,7 @@ body{margin:0;background:var(--bg)}
   <section class="panel" data-panel="rev" hidden>
     <div class="card" id="cash-upload" hidden>
       <h2>Шинэ хяналт хийх</h2>
-      <p class="note" style="margin:0 0 10px">Smart-аас «Борлуулалт төлбөрийн хэлбэрээр» тайлан болон тухайн хугацааны бүх банкны хуулгыг (Хаан, Голомт, ХХБ, Ариг) оруулна уу. Бэлэн мөнгө, карт (POS), QPay/шилжүүлэг, зээлийн орлогыг нэг дор тулгана. Файлуудыг таны компьютер дээр тооцоолно.</p>
+      <p class="note" style="margin:0 0 10px">Тухайн хугацааны бүх банкны хуулгыг (Хаан, Голомт, ХХБ, Ариг) оруулна уу. Smart-ын төлбөрийн хэлбэрийн өгөгдлийг «Өдрийн тайлан»-д хадгалснаас автоматаар авна — Smart тайлан дахин оруулах шаардлагагүй (оруулбал түүнийг ашиглана). Бэлэн мөнгө, карт (POS), QPay/шилжүүлэг, зээлийн орлогыг нэг дор тулгана. Файлуудыг таны компьютер дээр тооцоолно.</p>
       <div class="drop" id="drop"><input id="cash-files" type="file" multiple accept=".xlsx,.xls" style="max-width:340px"><div style="margin-top:6px">эсвэл файлуудаа энд чирж оруулна уу</div></div>
       <div class="files" id="cash-filelist" style="margin-top:10px"></div>
       <div class="row" style="margin-top:10px"><button class="btn primary" id="cash-save" disabled>Үр дүнг хадгалж нягтланд харуулах</button><span class="note" id="cash-msg"></span></div>
@@ -291,12 +291,12 @@ body{margin:0;background:var(--bg)}
       <h2>Мэдэгдэл</h2>
       <p class="note" style="margin:0 0 10px">Шинэ хүсэлт ирэхэд эзэмшигчид, шийдвэр гарахад нягтланд утсан дээр мэдэгдэл очно (дээд талын «🔔» товчоор утас бүр дээр асаана).</p>
       <label class="row" style="gap:8px"><input type="checkbox" id="nt-unapproved" style="width:auto"> Зөвшөөрөлгүй гүйлгээ (хүсэлтгүй шилжүүлэг) гарахад надад мэдэгдэх</label>
-      <p class="note" style="margin:6px 0 0">Цалингийн данс (5224167073) болон өөрсдийн данс хоорондын шилжүүлгийг тооцохгүй.</p>
+      <p class="note" style="margin:6px 0 0">Өөрсдийн данс хоорондын шилжүүлгийг тооцохгүй. Цалингийн данснаас гарсан шилжүүлгийг зөвшөөрсөн цалингийн жагсаалттай тулгаж, жагсаалтад байхгүй бол тусад нь мэдэгдэнэ.</p>
     </div>
     <div class="card">
-      <h2>Өгөгдөл импортлох</h2>
-      <p class="note" style="margin:0 0 10px">Өмнөх аппаас экспортолсон <b>vivi-import.json</b> файлыг нэг удаа оруулна.</p>
-      <div class="row"><input id="imp-file" type="file" accept=".json" style="max-width:320px"><span class="note" id="imp-msg"></span></div>
+      <details><summary><b>Өгөгдөл импортлох</b> <span class="note">— нэг удаагийн (хийгдсэн)</span></summary>
+      <p class="note" style="margin:8px 0 10px">Өмнөх аппаас экспортолсон <b>vivi-import.json</b> файлыг нэг удаа оруулна.</p>
+      <div class="row"><input id="imp-file" type="file" accept=".json" style="max-width:320px"><span class="note" id="imp-msg"></span></div></details>
     </div>
   </section>
 
@@ -1320,10 +1320,15 @@ const PAY = (() => {
   }
 
   // department in the payroll file -> business unit (new departments show up under their own name)
+  const CLOSED = 'Хаагдсан салбар';
   const UNIT_MAP = [[/office|оффис|удирдлага|захиргаа/i, 'Оффис'], [/эцсийн хэрэглэгч|фэйшн|поп-?ап|pop-?up/i, 'Поп-ап (түр цэг)'], [/онлайн|online/i, 'Онлайн дэлгүүр'], [/^dr$|драгон|dragon/i, 'Драгон'], [/^fc$|фүүд|food/i, 'Фүүд сити'],
-    [/е\s*март|имарт|e-?mart|баянгол/i, 'Е-март Баянгол'], [/сандэй|sunday|дархан/i, 'Дархан / Сандэй плаза'], [/уид/i, 'УИД'], [/эрдэнэт/i, 'Эрдэнэт'], [/нийслэл/i, 'Нийслэл'],
-    [/хан-?уул/i, 'Хан-Уул'], [/агуулах|warehouse/i, 'Агуулах'], [/кинг|king/i, 'Кинг тауэр']];
-  const OFFICE_UNITS = new Set(['Оффис', 'Агуулах']);
+    [/е\s*март|имарт|e-?mart|баянгол/i, CLOSED], [/сандэй|sunday|дархан/i, 'Дархан / Сандэй плаза'], [/уид/i, CLOSED], [/эрдэнэт/i, CLOSED], [/нийслэл/i, 'Нийслэл'],
+    [/хан-?уул/i, CLOSED], [/агуулах|warehouse/i, 'Агуулах'], [/кинг|king/i, CLOSED]];
+  // closed stores (Е-март, Эрдэнэт, УИД, Хан-Уул, Кинг тауэр) are not shown as stores; their leftover costs go to company level
+  const OFFICE_UNITS = new Set(['Оффис', 'Агуулах', CLOSED]);
+  // fixed display order of stores: active ones first, then any other (closed / pop-up) by size
+  const STORE_ORDER = ['Фүүд сити', 'Драгон', 'Нийслэл', 'Онлайн дэлгүүр'];
+  const byStoreOrder = (a, b, va, vb) => { const ia = STORE_ORDER.indexOf(a), ib = STORE_ORDER.indexOf(b); if (ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); return (vb || 0) - (va || 0); };
   const unitOf = dept => { const d = String(dept || '').trim(); for (const [re, u] of UNIT_MAP) if (re.test(d)) return u; return d || 'Бусад'; };
   // payroll cost by month and unit. Cost = «Олговол зохих» (gross) + employer social insurance, from the final («сүүл») list;
   // months that only have the advance list show the advance as paid so far.
@@ -1358,7 +1363,7 @@ const PAY = (() => {
     return out;
   }
 
-  const R = {SAL_ACCS, unitOf, OFFICE_UNITS, costs, KIND_LABEL, accShort, accBank, sameAcc, baseCode, nameCore, parse, compare, match, debts};
+  const R = {SAL_ACCS, CLOSED, STORE_ORDER, byStoreOrder, unitOf, OFFICE_UNITS, costs, KIND_LABEL, accShort, accBank, sameAcc, baseCode, nameCore, parse, compare, match, debts};
   if (typeof module !== 'undefined') module.exports = R;
   return R;
 })();
@@ -1468,7 +1473,10 @@ const PL = (() => {
     }
     const list = Object.values(units).map(x => { const gp = x.sales - x.cost, res = gp - x.payroll - x.direct;
       return {...x, gp: r2(gp), margin: x.sales ? gp / x.sales * 100 : null, result: r2(res), resultPct: x.sales ? res / x.sales * 100 : null}; });
-    const stores = list.filter(x => !x.office).sort((a, b) => b.sales - a.sales), office = list.filter(x => x.office);
+    const ORD = opts.order || [];
+    for (const u of ORD) if (!units[u]) list.push({unit: u, office: false, sales: 0, cost: 0, payroll: 0, direct: 0, directBy: {}, lines: [], gp: 0, margin: null, result: 0, resultPct: null, rent: 0, media: 0, otherFixed: 0, rest: 0, cmp: []});
+    const oi = u => { const i = ORD.indexOf(u); return i < 0 ? 99 : i; };
+    const stores = list.filter(x => !x.office).sort((a, b) => oi(a.unit) - oi(b.unit) || b.sales - a.sales), office = list.filter(x => x.office);
     const sum = (a, f) => r2(a.reduce((s, x) => s + (x[f] || 0), 0));
     const storeTot = {sales: sum(stores, 'sales'), cost: sum(stores, 'cost'), gp: sum(stores, 'gp'), payroll: sum(stores, 'payroll'), direct: sum(stores, 'direct'), rent: sum(stores, 'rent'), media: sum(stores, 'media'), otherFixed: sum(stores, 'otherFixed'), rest: sum(stores, 'rest'), result: sum(stores, 'result')};
     const officeCost = r2(sum(office, 'payroll') + sum(office, 'direct') - sum(office, 'gp'));
@@ -1555,7 +1563,13 @@ const DAILY = (() => {
     return out;
   }
   // sum a list of day docs
+  // unit-name normaliser (saved days keep the names they were uploaded with; closed stores fold into one unit)
+  let NORM = u => u; const setNorm = fn => { NORM = fn || (u => u); };
+  const normDoc = D => { const re = o => { const r = {}; for (const [u, v] of Object.entries(o || {})){ const k = NORM(u); r[k] = r[k] ? merge(r[k], v) : v; } return r; };
+    return {...D, stores: re(D.stores), sup: re(D.sup), pay: D.pay ? re(D.pay) : D.pay}; };
+  const merge = (a, b) => { if (typeof a !== 'object' || a == null) return (a || 0) + (b || 0); const o = {...a}; for (const [k, v] of Object.entries(b || {})) o[k] = k in o ? (typeof v === 'object' && v ? merge(o[k], v) : (typeof v === 'number' ? (o[k] || 0) + v : o[k])) : v; return o; };
   function sum(dayDocs, opts){
+    dayDocs = dayDocs.map(normDoc);
     if (opts && opts.orionFlat) dayDocs = dayDocs.map(orionFlat);
     const st = {}, sup = {}, pay = {}; let lines = 0, adjN = 0; const days = [];
     for (const D of dayDocs){
@@ -1575,7 +1589,7 @@ const DAILY = (() => {
       points: Object.values(st).filter(x => x.s > 0).length, pay: r2(payTot)}, days: days.sort((a, b) => a.date.localeCompare(b.date)), lines, adjN,
       hasPay: dayDocs.some(D => D.pay)};
   }
-  const fin = (x, tot) => ({...x, s: r2(x.s), c: r2(x.c), gp: r2(x.s - x.c), m: x.s ? (x.s - x.c) / x.s * 100 : 0, share: tot ? x.s / tot * 100 : 0});
+  const fin = (x, tot) => ({...x, s: r2(x.s), c: r2(x.c), gp: r2(x.s - x.c), m: x.s ? (x.s - x.c) / x.s * 100 : null, share: tot ? x.s / tot * 100 : 0});
   function supplierTable(agg, unit){
     const acc = {};
     for (const [u, U] of Object.entries(agg.sup)){ if (unit && u !== unit) continue;
@@ -1584,7 +1598,7 @@ const DAILY = (() => {
     const tot = Object.values(acc).reduce((a, x) => a + x.s, 0);
     return Object.values(acc).map(x => { const f = fin(x, tot); f.groups = Object.values(x.g).map(g => fin(g, x.s)).sort((a, b) => b.s - a.s); return f; });
   }
-  function storeTable(agg){ const tot = agg.total.s; return Object.values(agg.stores).map(x => fin(x, tot)).sort((a, b) => b.s - a.s); }
+  function storeTable(agg, order){ const tot = agg.total.s; const oi = u => { const i = (order || []).indexOf(u); return i < 0 ? 99 : i; }; return Object.values(agg.stores).map(x => fin(x, tot)).sort((a, b) => oi(a.unit) - oi(b.unit) || b.s - a.s); }
   function payTable(agg){
     const forms = {}, byStore = {};
     for (const [u, U] of Object.entries(agg.pay)) for (const [f, F] of Object.entries(U)){ const o = forms[f] = forms[f] || {form: f, a: 0, n: 0, k: F.k || ''}; o.a += F.a; o.n += F.n; (byStore[u] = byStore[u] || {})[f] = F.a; }
@@ -1624,7 +1638,7 @@ const DAILY = (() => {
     }
     return {creditBy, rows, tot: Object.fromEntries(Object.entries(tot).map(([k, v]) => [k, r2(v)])), cats: Object.values(cats).map(c => ({...c, a: r2(c.a)})).sort((x, y) => y.a - x.a), exp, checks};
   }
-  const R = {flow, FEES, salesDays, payDays, sum, supplierTable, storeTable, payTable};
+  const R = {flow, FEES, setNorm, salesDays, payDays, sum, supplierTable, storeTable, payTable};
   if (typeof module !== 'undefined') module.exports = R;
   return R;
 })();
@@ -1633,8 +1647,8 @@ const DAILY = (() => {
 const PAYEES = (() => {
   const accShort = a => { let s = String(a == null ? '' : a).toUpperCase().replace(/\s/g, ''); const m = s.match(/^(?:MN)?(\d{2})(\d{4})(\d{12,13})$/); if (m) return m[3].replace(/^0+/, ''); s = s.replace(/\D/g, ''); if (s.length >= 18) return s.slice(-10).replace(/^0+/, ''); return s.replace(/^0+/, ''); };
   // business unit from the counterparty's name
-  const STORE_RE = [[/фүүд\s*сити|food\s*city/i, 'Фүүд сити'], [/драгон|dragon/i, 'Драгон'], [/хүннү|оффис/i, 'Оффис'], [/имарт|e-?mart|10-р хороолол/i, 'Е-март Баянгол'],
-    [/сандай|сандэй|sunday|дархан/i, 'Дархан / Сандэй плаза'], [/эрдэнэт\s*салбар|эрдэнэт$/i, 'Эрдэнэт'], [/нийслэл/i, 'Нийслэл'], [/агуулах/i, 'Агуулах'], [/онлайн/i, 'Онлайн дэлгүүр']];
+  const STORE_RE = [[/фүүд\s*сити|food\s*city/i, 'Фүүд сити'], [/драгон|dragon/i, 'Драгон'], [/хүннү|оффис/i, 'Оффис'], [/имарт|e-?mart|10-р хороолол/i, 'Хаагдсан салбар'],
+    [/сандай|сандэй|sunday|дархан/i, 'Дархан / Сандэй плаза'], [/эрдэнэт\s*салбар|эрдэнэт$/i, 'Хаагдсан салбар'], [/нийслэл/i, 'Нийслэл'], [/агуулах/i, 'Агуулах'], [/онлайн/i, 'Онлайн дэлгүүр']];
   const storeOf = n => { for (const [re, u] of STORE_RE) if (re.test(n || '')) return u; return ''; };
   // category from the group and the cash-flow code («Мөнгөн гүйлгээний үзүүлэлтийн код»)
   function catOf(group, code, name){
@@ -1694,7 +1708,7 @@ const PAYEES = (() => {
 })();
 
 const PAYEES_DEFAULT = {"list": [{"acc": "444017046", "name": "Фүүдсити - Хувь гэрээ", "group": "Түрээс", "code": "2565935-1", "bank": "ХХБ", "holder": "ЦОГТГЭРЭЛ ДАШДОНДОВ", "cf": "1.2.9", "cat": "rent", "store": "Фүүд сити"}, {"acc": "5581001313", "name": "Фүүдсити - Байгууллагын гэрээ", "group": "Түрээс", "code": "2565935", "bank": "Хаан", "holder": "БӨХБАТ", "cf": "1.2.9", "cat": "rent", "store": "Фүүд сити"}, {"acc": "1205266311", "name": "Драгон салбар", "group": "Түрээс", "code": "5118395", "bank": "Голомт", "holder": "ПУНСАНЦОГВОО ГУНГААЖАНЦАН", "cf": "1.2.9", "cat": "rent", "store": "Драгон"}, {"acc": "9015118395", "name": "Драгон цахилгаан", "group": "Түрээс", "code": "5118395", "bank": "М Банк", "holder": "ДРАГОНХОЛДИНГ", "cf": "1.2.4", "cat": "media", "store": "Драгон"}, {"acc": "5598039337", "name": "Хүннү тауэр оффис - Нэргүй", "group": "Түрээс", "code": "УГ86031668", "bank": "Хаан", "holder": "ЦООЖ НЭРГҮЙ", "cf": "1.2.9", "cat": "rent", "store": "Оффис"}, {"acc": "1705134686", "name": "Belmonte TV", "group": "Түрээс", "code": "Белмонте ТВ", "bank": "Голомт", "holder": "МӨНХСАРАН ДАГВАСҮРЭН", "cf": "1.2.9", "cat": "rent", "store": ""}, {"acc": "461084545", "name": "БГД 10-р хороолол Имарт салбар", "group": "Түрээс", "code": "5811651-23", "bank": "ХХБ", "holder": "СКАЙХАЙПЕРМАРКЕТ ХХК", "cf": "1.2.9", "cat": "rent", "store": "Е-март Баянгол"}, {"acc": "456095088", "name": "Камдер ХХК", "group": "Түрээс", "code": "5169038", "bank": "ХХБ", "holder": "КАМДЕР ХХК", "cf": "1.2.9", "cat": "rent", "store": ""}, {"acc": "5029946765", "name": "Н.Отгонтуяа", "group": "Зээл", "code": "99098046", "bank": "Хаан", "holder": "ОТГОНТУЯА НАНЖАА", "cf": "1.2.6", "cat": "ploan", "store": ""}, {"acc": "499201039", "name": "П.Цэнгэл", "group": "Зээл", "code": "111", "bank": "ХХБ", "holder": "ЦЭНГЭЛ ПҮРЭВДОРЖ", "cf": "1.2.6", "cat": "ploan", "store": ""}, {"acc": "5038159494", "name": "Маркетингийн камер", "group": "Зээл", "code": "7105273", "bank": "Хаан", "holder": "Могул финанс ХХК", "cf": "3.2.1", "cat": "ploan", "store": ""}, {"acc": "5222163944", "name": "Соёолон Капитал ББСБ - 135сая + 100сая зээл", "group": "Зээл", "code": "5935253", "bank": "Хаан", "holder": "Соёолон Капитал ББСБ", "cf": "3.2.1", "cat": "bank", "store": ""}, {"acc": "5034332645", "name": "О.Эрдэнэтулга - хувь зээл", "group": "Зээл", "code": "99919956", "bank": "Хаан", "holder": "ЭРДЭНЭТУЛГА ОТГОН", "cf": "3.2.1", "cat": "ploan", "store": ""}, {"acc": "5401270409", "name": "Б.Болортунгалаг - хувь зээл", "group": "Зээл", "code": "99840081", "bank": "Хаан", "holder": "БОЛОРТУНГАЛАГ БАЛЖИННЯМ", "cf": "3.2.1", "cat": "ploan", "store": ""}, {"acc": "451065110", "name": "З.Банзрагч - Datoy", "group": "Бараа нийлүүлэгч", "code": "020", "bank": "ХХБ", "holder": "БАНЗРАГЧ ЗОЛБАЯР", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5067059086", "name": "Luvly shop", "group": "Бараа нийлүүлэгч", "code": "025", "bank": "Хаан", "holder": "БЯМБАХИШИГ ЖАРГАЛСАЙХАН", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "421056407", "name": "Шива энэтхэг бараа", "group": "Бараа нийлүүлэгч", "code": "050", "bank": "ХХБ", "holder": "ЭНХМАА БАТБАЯР", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "456172742", "name": "Жанжийжаваалий бараа", "group": "Бараа нийлүүлэгч", "code": "016", "bank": "ХХБ", "holder": "ЖАНЖИЙЖАВААЛИЙ БЯМБАДОРЖ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5075006191", "name": "Б.Хатанбаатар /00-н цаас/", "group": "Бараа нийлүүлэгч", "code": "047", "bank": "Хаан", "holder": "ХАТАНБААТАР БАЯРЦЭНГЭЛ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5403930726", "name": "Б.Эрдэнэжаргал /гадаад пас/", "group": "Бараа нийлүүлэгч", "code": "049", "bank": "Хаан", "holder": "ОЮУНДЭЛГЭР ЧИМЭДЦЭРЭН", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5063774317", "name": "Юргана индастри ХХК", "group": "Бараа нийлүүлэгч", "code": "6839754", "bank": "Хаан", "holder": "ЮРГАНА ИНДАСТРИ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5700579867", "name": "Энари гоо сайхан", "group": "Бараа нийлүүлэгч", "code": "022", "bank": "Хаан", "holder": "АДЪЯАХҮҮ ОНГООБОР", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5035274680", "name": "Ариунзул", "group": "Бараа нийлүүлэгч", "code": "006", "bank": "Хаан", "holder": "АРИУНЗУЛ ЦООДОЛ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5034911688", "name": "Евро косметикс", "group": "Бараа нийлүүлэгч", "code": "048", "bank": "Хаан", "holder": "ХИШИГДОРЖ НАРАНГЭРЭЛ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5085174777", "name": "Жи Эс коммерс", "group": "Бараа нийлүүлэгч", "code": "035", "bank": "Хаан", "holder": "ГАНХУЯГ ГАНБОЛД", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5082065115", "name": "Сэрвэн Ундрага ХХК /БТ хувцас", "group": "Бараа нийлүүлэгч", "code": "6926126", "bank": "Хаан", "holder": "МӨНХЗУЛ ДҮГЭЭ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5029946765", "name": "Н.Отгонтуяа", "group": "Бараа нийлүүлэгч", "code": "034", "bank": "Хаан", "holder": "ОТГОНТУЯА НАНЖАА", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5026885341", "name": "Цахиур төмөр ХХК -НӨАТтэй", "group": "Бараа нийлүүлэгч", "code": "2645319", "bank": "Хаан", "holder": "ЦАХИУРТӨМӨР", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "456262858", "name": "Энхтайван", "group": "Бараа нийлүүлэгч", "code": "033", "bank": "ХХБ", "holder": "ЭНХТАЙВАН СҮХ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "453131737", "name": "Янмал ХХК", "group": "Бараа нийлүүлэгч", "code": "044", "bank": "ХХБ", "holder": "ЯНМАЛ ХХК", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5035115733", "name": "Хишигтогтох", "group": "Бараа нийлүүлэгч", "code": "001", "bank": "Хаан", "holder": "БАЯРМАА БАВУУХҮҮ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5007910879", "name": "Бээжин Баяраа", "group": "Бараа нийлүүлэгч", "code": "58585856", "bank": "Хаан", "holder": "БАТМӨНХ БАЯНСАН", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5077208652", "name": "Д.Чимидмаа", "group": "Бараа нийлүүлэгч", "code": "027", "bank": "Хаан", "holder": "ЧИМИДМАА ДАВАА", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5308524725", "name": "Б.Одончимэг - гутал D43", "group": "Бараа нийлүүлэгч", "code": "", "bank": "Хаан", "holder": "ОДОНЧИМЭГ БАТБАЯР", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5305588115", "name": "Хадаа гутал", "group": "Бараа нийлүүлэгч", "code": "014", "bank": "Хаан", "holder": "БАТЦЭЦЭГ ЧИЛГЭР", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5072086738", "name": "Ө.Урангуя - Аялал", "group": "Бараа нийлүүлэгч", "code": "052", "bank": "Хаан", "holder": "УРАНГУА ӨЛЗИЙ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5039860137", "name": "Удшижан", "group": "Бараа нийлүүлэгч", "code": "ХГ86100713", "bank": "Хаан", "holder": "БАТНАСАН ВАНДАНТҮГЖ", "cf": "1.2.3", "cat": "goods", "store": ""}, {"acc": "5024507314", "name": "Карго төлбөр", "group": "Бусад", "code": "ХГ86100713", "bank": "Хаан", "holder": "МӨНХБАТ ОТГОНБАЯР", "cf": "1.2.5", "cat": "cargo", "store": ""}, {"acc": "5002058966", "name": "Шатахуун", "group": "Бусад", "code": "ХГ84021311", "bank": "Хас", "holder": "Даваахүү ЭНХБААТАР", "cf": "1.2.5", "cat": "fuel", "store": ""}, {"acc": "405097565", "name": "Энхбаатар - цалин", "group": "Бусад", "code": "ХГ84021311", "bank": "ХХБ", "holder": "ЭНХБААТАР ДАВААХҮҮ", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5176120446", "name": "Д.Энхбаатар - ХХОАТ", "group": "Бусад", "code": "ХГ84021311", "bank": "Хаан", "holder": "ТАТВАРЫН ЕРӨНХИЙ ГАЗАР", "cf": "1.2.7", "cat": "tax", "store": ""}, {"acc": "5176120446", "name": "Д.Энхбаатар - НӨАТ", "group": "Бусад", "code": "ХГ84021311", "bank": "Хаан", "holder": "ТАТВАРЫН ЕРӨНХИЙ ГАЗАР", "cf": "1.2.7", "cat": "tax", "store": ""}, {"acc": "499071483", "name": "Д.Энхбаатар - НДШ", "group": "Бусад", "code": "ХГ84021311", "bank": "ХХБ", "holder": "БАЯНГОЛ ДҮҮРГИЙН НИЙГМИЙН ДААТГАЛЫН ГАЗАР", "cf": "1.2.2", "cat": "tax", "store": ""}, {"acc": "9025036895", "name": "Э.Энхтөр - утасны төлбөр", "group": "Бусад", "code": "ХГ84021311", "bank": "М Банк", "holder": "ЮНИТЕЛ ХХК", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5026814471", "name": "Өмгөөлөгчийн төлбөр - Ц.Ариунзул", "group": "Бусад", "code": "006", "bank": "Хаан", "holder": "ДАВААНЯМ ЖАЛБУУ", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5020599412", "name": "Харуул хамгаалалтын төлбөр", "group": "Бусад", "code": "5271746", "bank": "Хаан", "holder": "ИХ ХАР СҮЛД", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5114330398", "name": "62004836 КОДтой ашиглалтын төлбөр", "group": "Бусад", "code": "5234433", "bank": "Хаан", "holder": "ХҮРЭЭХАУС", "cf": "1.2.4", "cat": "media", "store": ""}, {"acc": "8008001001367", "name": "Бодь даатгал ХК /хөрөнгийн болон БМ/", "group": "Бусад", "code": "2088606", "bank": "Богд", "holder": "Бодь даатгал ХК", "cf": "1.2.8", "cat": "ops", "store": ""}, {"acc": "5131130536", "name": "Хүннү тауэр - ашиглалтын төлбөр", "group": "Бусад", "code": "УГ86031668", "bank": "Хаан", "holder": "БИНДЭГНОРОВ", "cf": "1.2.4", "cat": "media", "store": "Оффис"}, {"acc": "5040357967", "name": "Хүннү тауэр - СӨХ-н төлбөр 4*70,000₮", "group": "Бусад", "code": "УГ86031668", "bank": "Хаан", "holder": "ХҮННҮ ВИЛЛА СӨХ", "cf": "1.2.4", "cat": "media", "store": "Оффис"}, {"acc": "5114426977", "name": "Сандай ашиглалт 6 сар, цахилгааны төлбөр 5сар", "group": "Бусад", "code": "8295824", "bank": "Хаан", "holder": "САНДЭЙ ПЛАЗАД БИЗНЕС ЭРХЛЭГЧИД ЦЭЛМЭГ ТӨВ", "cf": "1.2.4", "cat": "media", "store": "Дархан / Сандэй плаза"}, {"acc": "499007597", "name": "Цахилгааны төлбөр 3035671", "group": "Бусад", "code": "2646161", "bank": "ХХБ", "holder": "УБЦТС ТӨХК БАЯНГОЛ ХҮТ", "cf": "1.2.4", "cat": "media", "store": ""}, {"acc": "432023265", "name": "Онлайн хүргэлт PP-26-0897", "group": "Бусад", "code": "6612784", "bank": "ХХБ", "holder": "ПИК ПАК ГРУПП ХХК", "cf": "1.2.5", "cat": "cargo", "store": "Онлайн дэлгүүр"}, {"acc": "1410016178", "name": "КоллПро 77051818", "group": "Бусад", "code": "5827787", "bank": "Голомт", "holder": "КОЛЛПРО ХХК", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5111645381", "name": "Вивекавикториа ххк-с 5915198; Timely", "group": "Бусад", "code": "6675654", "bank": "Хаан", "holder": "ТЕК СТРИМ", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "9015388457", "name": "Интернэтийн төлбөр", "group": "Бусад", "code": "5388457", "bank": "М Банк", "holder": "ЮНИВИШН ХХК", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "9025036895", "name": "Утасны дугаарын төлбөр", "group": "Бусад", "code": "5036895", "bank": "М Банк", "holder": "ЮНИТЕЛ", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5097048829", "name": "Эрдэнэт салбар Портерийн тээврийн хөлс", "group": "Бусад", "code": "ФМ78050769", "bank": "Хаан", "holder": "ӨЛЗИЙБАЯР ЁНДОНСАМБУУ", "cf": "1.2.5", "cat": "cargo", "store": "Эрдэнэт"}, {"acc": "5026595377", "name": "Эрдэнэт салбар - Тээш төлбөр", "group": "Бусад", "code": "2076675", "bank": "Хаан", "holder": "БАТСАЙХАН ГОМБОРАГЧАА", "cf": "1.2.5", "cat": "cargo", "store": "Эрдэнэт"}, {"acc": "3665109094", "name": "Портер шатахуун", "group": "Бусад", "code": "", "bank": "Голомт", "holder": "ЭНХТУЛГА ДАВААХҮҮ", "cf": "1.2.5", "cat": "fuel", "store": ""}, {"acc": "5753811879", "name": "САНДАГ-ОЧИР ЭНХБОЛД", "group": "Бусад", "code": "", "bank": "Хаан", "holder": "САНДАГ-ОЧИР ЭНХБОЛД", "cf": "1.2.5", "cat": "cargo", "store": ""}, {"acc": "5030482980", "name": "ЭКОС төлбөр", "group": "Бусад", "code": "5915195", "bank": "Хаан", "holder": "НИНА ЭРДЭНЭЧИМЭГ", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "2611208076", "name": "Гэрийн үйлчлэгчийн цалин", "group": "Бусад", "code": "ЧМ73032564", "bank": "ХХБ", "holder": "ЭРДЭНЭЧУЛУУН БЯМБАА", "cf": "1.2.1", "cat": "salary", "store": ""}, {"acc": "2602036637", "name": "Гэрийн үйлчлэгчийн цалин", "group": "Бусад", "code": "ЧМ78013069", "bank": "ХХБ", "holder": "БОЛОРЧУЛУУН БЯМБАА", "cf": "1.2.1", "cat": "salary", "store": ""}, {"acc": "5040171494", "name": "Тор, скоч, Пос цаас г,м", "group": "Бусад", "code": "6278957", "bank": "Хаан", "holder": "ОБ ТРЕЙДИНГ", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5039742363", "name": "Хангамж - Оффис", "group": "Бусад", "code": "5915195", "bank": "Хаан", "holder": "БОР ОЮУНТУНГАЛАГ", "cf": "1.2.9", "cat": "ops", "store": "Оффис"}, {"acc": "9005159954", "name": "Хэвлэл", "group": "Бусад", "code": "5159954", "bank": "М Банк", "holder": "МӨНГӨН ГАНЗАЙ ХХК", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5021476161", "name": "Хангамж - Салбарууд", "group": "Бусад", "code": "940004000", "bank": "Хаан", "holder": "ПҮРЭВЖАВ ЦЭДЭНЖИЙМАА", "cf": "1.2.9", "cat": "ops", "store": ""}, {"acc": "5090715290", "name": "Эрдэнэт салбар - Баллонтой ус", "group": "Бусад", "code": "5915195", "bank": "Хаан", "holder": "ЭНЭБИШ БАЯРМАГНАЙ", "cf": "1.2.9", "cat": "ops", "store": "Эрдэнэт"}, {"acc": "5657071875", "name": "Драгон салбар - Баллонтой ус", "group": "Бусад", "code": "5915195", "bank": "Хаан", "holder": "ЗАНДРАА БААСАНДОРЖ", "cf": "1.2.9", "cat": "ops", "store": "Драгон"}, {"acc": "5039201516", "name": "Хүннү тауэр - Баллонтой ус", "group": "Бусад", "code": "5915195", "bank": "хаан", "holder": "ТӨГСБУЯНДЭЛГЭР САМЪЯА", "cf": "1.2.9", "cat": "ops", "store": "Оффис"}], "emps": [{"code": "РЕ98051307", "name": "Бя.Оюун-Эрдэнэ", "acc": "1735156525", "note": "НДШ төлдөг", "pos": "Дэлгүүрийн ЗБ"}, {"code": "МЕ90080601", "name": "Солонго", "acc": "458055838", "note": "НДШ төлдөг", "pos": "Тооцооны нягтлан бодогч"}, {"code": "ОО94092721", "name": "Оюунбилэг", "acc": "1735156286", "note": "НДШ төлдөг", "pos": "Ахлах нягтлан бодогч"}, {"code": "УК97022408", "name": "Халиунаа", "acc": "1735156289", "note": "НДШ төлдөг", "pos": "Маркетингийн менежер"}, {"code": "УП89063046", "name": "Ариунжаргал", "acc": "1735156284", "note": "НДШ төлдөг", "pos": "Ерөнхий нягтлан бодогч"}, {"code": "ХГ86100713", "name": "Мөнхдорж", "acc": "1735156283", "note": "НДШ төлдөг", "pos": "Ерөнхий захирал"}, {"code": "ЧМ73032564", "name": "Эрдэнэчулуун", "acc": "1735156288", "note": "НДШ төлдөг", "pos": "Үйлчлэгч"}, {"code": "ЧМ78013069", "name": "Болорчулуун", "acc": "2602036637", "note": "НДШ төлдөг", "pos": "Үйлчлэгч"}, {"code": "ВЗ69100618", "name": "Баатар", "acc": "1735156571", "note": "НДШ төлдөг", "pos": "Үйлчлэгч"}, {"code": "ДЖ98070809", "name": "Уранзаяа", "acc": "1905125044", "note": "НДШ төлдөг", "pos": "Нярав"}, {"code": "КЮ76042206", "name": "Буяндэлгэр", "acc": "1735156293", "note": "НДШ төлдөг", "pos": "Дэлгүүрийн ЗБ"}, {"code": "ТХ98072401", "name": "Элбэгзаяа", "acc": "1735156295", "note": "НДШ төлдөг", "pos": "Нярав"}, {"code": "СП94083006", "name": "О.Золжаргал", "acc": "1735156297", "note": "НДШ төлдөг", "pos": "Дэлгүүрийн менежер"}, {"code": "АЮ87040403", "name": "Буянжаргал", "acc": "1735156291", "note": "НДШ төлдөг", "pos": "Онлайн худалдааны мэргэжилтэн"}, {"code": "АМ02241503", "name": "Б.Эрдэнэцэцэг", "acc": "5251418414", "note": "төлдөггүй", "pos": "Касс"}, {"code": "ГН87092400", "name": "Х.Уянга", "acc": "5284076229", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ДЖ03292006", "name": "Ц.Мөнхзул", "acc": "109500167338", "note": "төлдөггүй", "pos": "Касс"}, {"code": "ЗЖ75012801", "name": "А.Уранцэцэг", "acc": "5619052521", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "НЭ92101818", "name": "М.Мөнгөндорж", "acc": "192200046273", "note": "төлдөггүй", "pos": "Камер хянагч"}, {"code": "ОЭ80121161", "name": "З.Сүрэнжав", "acc": "5622790325", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ПЙ73112061", "name": "Д.Өсөхжаргал", "acc": "5845541170", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ТА70070763", "name": "Т.Уранцэцэг", "acc": "5056029019", "note": "төлдөггүй", "pos": "Үйл ажиллагааны менежер"}, {"code": "УП01301241", "name": "Ану-Үржин", "acc": "1735156292", "note": "төлдөггүй", "pos": "Касс"}, {"code": "ЧД73120503", "name": "Н.Лхамсүрэн", "acc": "5059435223", "note": "төлдөггүй", "pos": "Камер хянагч"}, {"code": "ЧЕ81091600", "name": "Д.Мандах", "acc": "5057669311", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ЧО71061262", "name": "С.Алтантуул", "acc": "5019558822", "note": "төлдөггүй", "pos": "Үйлчлэгч"}, {"code": "ШД88031808", "name": "Рэ.Баасансүрэн", "acc": "5171391025", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "БВ92011207", "name": "А.Төлеу", "acc": "5058528471", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "СЮ02250901", "name": "Ц.Хонгорзул", "acc": "5926293828", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "УП96070572", "name": "Д.Энхтулга", "acc": "3665109094", "note": "төлдөггүй", "pos": "Камер хянагч"}, {"code": "ФД04262948", "name": "Б.Хувьзаяа", "acc": "5653105823", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ЙЮ70022606-", "name": "П.Цэдэнжиймаа", "acc": "5021476161", "note": "төлдөггүй", "pos": "Нягтлан бодогч"}, {"code": "МЕ90080601-1", "name": "Б.Солонго", "acc": "8200005364", "note": "төлдөггүй", "pos": "Тооцооны нягтлан бодогч"}, {"code": "МН83030164", "name": "Б.Оюун-эрдэнэ", "acc": "5111054591", "note": "төлдөггүй", "pos": "Нярав"}, {"code": "ОЮ98043042", "name": "Х.Золбоо", "acc": "2715159415", "note": "төлдөггүй", "pos": "Хүний нөөцийн менежер"}, {"code": "ТА82022262-2", "name": "Т.Цээнэ", "acc": "405126369", "note": "төлдөггүй", "pos": "Дэд захирал"}, {"code": "УЖ03280621", "name": "Г.Номин-Эрдэнэ", "acc": "5071683237", "note": "төлдөггүй", "pos": "Маркетингийн мэргэжилтэн"}, {"code": "УП89063046-1", "name": "Н.Ариунжаргал", "acc": "1105249287", "note": "төлдөггүй", "pos": "Ерөнхий нягтлан бодогч"}, {"code": "УХ59112088", "name": "С.Энхтайван", "acc": "5026814493", "note": "төлдөггүй", "pos": "Менежер"}, {"code": "УХ97100451", "name": "Э.Сандаг-Очир", "acc": "5753811879", "note": "төлдөггүй", "pos": "Агуулахын жолооч"}, {"code": "ХЙ84110302", "name": "М.Цацрал", "acc": "5037266101", "note": "төлдөггүй", "pos": "Ахлах нярав"}, {"code": "ЧЖ75120216", "name": "Г.Батсайхан", "acc": "5026595377", "note": "төлдөггүй", "pos": "Агуулахын жолооч"}, {"code": "1-МЮ06211901", "name": "М.Энхчимэг", "acc": "5692387378", "note": "төлдөггүй", "pos": "Ахлах касс"}, {"code": "ЖЯ84062762", "name": "Ц.Наранчимэг", "acc": "5675291358", "note": "төлдөггүй", "pos": "Бараа материалын нягтлан бодогч"}, {"code": "ЗА06291105", "name": "Г.Цэвэлсүрэн", "acc": "1305143697", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ИА79052819", "name": "Х.Дашцоймбол", "acc": "5020906060", "note": "төлдөггүй", "pos": "Камер хянагч"}, {"code": "ЙВ79081509", "name": "Б.Энхмэнд", "acc": "5543020794", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ОА79101506", "name": "Б.Байгалмаа", "acc": "5801038369", "note": "төлдөггүй", "pos": "Касс"}, {"code": "ПБ78102601", "name": "Г.Болормаа", "acc": "405099752", "note": "төлдөггүй", "pos": "Дэлгүүрийн ЗБ"}, {"code": "ПМ99031405", "name": "О.Бямбаням", "acc": "5859083983", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "РМ08221805", "name": "Д.Мөнх-Учрал", "acc": "5157244556", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "УС58052501", "name": "Х.Гэрэл", "acc": "5001676491", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "УС64030638", "name": "Д.Амгаланбаяр", "acc": "5014232703", "note": "төлдөггүй", "pos": "Камер хянагч"}, {"code": "ХВ81081900", "name": "Б.Дуламжав", "acc": "5033608561", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ЧБ65103171", "name": "Н.Зууннаст", "acc": "5598243388", "note": "төлдөггүй", "pos": "Агуулахын туслах ажилтан"}, {"code": "ЧГ82021403", "name": "Д.Одонтунгалаг", "acc": "5166146682", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ЧЛ69101302", "name": "Л.Даваа", "acc": "5033294847", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}, {"code": "ШЕ78042403", "name": "Х.Өнөржаргал", "acc": "5039343277", "note": "төлдөггүй", "pos": "Касс"}, {"code": "ШЖ63111401", "name": "Д.Цэцэгмаа", "acc": "5027299990", "note": "төлдөггүй", "pos": "Худалдааны зөвлөх"}], "added": [{"acc": "5005782912", "name": "Мөнгөнганзай ХХК – хэвлэл", "group": "Нэмсэн", "code": "", "bank": "", "holder": "", "cf": "", "cat": "ops", "store": ""}, {"acc": "5084553122", "name": "Т.Энхзориг – үйлчилгээний төлбөр", "group": "Нэмсэн", "code": "", "bank": "", "holder": "", "cf": "", "cat": "ops", "store": ""}, {"acc": "5002843189", "name": "Портер ачааны мөнгө (Самнордов Тэгшзаяа)", "group": "Нэмсэн", "code": "", "bank": "", "holder": "", "cf": "", "cat": "cargo", "store": ""}, {"acc": "2725103070", "name": "Премиум нэксус ХК – Си Юү захиалга", "group": "Нэмсэн", "code": "", "bank": "", "holder": "", "cf": "", "cat": "ops", "store": ""}, {"acc": "4003358983", "name": "TSEENE", "group": "Нэмсэн", "code": "", "bank": "", "holder": "", "cf": "", "cat": "ops", "store": ""}, {"acc": "3405133858", "name": "НШШГГ – цалингийн суутгал (шүүхийн шийдвэр)", "group": "Нэмсэн", "code": "", "bank": "", "holder": "", "cf": "", "cat": "salary", "store": ""}]};
-PAYEES.set((PAYEES_DEFAULT.added || []).concat(PAYEES_DEFAULT.list)); VIVI.setBase(PAYEES.catFor);
+PAYEES.set((PAYEES_DEFAULT.added || []).concat(PAYEES_DEFAULT.list)); VIVI.setBase(PAYEES.catFor); DAILY.setNorm(PAY.unitOf);
 
 </script>
 <script>
@@ -1880,16 +1894,19 @@ function reqCard(r, matches){
   if (canWrite && s === 'approved') acts += `<button class="btn primary" data-act="paid" data-id="${esc(r.id)}">Шилжүүлсэн гэж тэмдэглэх</button>`;
   if (s === 'approved' || s === 'paid') acts += `<button class="btn" data-act="print" data-id="${esc(r.id)}">🖨 Зарлагын баримт</button>`;
   if (canWrite && (s === 'pending' || s === 'hold') && r.createdBy === me) acts += `<button class="btn" data-act="cancel" data-id="${esc(r.id)}">Цуцлах</button>`;
-  const bankChips = (matches||[]).map(({t,m}) => `<span class="chip ${m.cls}">Банк: ${esc(m.label)} · ${esc(String(t.dt).slice(0,10))}</span>`).join('');
+  // bank links: matched transfers in full, «amount differs» ones folded into one chip
+  const okM = (matches||[]).filter(x => x.m.st === 'ok'), warnM = (matches||[]).filter(x => x.m.st !== 'ok');
+  const bankChips = okM.map(({t,m}) => `<span class="chip ${m.cls}">Банк: ${esc(m.label)} · ${esc(String(t.dt).slice(0,10))}</span>`).join('')
+    + (warnM.length ? `<span class="chip c-warn" title="${esc(warnM.map(x => String(x.t.dt).slice(0,10) + ' · ' + fmt(x.t.amount) + ' ₮').join('\n'))}">Энэ данс руу өөр дүнтэй ${warnM.length} гүйлгээ</span>` : '');
   return `<div class="req" data-req="${esc(r.id)}">
     <div><div class="who">${esc(r.payee)}</div>
       <div class="meta">${esc(r.payeeAcc)} · ${esc(r.payeeBank||'')}</div>
       <div class="meta">Данснаас: ${esc(ACC_LABEL[r.fromAcc] || r.fromAcc || '')}</div>
       <div style="margin-top:4px">${esc(r.note||'')}</div>
-      <div class="note">${esc(r.category||'')} · ${esc(nameOf(r.createdBy))} · ${esc(String(r.createdAt||'').replace('T',' ').slice(0,16))}</div>
+      <div class="note">${esc(r.category||'')} · ${esc(nameOf(r.createdBy))} · ${esc(fmtDT(r.createdAt))}</div>
       ${a && a.comment ? `<div class="note">Эзэмшигчийн тайлбар: ${esc(a.comment)}</div>` : ''}
       ${s === 'hold' ? `<div class="note" style="color:#5b3b8c">⏸ Хүлээлгэсэн ${esc(fmtDT(r.holdAt))}${r.holdNote ? ' · ' + esc(r.holdNote) : ''}${r.remindAt ? ' · ⏰ сануулга ' + esc(fmtDT(r.remindAt)) : ''}</div>` : ''}
-      ${r.resendCount ? `<div class="note">↻ Дахин илгээсэн ${r.resendCount} удаа${r.resentAt ? ' · сүүлд ' + esc(String(r.resentAt).replace('T',' ').slice(0,16)) : ''}</div>` : ''}
+      ${r.resendCount ? `<div class="note">↻ Дахин илгээсэн ${r.resendCount} удаа${r.resentAt ? ' · сүүлд ' + esc(fmtDT(r.resentAt)) : ''}</div>` : ''}
       ${r.attachId ? `<a href="#" data-file="${esc(r.attachId)}">${/pdf/.test(r.attachType||'') ? 'Баримт (PDF) нээх' : `<img class="thumb" data-file-img="${esc(r.attachId)}" alt="Баримт">`}</a>` : ''}
     </div>
     <div style="text-align:right"><div class="amt">${fmt(r.amount)} ₮</div><div class="chips" style="justify-content:flex-end;margin-top:6px"><span class="chip ${chip[1]}">${chip[0]}</span>${changedSinceApproval(r) ? '<span class="chip c-bad">Зөвшөөрснөөс хойш өөрчлөгдсөн</span>' : ''}${bankChips}</div></div>
@@ -1960,7 +1977,7 @@ function renderCash(){
   const focusId = document.activeElement && document.activeElement.id;
   $('#cash-body').innerHTML = rows.length ? rows.map(g => { const id = rowId(g), n = S.notes[id]; const st = ST_LABEL[g.status] || ['',''];
     return `<tr class="${g.status==='BRAK'?'sev-bad':'sev-warn'}"><td>${esc(g.store)}</td><td class="mono">${esc(g.days.join(', '))}${g.depDates.length ? `<div class="note">Тушаасан: ${esc(g.depDates.join(', '))}</div>` : ''}</td><td class="n">${fmt(g.smart)}</td><td class="n">${fmt(g.dep)}</td><td class="n">${fmt(g.diff)}</td><td><span class="chip ${st[1]}">${st[0]}</span></td>
-    <td>${pendingRun ? '<span class="note">Хадгалсны дараа тайлбар бичнэ</span>' : `<div class="row"><textarea id="nt-${esc(id)}" rows="1" placeholder="Бэлэн мөнгө хаашаа орсон бэ?" ${canWrite?'':'disabled'}>${esc(n ? n.text : '')}</textarea><button class="btn" data-act="note" data-id="${esc(id)}" ${canWrite?'':'disabled'}>Хадгалах</button></div>${n && n.text ? `<div class="note">${esc(nameOf(n.by))} · ${esc(String(n.at||'').replace('T',' ').slice(0,16))}</div>` : ''}`}</td></tr>`; }).join('')
+    <td>${pendingRun ? '<span class="note">Хадгалсны дараа тайлбар бичнэ</span>' : `<div class="row"><textarea id="nt-${esc(id)}" rows="1" placeholder="Бэлэн мөнгө хаашаа орсон бэ?" ${canWrite?'':'disabled'}>${esc(n ? n.text : '')}</textarea><button class="btn" data-act="note" data-id="${esc(id)}" ${canWrite?'':'disabled'}>Хадгалах</button></div>${n && n.text ? `<div class="note">${esc(nameOf(n.by))} · ${esc(fmtDT(n.at))}</div>` : ''}`}</td></tr>`; }).join('')
     : `<tr><td colspan="7" class="empty">${prob.length ? 'Бүх өдөр тайлбартай.' : 'Асуудалтай өдөр алга.'}</td></tr>`;
   if (focusId && document.getElementById(focusId)) document.getElementById(focusId).focus();
 }
@@ -2037,11 +2054,30 @@ async function handleFiles(fl){
   }
   $('#cash-filelist').innerHTML = parsedFiles.map(p => `<div>${p.type==='unknown'?'<span class="chip c-bad">?</span>':'<span class="chip c-ok">✓</span>'} ${esc(p.label)} · ${p.rows.length} мөр · ${esc(p.file)}</div>`).join('');
   lastFiles = parsedFiles.slice();
-  const m = VIVI.build(parsedFiles);
-  if (m.error){ $('#cash-msg').textContent = 'Smart «Борлуулалт төлбөрийн хэлбэрээр» тайлан оруулна уу.'; return; }
+  // Smart side: an uploaded payment-form report wins; otherwise take it from the saved daily reports («Өдрийн тайлан»)
+  const fromDaily = !parsedFiles.some(f => f.type === 'smart') ? dailySmartFile(parsedFiles) : null;
+  if (fromDaily){ lastFiles.push(fromDaily); $('#cash-filelist').insertAdjacentHTML('beforeend', `<div><span class="chip c-ok">✓</span> ${esc(fromDaily.label)} · ${fromDaily.rows.length} мөр</div>`); }
+  const m = VIVI.build(lastFiles);
+  if (m.error){ $('#cash-msg').textContent = parsedFiles.some(f => f.type === 'bank') ? 'Хуулгын хугацаанд «Өдрийн тайлан»-д төлбөрийн хэлбэрийн өгөгдөл алга — тухайн өдрүүдийн Smart тайланг «Өдрийн тайлан»-д оруулна уу.' : 'Банкны хуулгаа оруулна уу.'; return; }
   pendingRun = {d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
   $('#cash-save').disabled = false; $('#cash-msg').textContent = 'Тооцоолсон. Хадгалбал нягтлан тайлбар бичих боломжтой болно.';
   render();
+}
+// daily docs (pay[unit][form] = {a, n, k}) → rows in the shape of core's Smart payment-form parser
+const UNIT_CORE = {'Фүүд сити':'Food city', 'Е-март Баянгол':'Е март баянгол-3 давхар', 'Эрдэнэт':'Эрдэнэт салбар'};
+function dailySmartFile(files){
+  if (typeof DR === 'undefined') return null;
+  const dts = files.filter(f => f.type === 'bank').flatMap(f => f.rows.map(t => +t.dt)).filter(x => x > 0);
+  if (!dts.length) return null;
+  const isoD = t => { const d = new Date(t); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`; };
+  const a = isoD(Math.min(...dts)), z = isoD(Math.max(...dts)), rows = [], days = [], miss = [];
+  for (let t = new Date(a+'T00:00:00Z'); isoD(+t) <= z; t.setUTCDate(t.getUTCDate()+1)){ const d = isoD(+t), D = DR.days[d];
+    if (!D || !D.pay){ miss.push(d); continue; } days.push(d);
+    for (const [u, U] of Object.entries(D.pay)) for (const [f, F] of Object.entries(U)){
+      const k = F.k || (/бэлэн|бэлн/i.test(f) ? 'cash' : /^зээл/i.test(f) ? 'credit' : 'bank');
+      rows.push({d, store: UNIT_CORE[u] || u, kas: '', form: k === 'cash' ? 'Бэлнээр' : k === 'credit' ? 'Зээлээр' : 'Банкаар', bank: f, amt: +F.a || 0}); } }
+  if (!rows.length) return null;
+  return {type: 'smart', label: `Smart – «Өдрийн тайлан»-аас (${days.length} өдөр${miss.length ? `, дутуу: ${miss.join(', ')}` : ''})`, rows, file: 'Өдрийн тайлан', auto: true};
 }
 $('#cash-files').addEventListener('change', e => handleFiles([...e.target.files]));
 const drop = $('#drop');
@@ -2419,8 +2455,8 @@ function renderPayList(l, m){
     ${flagList(l.flags || [])}
     <div class="acts row" style="margin-top:10px">${acts}</div>`;
   const rows = l.people.filter(p => p.amt > 0).map(p => ({p, x: r.people[p.key] || {st: 'none', sum: 0, diff: -p.amt, got: [], others: []}, fl: (l.flags || []).filter(f => f.key === p.key && f.lvl !== 'info')}));
-  const want = {all: () => true, todo: o => o.x.st !== 'paid', diff: o => o.x.st === 'part' || o.x.st === 'over', warn: o => o.fl.length || o.x.otherAcc || o.x.nonSal || o.x.got.some(g => g.early), paid: o => o.x.st === 'paid'}[PS.filter] || (() => true);
-  const cnt = k => rows.filter({all: () => true, todo: o => o.x.st !== 'paid', diff: o => o.x.st === 'part' || o.x.st === 'over', warn: o => o.fl.length || o.x.otherAcc || o.x.nonSal || o.x.got.some(g => g.early), paid: o => o.x.st === 'paid'}[k]).length;
+  const want = {all: () => true, todo: o => o.x.st !== 'paid', diff: o => o.x.st === 'part' || o.x.st === 'over', warn: o => o.fl.length || o.x.otherAcc || o.x.nonSal || (s === 'approved' && o.x.got.some(g => g.early)), paid: o => o.x.st === 'paid'}[PS.filter] || (() => true);
+  const cnt = k => rows.filter({all: () => true, todo: o => o.x.st !== 'paid', diff: o => o.x.st === 'part' || o.x.st === 'over', warn: o => o.fl.length || o.x.otherAcc || o.x.nonSal || (s === 'approved' && o.x.got.some(g => g.early)), paid: o => o.x.st === 'paid'}[k]).length;
   for (const [k, lb] of [['all','Бүгд'],['todo','Шилжээгүй'],['diff','Зөрүүтэй'],['warn','Анхаарах'],['paid','Шилжсэн']]){ const bt = document.querySelector(`#pay-filter button[data-f="${k}"]`); if (bt) bt.textContent = `${lb} (${cnt(k)})`; }
   const list = rows.filter(want).sort((a, b) => String(a.p.dept).localeCompare(String(b.p.dept)) || a.p.name.localeCompare(b.p.name));
   const STX = {paid: ['Шилжсэн', 'c-ok', 'sev-ok'], part: ['Дутуу', 'c-warn', 'sev-warn'], over: ['Илүү', 'c-bad', 'sev-bad'], none: ['Шилжээгүй', s === 'approved' ? 'c-bad' : 'c-grey', s === 'approved' ? 'sev-bad' : '']};
@@ -2515,7 +2551,7 @@ function payCostData(){
 }
 function unitOrder(C){
   const tot = {}; for (const m of C) for (const u of Object.values(m.units)) tot[u.unit] = (tot[u.unit] || 0) + (u.cost != null ? u.cost : u.paid);
-  return Object.keys(tot).sort((a, b) => (PAY.OFFICE_UNITS.has(b) - PAY.OFFICE_UNITS.has(a)) || tot[b] - tot[a]);
+  return Object.keys(tot).sort((a, b) => (PAY.OFFICE_UNITS.has(b) - PAY.OFFICE_UNITS.has(a)) || PAY.byStoreOrder(a, b, tot[a], tot[b]));
 }
 const pcVal = (m, u) => { if (u === '') return m.total; if (u === STORES_ALL){ const us = Object.values(m.units).filter(x => !x.office); const sm = f => us.reduce((a, x) => a + (x[f] || 0), 0); return {n: sm('n'), gross: sm('gross'), ndshEmp: sm('ndshEmp'), cost: m.final ? sm('cost') : null, adv: sm('adv'), net: sm('net'), paid: sm('paid')}; } return m.units[u] || null; };
 function renderPayCost(){
@@ -2597,7 +2633,7 @@ const PLS = {months: {}, sel: '', cfg: {catMode: {}}, fixedCfg: {units: {}}, acc
 // active units (Nov 2026): Food City, Dragon, Online; Нийслэл opening; closed stores still show when a period has their data
 const PL_UNITS = ['Фүүд сити','Драгон','Онлайн дэлгүүр','Нийслэл','Оффис','Агуулах'];
 const N2O = {'4002594661':'405095875','4002639706':'405096869','4002636496':'405096868','4002599151':'405095877'};
-const plUnits = () => [...new Set([...PL_UNITS, ...Object.values(DR.days).flatMap(d => Object.keys(d.stores || {}))])];
+const plUnits = () => [...new Set([...PL_UNITS, ...Object.values(DR.days).flatMap(d => Object.keys(d.stores || {}).map(PAY.unitOf))])].filter(u => u !== PAY.CLOSED);
 const pct = v => v == null || !isFinite(v) ? '–' : v.toFixed(1) + '%';
 const sgnC = v => `<span style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${fmt(v)}</span>`;
 let plFiles = {stmt: []};
@@ -2662,8 +2698,9 @@ function plModel(){
   const manual = []; for (const m of months) for (const x of ((PLS.months[m.per] || {}).manual || [])) manual.push({...x, amount: (+x.amount || 0) * m.share});
   const pl = {stores, suppliers, stmtTx: []};
   const tx = plTx(a, z);
-  const baseStore = Object.fromEntries(Object.values(PAYEES.all()).filter(p => p.store).map(p => [p.acc, p.store]));
-  const out = PL.build(pl, Object.keys(pay.units).length ? pay : null, tx, {catMode: PLS.cfg.catMode || {}, accStore: PLS.accStore || {}, baseStore, manual, officeUnits: PAY.OFFICE_UNITS, fixed});
+  const baseStore = Object.fromEntries(Object.values(PAYEES.all()).filter(p => p.store).map(p => [p.acc, PAY.unitOf(p.store)]));
+  const accStoreN = Object.fromEntries(Object.entries(PLS.accStore || {}).map(([a, u]) => [a, u ? PAY.unitOf(u) : u]));
+  const out = PL.build(pl, Object.keys(pay.units).length ? pay : null, tx, {catMode: PLS.cfg.catMode || {}, accStore: accStoreN, baseStore, manual: (manual || []).map(m => m.unit ? {...m, unit: PAY.unitOf(m.unit)} : m), officeUnits: PAY.OFFICE_UNITS, fixed, order: PAY.STORE_ORDER});
   return {...out, a, z, months, pl, tx, A, docs, payMissing, payAdv, hasStmt: months.some(m => ((PLS.months[m.per] || {}).stmtAccs || []).length)};
 }
 // period bar shared with «Өдрийн тайлан»
@@ -2715,14 +2752,15 @@ function renderPL(){
     + row('Түрээс', c => c.rent ? fmt(c.rent) + (c.fixedSet && c.fixedSet.rent ? 'ᵀ' : '') : '–') + row('Ашиглалт (цахилгаан, дулаан г.м.)', c => c.media ? fmt(c.media) + (c.fixedSet && c.fixedSet.media ? 'ᵀ' : '') : '–')
     + row('Бусад тогтмол', c => c.otherFixed ? fmt(c.otherFixed) + 'ᵀ' : '–') + row('Бусад зардал (гүйлгээ, гараар)', c => c.rest ? fmt(c.rest) : '–')
     + row('<b>Салбарын ашиг</b>', c => `<b>${sgnC(c.result)}</b>`, {b: 1}) + row('Ашгийн %', c => pct(c.resultPct));
-  const cmp = [['Дэлгүүрүүдийн ашиг', M.storeTot.result], ['− Оффисын зардал (цалин, оффист оноосон)', -M.officeCost], ...Object.entries(M.company.byCat).sort((a, b) => b[1] - a[1]).map(([k, v]) => [`− ${esc(VIVI_CAT_LABEL(k))} (салбарт хуваарилаагүй)`, -v])];
+  const CL = M.office.find(x => x.unit === PAY.CLOSED), closedCost = CL ? Math.round((CL.payroll || 0) + (CL.direct || 0) - (CL.gp || 0)) : 0;
+  const cmp = [['Дэлгүүрүүдийн ашиг', M.storeTot.result], ['− Оффисын зардал (цалин, оффист оноосон)', -(M.officeCost - closedCost)], ...(closedCost ? [['− Хаагдсан салбарын үлдэгдэл зардал (Е-март, Эрдэнэт г.м.)', -closedCost]] : []), ...Object.entries(M.company.byCat).sort((a, b) => b[1] - a[1]).map(([k, v]) => [`− ${esc(VIVI_CAT_LABEL(k))} (салбарт хуваарилаагүй)`, -v])];
   $('#pl-company').innerHTML = cmp.map(([l, v]) => `<tr><td>${l}</td><td class="n">${sgnC(v)}</td></tr>`).join('')
     + `<tr style="font-weight:700"><td>Компанийн цэвэр ашиг</td><td class="n">${sgnC(M.net)} <span class="note">(${pct(M.netPct)})</span></td></tr>`
     + `<tr><td class="note">Тусад нь: зээл, хүүгийн төлбөр</td><td class="n note">${fmt(M.company.debt)}</td></tr><tr><td class="note">Тусад нь: эзэмшигч рүү (хувийн)</td><td class="n note">${fmt(M.company.owner)}</td></tr>`;
   // fixed costs settings + comparison
   const FXC = (PLS.fixedCfg || {}).units || {}, perZ = M.z.slice(0, 7), cur = PL.fixedFor(FXC, perZ);
-  const fu = [...new Set([...M.stores.map(x => x.unit), ...M.office.map(x => x.unit), ...Object.keys(FXC), ...plUnits()])];
-  const fv = v => v ? String(Math.round(v)) : '';
+  const fu = [...new Set([...M.stores.map(x => x.unit), ...M.office.map(x => x.unit), ...Object.keys(FXC), ...plUnits()])].filter(u => u !== PAY.CLOSED && !/Е-март|Эрдэнэт|^УИД$|Хан-Уул|Кинг/.test(u));
+  const fv = v => v ? fmt(v).replace(/\u00a0/g, ' ') : '';
   $('#pl-fixed').innerHTML = fu.map((u, i) => { const f = cur[u] || {};
     return `<tr><td>${esc(u)}</td>${['rent', 'payroll', 'media', 'other'].map(k => `<td class="n"><input id="fx-${i}-${k}" inputmode="numeric" value="${fv(f[k])}" placeholder="—" style="width:120px;text-align:right"></td>`).join('')}
       <td><input id="fx-${i}-otherLabel" value="${esc(f.otherLabel || '')}" placeholder="жишээ: хамгаалалт" style="width:140px"></td><td><input id="fx-${i}-from" type="month" value="${esc(perZ)}" style="width:auto"><div class="note">${f.from ? 'одоо: ' + esc(f.from) + '-аас' : ''}</div></td>
@@ -2732,7 +2770,7 @@ function renderPL(){
     return `<tr class="${Math.abs(d) > Math.max(100000, r.f * 0.05) ? 'sev-warn' : ''}"><td>${esc(r.unit)}</td><td>${esc(r.k)}</td><td class="n">${fmt(r.f)}</td><td class="n">${r.a ? fmt(r.a) : '<span class="note">0</span>'}</td><td class="n">${sgnC(d)}</td></tr>`; }).join('')
     : '<tr><td colspan="5" class="empty">Тогтмол зардал тохируулаагүй байна.</td></tr>';
   // suppliers
-  const units = Object.values(pl.stores).sort((x, y) => y.sales - x.sales).map(x => x.unit);
+  const units = Object.values(pl.stores).sort((x, y) => PAY.byStoreOrder(x.unit, y.unit, x.sales, y.sales)).map(x => x.unit);
   if (PLS.supUnit && !units.includes(PLS.supUnit)) PLS.supUnit = '';
   $('#pl-sup-units').innerHTML = [['', 'Бүгд'], ...units.map(u => [u, u])].map(([k, l]) => `<button data-u="${esc(k)}" aria-pressed="${k === PLS.supUnit}">${esc(l)}</button>`).join('');
   const min = parseFloat(String($('#pl-sup-min').value).replace(/\s/g, '')) || 0, so = $('#pl-sup-sort').value;
@@ -2894,7 +2932,7 @@ function renderDaily(){
     $('#dr-chart').innerHTML = `<div class="pc-viz"><div class="note">Өдрийн цэвэр борлуулалт</div><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Өдрийн борлуулалт">${g}</svg></div>`;
   }
   // stores
-  const ST = DAILY.storeTable(A);
+  const ST = DAILY.storeTable(A, PAY.STORE_ORDER);
   $('#dr-stores').innerHTML = ST.length ? ST.map(x => `<tr><td>${esc(x.unit)}</td><td class="n">${fmt(x.s)}</td><td class="n">${fmt(x.c)}</td><td class="n">${fmt(x.gp)}</td><td class="n">${pc1(x.m)}</td><td class="n">${pc1(x.share)}</td><td class="n">${fmt(x.q)}</td></tr>`).join('')
     + `<tr style="font-weight:700"><td>Нийт</td><td class="n">${fmt(T.s)}</td><td class="n">${fmt(T.c)}</td><td class="n">${fmt(T.gp)}</td><td class="n">${pc1(T.m)}</td><td class="n">100%</td><td class="n">${fmt(T.q)}</td></tr>` : '<tr><td colspan="7" class="empty">–</td></tr>';
   // suppliers
@@ -2903,7 +2941,7 @@ function renderDaily(){
   const so = $('#dr-sup-sort').value, nn = +$('#dr-sup-n').value;
   const SU = DAILY.supplierTable(A, DR.supUnit).sort((x, y) => so === 'm' ? y.m - x.m : so === 'mlow' ? x.m - y.m : so === 'gp' ? y.gp - x.gp : y.s - x.s);
   const shown = nn ? SU.slice(0, nn) : SU;
-  const mcls = m => m < 0 ? 'c-bad' : m < 30 ? 'c-warn' : m >= 60 ? 'c-ok' : 'c-grey';
+  const mcls = m => m == null ? 'c-grey' : m < 0 ? 'c-bad' : m < 30 ? 'c-warn' : m >= 60 ? 'c-ok' : 'c-grey';
   const grow = (g, lvl) => `<tr><td style="padding-left:24px" class="note">${esc(g.name)}</td><td class="n note">${fmt(g.s)}</td><td class="n note">${fmt(g.c)}</td><td class="n note">${fmt(g.gp)}</td><td class="n note">${pc1(g.m)}</td><td class="n note">${pc1(g.share)}</td><td class="n note">${fmt(g.q)}</td></tr>`;
   $('#dr-sup').innerHTML = shown.length ? shown.map(x => `<tr data-sup="${esc(x.name)}" style="cursor:pointer"><td><b>${esc(x.name)}</b> <span class="note">${DR.open[x.name] ? '▾' : '▸'}</span></td><td class="n">${fmt(x.s)}</td><td class="n">${fmt(x.c)}</td><td class="n">${fmt(x.gp)}</td><td class="n"><span class="chip ${mcls(x.m)}">${pc1(x.m)}</span></td><td class="n">${pc1(x.share)}</td><td class="n">${fmt(x.q)}</td></tr>` + (DR.open[x.name] ? x.groups.map(g => grow(g)).join('') : '')).join('')
     + (SU.length > shown.length ? `<tr><td colspan="7" class="note">… өөр ${SU.length - shown.length} нийлүүлэгч (${fmt(SU.slice(shown.length).reduce((q, x) => q + x.s, 0))} ₮)</td></tr>` : '') : '<tr><td colspan="7" class="empty">–</td></tr>';
@@ -2934,7 +2972,7 @@ $('#dr-xlsx').addEventListener('click', () => {
     const p1 = x => Math.round(x * 10) / 10;
     add('Хураангуй', [['Үзүүлэлт', 'Дүн'], ['Хугацаа', a === z ? a : `${a} – ${z}`], ['Нийт цэвэр борлуулалт', A.total.s], ['Өртөг', A.total.c], ['Бохир ашиг', A.total.gp], ['Дундаж маржин %', A.total.m != null ? p1(A.total.m) : null], ['Тоо ширхэг', A.total.q], ['Худалдааны цэг', A.total.points], ['Төлбөрийн нийт', A.total.pay]], [28, 18]);
     if (A.days.length > 1) add('Өдрөөр', [['Өдөр', 'Гараг', 'Борлуулалт', 'Өртөг', 'Ашиг', 'Маржин %', 'Ширхэг', 'Төлбөр'], ...A.days.map(d => [d.date, wdOf2(d.date), d.s, d.c, r2x(d.s - d.c), d.s ? p1((d.s - d.c) / d.s * 100) : null, d.q, d.pay])], [12, 9, 14, 14, 14, 10, 9, 14]);
-    add('Салбараар', [['Салбар', 'Борлуулалт', 'Өртөг', 'Ашиг', 'Маржин %', 'Эзлэх %', 'Ширхэг'], ...DAILY.storeTable(A).map(x => [x.unit, x.s, x.c, x.gp, p1(x.m), p1(x.share), x.q])], [22, 14, 14, 14, 10, 10, 9]);
+    add('Салбараар', [['Салбар', 'Борлуулалт', 'Өртөг', 'Ашиг', 'Маржин %', 'Эзлэх %', 'Ширхэг'], ...DAILY.storeTable(A, PAY.STORE_ORDER).map(x => [x.unit, x.s, x.c, x.gp, p1(x.m), p1(x.share), x.q])], [22, 14, 14, 14, 10, 10, 9]);
     const SU = DAILY.supplierTable(A, '').sort((x, y) => y.s - x.s);
     add('Нийлүүлэгчээр', [['Нийлүүлэгч', 'Борлуулалт', 'Өртөг', 'Ашиг', 'Маржин %', 'Эзлэх %', 'Ширхэг'], ...SU.map(x => [x.name, x.s, x.c, x.gp, p1(x.m), p1(x.share), x.q])], [32, 14, 14, 14, 10, 10, 9]);
     add('Бүлгээр', [['Нийлүүлэгч', 'Бүлэг', 'Борлуулалт', 'Өртөг', 'Ашиг', 'Маржин %', 'Дотор %', 'Ширхэг'], ...SU.flatMap(x => x.groups.map(g => [x.name, g.name, g.s, g.c, g.gp, p1(g.m), p1(g.share), g.q]))], [32, 20, 14, 14, 14, 10, 10, 9]);
@@ -2961,9 +2999,11 @@ function drFlowTx(a, z){
 }
 function renderFlow(a, z){
   $('#dr-flow-card').hidden = !DR.canFlow; if (!DR.canFlow) return;
-  const out = drFlowTx(a, z);
   const bals = S.balances.map(b => ({date: b.date, total: BAL_ACCS.reduce((q, [k]) => q + (+((b.items || {})[k]) || 0), 0)}));
-  const F = DAILY.flow(Object.values(DR.days), out, bals, a, z), T = F.tot;
+  // the expected balance rolls forward from the last recorded balance, so outflows are needed from that day on
+  const openD = (bals.filter(b => b.date <= a).sort((x, y) => x.date.localeCompare(y.date)).pop() || {}).date || a;
+  const outAll = drFlowTx(openD < a ? openD : a, z), out = outAll.filter(t => t.date >= a);
+  const F = DAILY.flow(Object.values(DR.days), outAll, bals, a, z), T = F.tot;
   $('#dr-flow-kpis').innerHTML = `<div class="kpi"><div class="l">Банкинд орох ёстой (бэлэн бус)</div><div class="v">${fmt(T.bank)}</div><div class="s">шимтгэл ${fmt(T.fee)}</div></div>
     <div class="kpi warn"><div class="l">Бэлэн — тушаагдах ёстой</div><div class="v">${fmt(T.cash)}</div><div class="s">хойшид орох: ${Object.entries(F.creditBy).map(([f, v]) => `${esc(f)} ${fmt(v)}`).join(' · ') || '0'}</div></div>
     <div class="kpi bad"><div class="l">Гарсан шилжүүлэг</div><div class="v">${fmt(T.out)}</div><div class="s">${out.length} гүйлгээ</div></div>
