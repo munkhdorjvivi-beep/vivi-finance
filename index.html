@@ -1934,6 +1934,7 @@ const sgn = n => (n > 0 ? '+' : '') + fmt(n);
 const diffCls = (d, base) => Math.abs(d) <= Math.max(10000, Math.abs(base) * 0.01) ? '' : d < 0 ? 'c-bad' : 'c-grey';
 function revCover(){
   const el = $('#rev-cover'); if (!el) return; if (typeof DR === 'undefined'){ el.hidden = true; return; }
+  if (window.REV_DAILY === false){ el.className = 'banner'; el.innerHTML = 'Тухайн хугацааны банкны хуулгууд болон Smart-ын <b>«Борлуулалтын жагсаалт /төлбөрийн хэлбэрээр/»</b> тайланг хамт оруулна уу (танд «Өдрийн тайлан» эрх алга тул өгөгдлийг тэндээс авах боломжгүй).'; return; }
   const ds = Object.values(DR.days).filter(d => d.pay).map(d => d.date).sort();
   if (!ds.length){ el.innerHTML = '«Өдрийн тайлан»-д төлбөрийн хэлбэрийн өгөгдөл алга — эхлээд тэнд Smart тайлангаа оруулна уу.'; el.className = 'banner bad'; return; }
   const a = ds[0], z = ds[ds.length - 1], have = new Set(ds), miss = [];
@@ -2071,7 +2072,7 @@ async function handleFiles(fl){
   const fromDaily = !parsedFiles.some(f => f.type === 'smart') ? dailySmartFile(parsedFiles) : null;
   if (fromDaily){ lastFiles.push(fromDaily); $('#cash-filelist').insertAdjacentHTML('beforeend', `<div><span class="chip c-ok">✓</span> ${esc(fromDaily.label)} · ${fromDaily.rows.length} мөр</div>`); }
   const m = VIVI.build(lastFiles);
-  if (m.error){ $('#cash-msg').textContent = parsedFiles.some(f => f.type === 'bank') ? 'Хуулгын хугацаанд «Өдрийн тайлан»-д төлбөрийн хэлбэрийн өгөгдөл алга — тухайн өдрүүдийн Smart тайланг «Өдрийн тайлан»-д оруулна уу.' : 'Банкны хуулгаа оруулна уу.'; return; }
+  if (m.error){ $('#cash-msg').textContent = parsedFiles.some(f => f.type === 'bank') ? (window.REV_DAILY === false ? 'Smart «Борлуулалтын жагсаалт /төлбөрийн хэлбэрээр/» тайланг хуулгатай хамт оруулна уу.' : 'Хуулгын хугацаанд «Өдрийн тайлан»-д төлбөрийн хэлбэрийн өгөгдөл алга — тухайн өдрүүдийн Smart тайланг «Өдрийн тайлан»-д оруулна уу.') : 'Банкны хуулгаа оруулна уу.'; return; }
   pendingRun = {d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
   $('#cash-save').disabled = false; $('#cash-msg').textContent = 'Тооцоолсон. Хадгалбал нягтлан тайлбар бичих боломжтой болно.';
   render();
@@ -3176,6 +3177,7 @@ else VIVIFB.start(async () => {
   db.doc('config/payees').onSnapshot(d => { const x = d.exists ? d.data() : {}; const base = (x.list || []).length ? x.list : PAYEES_DEFAULT.list;
     PAYEES.set((x.extra || []).concat(PAYEES_DEFAULT.added || [], base)); PAYEES.setDefaults(x.defaults || {}); PBINFO = {file: (x.list || []).length ? (x.file || '') : PBINFO.file, emps: x.emps || PBINFO.emps, extra: x.extra || [], defaults: x.defaults || {}}; renderPayees(); render(); }, onErr);
   if (ALLOW.daily) db.collection('daily').onSnapshot(s => { DR.days = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
+  $('#cash-upload').hidden = !(isOwner || ALLOW.rev); window.REV_DAILY = isOwner || !!ALLOW.daily;
   $('#dr-upload').hidden = !ALLOW.daily; DR.canFlow = isOwner || (ALLOW.bank && ALLOW.bal);
   if (ALLOW.pl){
     db.collection('pl').onSnapshot(s => { PLS.months = Object.fromEntries(s.docs.map(d => [d.id, {id: d.id, ...d.data()}])); render(); }, onErr);
