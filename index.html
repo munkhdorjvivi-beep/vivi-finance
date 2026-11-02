@@ -92,6 +92,10 @@ tr.sev-bad td:first-child{box-shadow:inset 3px 0 0 var(--bad)} tr.sev-warn td:fi
 .bal{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
 @media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))} form.grid{grid-template-columns:1fr} .bal{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+section[data-panel="req"][data-mode="rec"] > .card:not(#recur-card){display:none}
+section[data-panel="req"]:not([data-mode="rec"]) #recur-card{display:none}
+#req-mode{margin-bottom:12px}
+#recur-card td.acts .btn{padding:4px 8px}
 body{margin:0;background:var(--bg)}
 #gate{max-width:420px;margin:12vh auto 0;text-align:center}
 #gate .btn{margin-top:14px}
@@ -142,7 +146,8 @@ body{margin:0;background:var(--bg)}
   </nav>
 
   <!-- REQUESTS -->
-  <section class="panel" data-panel="req">
+  <section class="panel" data-panel="req" data-mode="one">
+    <div class="filter chips" id="req-mode"><button data-m="one" aria-pressed="true">Төлбөрийн хүсэлт</button><button data-m="rec" aria-pressed="false">🔁 Давтамжит гүйлгээ<span class="n badge" hidden></span></button></div>
     <div class="card" id="req-form-card">
       <h2 id="rq-title">Шинэ төлбөрийн хүсэлт</h2>
       <form class="grid" id="req-form" autocomplete="off">
@@ -179,6 +184,25 @@ body{margin:0;background:var(--bg)}
       </div>
       <div class="daysum" id="rday-sum"></div>
       <div id="req-list"><div class="empty">Хүсэлт алга. Дээрх маягтаар эхний хүсэлтээ илгээнэ үү.</div></div>
+    </div>
+    <div class="card" id="recur-card">
+      <div class="row" style="justify-content:space-between;margin-bottom:6px">
+        <h2 style="margin:0">Давтамжит гүйлгээ</h2>
+        <div class="row"><input type="month" id="rc-per" style="width:auto"><button class="btn" id="rc-xlsx">📥 Excel</button><label class="btn" style="cursor:pointer">📄 Excel-ээс оруулах<input id="rc-file" type="file" accept=".xlsx,.xls" hidden></label></div>
+      </div>
+      <p class="note" style="margin:0 0 8px">Сар бүр давтагддаг тогтмол шилжүүлэг (бараа, түрээс, зээл, НӨАТ…). Нягтлан нэмж, засаж, устгана; шинэ гүйлгээ болон өөрчлөлтийг эзэмшигч батална. Батлагдсан гүйлгээтэй ижил данс, ижил дүнтэй банкны шилжүүлэг «Хүсэлтгүй» гэж тооцогдохгүй. «Шилжсэн дүн» = тухайн сард энэ данс руу (нэг удаагийн хүсэлтээр тайлбарлагдаагүй) шилжсэн нийт дүн.</p>
+      <div class="daysum" id="rc-sum"></div>
+      <div class="tbl"><table><thead><tr><th class="n">№</th><th>Харилцагч</th><th>Данс</th><th>Хүлээн авагчийн нэр</th><th>Гүйлгээний утга</th><th class="n">Тогтмол дүн</th><th class="n">Шилжсэн дүн</th><th>Төлөв</th><th></th></tr></thead><tbody id="rc-body"><tr><td colspan="9" class="empty">–</td></tr></tbody></table></div>
+      <h3 id="rc-form-title" style="margin:16px 0 8px;font-size:14px">Шинэ давтамжит гүйлгээ</h3>
+      <form class="grid" id="rc-form" autocomplete="off">
+        <label class="f">Харилцагч *<input id="rc-name" required placeholder="Жишээ: Хадаа"></label>
+        <label class="f">Данс / IBAN *<input id="rc-acc" required inputmode="numeric" data-nofmt placeholder="MN020005005305588115"></label>
+        <label class="f">Хүлээн авагчийн нэр<input id="rc-holder" placeholder="Б.ЧИЛГЭР"></label>
+        <label class="f">Тогтмол дүн (₮) *<input id="rc-amt" required inputmode="decimal" placeholder="200 000"></label>
+        <label class="f">Аль данснаас<select id="rc-from"></select></label>
+        <label class="f">Гүйлгээний утга<input id="rc-desc" placeholder="Барааны төлбөр - Хадаа"></label>
+        <div class="f full row"><button class="btn primary" type="submit">Хадгалах</button><button class="btn" id="rc-cancel" type="button" hidden>Болих</button><span class="note" id="rc-msg"></span></div>
+      </form>
     </div>
   </section>
 
@@ -1109,7 +1133,7 @@ const VIVI = (() => {
 
 // ===== VIVI payroll (Цалин): read the payroll Excel, compare lists, match bank transfers per person, employee debts =====
 const PAY = (() => {
-  const SAL_ACCS = ['5224167073', '405096868', '4002636496', '1735159300'];   // salary payout accounts
+  const SAL_ACCS = ['5224167073', '405096868', '4002636496', '1735159300', '1825100856'];   // salary payout accounts
   const BANKS = {'0005':'Хаан', '0004':'ХХБ', '0015':'Голомт'};
   const KIND_LABEL = {adv:'Урьдчилгаа цалин', final:'Сүүл цалин'};
 
@@ -1737,12 +1761,12 @@ function groupInput(el){ const v = el.value, pos = el.selectionStart == null ? v
 const isAmtInput = el => el && el.tagName === 'INPUT' && /^(decimal|numeric)$/.test(el.getAttribute('inputmode') || '') && !el.hasAttribute('data-nofmt');
 document.addEventListener('input', e => { if (isAmtInput(e.target)) groupInput(e.target); });
 document.addEventListener('focusout', e => { if (isAmtInput(e.target)) groupInput(e.target); });
-const BAL_ACCS = [['tdb','ХХБанк'],['khan','Хаан банк'],['arig','Ариг банк'],['khan_md','Хаан – Мөнхдорж'],['khan_et','Хаан – Энхтөр'],['khan_eb','Хаан – Энхбаатар'],['golomt_erka','Голомт – Эрка']];
+const BAL_ACCS = [['tdb','ХХБанк'],['khan','Хаан банк'],['arig','Ариг банк'],['khan_md','Хаан – Мөнхдорж'],['khan_et','Хаан – Энхтөр'],['khan_eb','Хаан – Энхбаатар'],['golomt_erka','Голомт – Эрка'],['golomt','Голомт – Вивекавикториа 0856'],['golomt_sal','Голомт – цалин 9300']];
 const STORE_CODE = {'Food city':'FC','Драгон':'DR','Дархан Үзэсгэлэн':'DZ','Е март баянгол-3 давхар':'EM','Эрдэнэт салбар':'ER','Хан-Уул 1 давхар':'HU','Онлайн дэлгүүр':'ON','Сандэй плаза':'SP','Дархан / Сандэй плаза':'DZ'};
 const ST_LABEL = {BRAK:['Тушаагаагүй','c-bad'], MNIEJ:['Дутуу тушаасан','c-warn'], WIECEJ:['Илүү тушаасан','c-grey'], OK:['Зөв','c-ok'], BEZ_DNIA:['Өдөр тодорхойгүй','c-grey']};
 
 let db = null, user = null, me = null, isOwner = false, canWrite = true, assets = null;
-const S = { requests: [], approvals: {}, banktx: [], cash: null, notes: {}, balances: [], names: {} };
+const S = { requests: [], recurring: [], approvals: {}, banktx: [], cash: null, notes: {}, balances: [], names: {} };
 let bankDay = today(), loadBankDay = null, loadBankRange = null, reqDay = today(), bankRange = 'day', bankFrom = '', bankTo = '';
 let reqFilter = 'pending', bankFilter = 'all', cashFilter = 'open', cashStore = '', revCh = 'all', revOnly = 'diff', revStore = '';
 let pendingRun = null, lastFiles = null;
@@ -1825,10 +1849,13 @@ function matchBank(){
     const same = cands.filter(r => Math.abs((+r.amount||0) - (+t.amount||0)) <= 1);
     const appr = same.filter(r => ['approved','paid'].includes(reqStatus(r)));
     if (appr.length){ used.add(appr[0].id); res[t.id] = {st:'ok', label:'Зөвшөөрөлтэй', cls:'c-ok', req: appr[0].id}; continue; }
+    const rm = typeof recurMatch === 'function' ? recurMatch(t) : null;
+    if (rm && rm.st === 'ok'){ res[t.id] = rm; continue; }
     if (same.length){ res[t.id] = {st:'warn', label: reqStatus(same[0]) === 'rejected' ? 'Татгалзсан хүсэлт' : 'Зөвшөөрөөгүй', cls:'c-warn', req: same[0].id}; continue; }
     if (cands.length){ res[t.id] = {st:'warn', label:'Дүн зөрүүтэй', cls:'c-warn', req: cands[0].id}; continue; }
     { const pl = payUsedLabel(t); if (pl){ res[t.id] = pl; continue; } }
     if (/\s(ФС|ДР|АГ|ОФ|НС|Н|ОХ)\s*$/i.test(t.desc||'')) { res[t.id] = {st:'warn', label:'Цалин? Жагсаалттай тулга', cls:'c-warn'}; continue; }
+    if (rm){ res[t.id] = rm; continue; }
     res[t.id] = {st:'none', label:'Хүсэлтгүй', cls:'c-bad'};
   }
   return res;
@@ -1840,6 +1867,7 @@ function restoreDrafts(d){ for (const [id,v] of Object.entries(d)){ const el = d
 function render(){
   const drafts = keepDrafts('#req-list input, #req-list select, #cash-body textarea, #pl-fixed input');
   renderInner();
+  if (typeof renderRecur === 'function') try{ renderRecur(); }catch(e){ console.warn('recur', e); }
   restoreDrafts(drafts);
   document.querySelectorAll('.rm-sel').forEach(sel => { const c = document.getElementById('rmc-' + sel.id.slice(3)); if (c) c.hidden = sel.value !== 'custom'; });
   hydrateFiles();
@@ -2324,7 +2352,7 @@ function printHTML(html){
 
 // ---------- payroll (Цалин) ----------
 const PS = {lists: [], decs: {}, cfg: {exempt: {}}, tx: [], sel: null, filter: 'all', draft: null};
-const PAY_SAL_LABEL = {'5224167073':'Хаан 7073 (цалин)', '405096868':'ХХБ 6868 (цалин)', '4002636496':'ХХБ 6496 (цалин)', '1735159300':'Голомт 9300 (цалин)'};
+const PAY_SAL_LABEL = {'5224167073':'Хаан 7073 (цалин)', '405096868':'ХХБ 6868 (цалин)', '4002636496':'ХХБ 6496 (цалин)', '1735159300':'Голомт 9300 (цалин)', '1825100856':'Голомт 0856 (цалин)'};
 const accLabel = a => PAY_SAL_LABEL[PAY.accShort(a)] || ACC_LABEL[PAY.accShort(a)] || a || '';
 const perLabel = l => `${String(l.per || '').replace('-', '.')} · ${PAY.KIND_LABEL[l.kind] || l.kind}`;
 function payStatus(l){ if (l.archive) return 'archive'; const d = PS.decs[l.id]; if (d && d.decision === 'approved') return 'approved'; if (d && d.decision === 'rejected') return 'rejected'; if (d && d.decision === 'hold' && !(l.resentAt && l.resentAt > d.at)) return 'hold'; return 'pending'; }
@@ -2343,10 +2371,14 @@ let payCache = null;
 // allowed accounts: owner's list + the base's salary entries (household help)
 const payExempt = () => ({...Object.fromEntries(Object.values(PAYEES.all()).filter(p => p.cat === 'salary').map(p => [p.acc, p.name + (p.holder ? ' – ' + p.holder : '')])), ...(PS.cfg.exempt || {})});
 function payModel(){
-  const key = PS.lists.length + '|' + Object.keys(PS.decs).length + '|' + S.banktx.length + '|' + PS.tx.length + '|' + JSON.stringify(payExempt()) + '|' + PS.lists.map(l => (l.stmtTx || []).length + ':' + JSON.stringify(l.marks || {}) + JSON.stringify(l.extra || {})).join(',') + '|' + JSON.stringify(PS.decs);
+  const key = S.requests.length + '|' + Object.keys(S.approvals).length + '|' + (S.recurring || []).map(r => r.id + (r.appr ? r.appr.amount : '')).join(',') + '|' + PS.lists.length + '|' + Object.keys(PS.decs).length + '|' + S.banktx.length + '|' + PS.tx.length + '|' + JSON.stringify(payExempt()) + '|' + PS.lists.map(l => (l.stmtTx || []).length + ':' + JSON.stringify(l.marks || {}) + JSON.stringify(l.extra || {})).join(',') + '|' + JSON.stringify(PS.decs);
   if (payCache && payCache.key === key) return payCache.m;
   const lists = PS.lists.filter(l => !['rejected', 'archive'].includes(payStatus(l))).map(l => ({...l, decidedAt: (PS.decs[l.id] || {}).decision === 'approved' ? PS.decs[l.id].at : null}));
   const m = PAY.match(lists, payTx(), {exempt: payExempt(), own: VIVI.OWN});
+  // transfers from salary accounts that an approved request or an approved recurring payment explains are not «loose»
+  const explained = t => { const to = PAY.accShort(t.to || t.toAcc); return S.requests.some(r => PAY.accShort(r.payeeAcc) === to && Math.abs((+r.amount || 0) - (+t.amount || 0)) <= 1 && ['approved', 'paid'].includes(reqStatus(r)))
+    || (S.recurring || []).some(r => r.appr && !r.off && r.appr.accN === to && Math.abs((+r.appr.amount || 0) - (+t.amount || 0)) <= 1); };
+  m.loose = m.loose.filter(t => !explained(t));
   payCache = {key, m}; return m;
 }
 const listsSorted = () => PS.lists.slice().sort((a, b) => String(b.per).localeCompare(String(a.per)) || (a.kind === b.kind ? String(b.at).localeCompare(String(a.at)) : a.kind === 'final' ? -1 : 1));
@@ -3092,6 +3124,145 @@ function renderFlow(a, z){
   $('#dr-out').innerHTML = F.cats.length ? F.cats.map(c => `<tr><td>${esc(VIVI_CAT_LABEL(c.cat))}</td><td class="n">${c.n}</td><td class="n">${fmt(c.a)}</td></tr>`).join('') + `<tr style="font-weight:700"><td>Нийт</td><td class="n">${out.length}</td><td class="n">${fmt(T.out)}</td></tr>` : '<tr><td colspan="3" class="empty">Гарсан шилжүүлэг алга (имэйл ирээгүй).</td></tr>';
   $('#dr-outlist').innerHTML = out.sort((x, y) => String(y.dt).localeCompare(String(x.dt))).slice(0, 300).map(t => `<tr><td class="mono">${esc(String(t.dt).replace('T', ' ').slice(0, 16))}</td><td>${esc(ACC_LABEL[VIVI.norm(t.fromAcc)] || t.fromAcc)}</td><td>${esc(t.toName || '')}<div class="note mono">${esc(t.toAcc || '')}</div></td><td class="n">${fmt(t.amount)}</td><td>${esc(t.desc || '')}</td><td><span class="chip c-grey">${esc(VIVI_CAT_LABEL(t.cat))}</span></td></tr>`).join('');
 }
+// ---------- recurring transfers (Давтамжит гүйлгээ) ----------
+// accountant adds / changes / removes; a new item or a change waits for the owner's approval;
+// only the approved version (appr) explains bank transfers and silences the «Хүсэлтгүй» alarm
+const RC = {mode: 'one', per: '', edit: null};
+const rcPer = () => RC.per || today().slice(0, 7);
+const rcAcc = a => PAY.accShort(a);
+function recurMatch(t){                       // used by matchBank: approved recurring item for this transfer
+  const to = PAY.accShort(t.toAcc); const items = (S.recurring || []).filter(r => r.appr && r.appr.accN === to && !r.off);
+  if (!items.length) return null;
+  const same = items.find(r => rcKey(r).some(k => String(t.desc || '').includes(k)) && Math.abs((+r.appr.amount || 0) - (+t.amount || 0)) <= 1) || items.find(r => Math.abs((+r.appr.amount || 0) - (+t.amount || 0)) <= 1);
+  if (same) return {st: 'ok', label: 'Давтамжит: ' + same.name, cls: 'c-ok', rec: same.id};
+  return {st: 'warn', label: 'Давтамжит · дүн зөрүүтэй', cls: 'c-warn', rec: items[0].id};
+}
+function rcStatus(r){
+  if (r.status === 'pending') return r.appr ? ['Өөрчлөлт батлуулах', 'c-warn'] : ['Батлуулах', 'c-warn'];
+  if (r.status === 'rejected') return ['Татгалзсан', 'c-bad'];
+  return r.off ? ['Зогсоосон', 'c-grey'] : ['Батлагдсан', 'c-ok'];
+}
+// transfers to the item's account in the month that no one-off request explains;
+// items that share one account (e.g. НӨАТ and ХХОАТ to МОСТ ФИНТЕК) split the transfers: the code in the description first, then the amount
+const rcKey = r => String(r.desc || '').match(/\d{6,}/g) || [];
+function rcAlloc(per){
+  const mb = matchBank(), out = {}, items = (S.recurring || []).filter(r => r.status !== 'rejected');
+  const byAcc = {}; for (const r of items){ const a = (r.appr || {}).accN || rcAcc(r.acc); (byAcc[a] = byAcc[a] || []).push(r); out[r.id] = []; }
+  const txs = S.banktx.filter(t => String(t.dt).slice(0, 7) === per && byAcc[PAY.accShort(t.toAcc)] && !(mb[t.id] && mb[t.id].req && mb[t.id].st === 'ok')).sort((a, b) => String(a.dt).localeCompare(String(b.dt)));
+  for (const t of txs){
+    const g = byAcc[PAY.accShort(t.toAcc)]; if (g.length === 1){ out[g[0].id].push(t); continue; }
+    const paid = r => out[r.id].reduce((x, y) => x + (+y.amount || 0), 0), amt = +t.amount || 0;
+    const pick = g.find(r => rcKey(r).some(k => String(t.desc || '').includes(k)))
+      || g.find(r => Math.abs((+r.amount || 0) - amt) <= 1 && paid(r) + 1 < (+r.amount || 0))
+      || g.find(r => paid(r) + 1 < (+r.amount || 0)) || g[0];
+    out[pick.id].push(t);
+  }
+  return out;
+}
+function rcPaid(r, per){ if (!RC.alloc || RC.allocPer !== per){ RC.alloc = rcAlloc(per); RC.allocPer = per; } return RC.alloc[r.id] || []; }
+function setRcMode(m){
+  RC.mode = m; const sec = document.querySelector('section[data-panel="req"]'); if (sec) sec.dataset.mode = m;
+  $$('#req-mode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === m)));
+  if (m === 'rec') renderRecur();
+}
+$$('#req-mode button').forEach(b => b.addEventListener('click', () => setRcMode(b.dataset.m)));
+function renderRecur(){
+  const el = $('#rc-body'); if (!el) return; RC.alloc = null;
+  const per = rcPer(); if ($('#rc-per').value !== per) $('#rc-per').value = per;
+  const list = (S.recurring || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.createdAt).localeCompare(String(b.createdAt)));
+  const pend = list.filter(r => r.status === 'pending').length;
+  const tb = $('#req-mode button[data-m="rec"] .badge'); if (tb){ tb.textContent = pend || ''; tb.hidden = !pend; }
+  let tFix = 0, tPaid = 0;
+  el.innerHTML = list.length ? list.map((r, i) => {
+    const paid = rcPaid(r, per), sum = paid.reduce((s, t) => s + (+t.amount || 0), 0), st = rcStatus(r), fix = +r.amount || 0;
+    if (!r.off && r.status !== 'rejected'){ tFix += fix; tPaid += sum; }
+    const pc = !sum ? '' : Math.abs(sum - fix) <= 1 ? 'c-ok' : sum > fix ? 'c-grey' : 'c-warn';
+    const ch = r.appr && r.status === 'pending' ? [r.appr.amount !== r.amount ? `дүн ${fmt(r.appr.amount)} → ${fmt(r.amount)}` : '', r.appr.accN !== rcAcc(r.acc) ? `данс ${r.appr.accN} → ${rcAcc(r.acc)}` : '', r.appr.name !== r.name ? `нэр ${r.appr.name} → ${r.name}` : ''].filter(Boolean).join(' · ') : '';
+    let acts = '';
+    if (isOwner && r.status === 'pending') acts += `<button class="btn ok" data-rc="approve" data-id="${esc(r.id)}">Батлах</button><button class="btn bad" data-rc="reject" data-id="${esc(r.id)}">Татгалзах</button>`;
+    if (canWrite) acts += `<button class="btn" data-rc="edit" data-id="${esc(r.id)}">✎</button><button class="btn" data-rc="del" data-id="${esc(r.id)}" title="Устгах">🗑</button>`;
+    return `<tr class="${r.status === 'pending' ? 'sev-warn' : ''}"><td class="n">${i + 1}</td><td><b>${esc(r.name)}</b>${r.fromAcc ? `<div class="note">${esc(ACC_LABEL[r.fromAcc] || r.fromAcc)}</div>` : ''}</td><td class="mono">${esc(r.acc)}</td><td>${esc(r.holder || '')}</td><td>${esc(r.desc || '')}${ch ? `<div class="note" style="color:var(--warn)">${esc(ch)}</div>` : ''}</td>
+      <td class="n">${fmt(fix)}</td><td class="n">${sum ? `<span class="chip ${pc}" title="${esc(paid.map(t => String(t.dt).slice(0, 16).replace('T', ' ') + ' · ' + fmt(t.amount)).join('\n'))}">${fmt(sum)}</span>` : '–'}</td>
+      <td><span class="chip ${st[1]}">${st[0]}</span></td><td class="acts" style="white-space:nowrap">${acts}</td></tr>`; }).join('')
+    + `<tr><td></td><td colspan="4"><b>Нийт</b></td><td class="n"><b>${fmt(tFix)}</b></td><td class="n"><b>${fmt(tPaid)}</b></td><td colspan="2" class="note">${tFix ? Math.round(tPaid / tFix * 100) + '% шилжсэн' : ''}</td></tr>`
+    : '<tr><td colspan="9" class="empty">Давтамжит гүйлгээ бүртгэгдээгүй. Доорх маягтаар нэмэх эсвэл Excel-ээс оруулна уу.</td></tr>';
+  $('#rc-sum').textContent = `${per} · ${list.filter(r => !r.off && r.status !== 'rejected').length} гүйлгээ · тогтмол ${fmt(tFix)} ₮ · шилжсэн ${fmt(tPaid)} ₮${pend ? ` · батлуулах ${pend}` : ''}`;
+}
+$('#rc-per').addEventListener('change', e => { RC.per = e.target.value; renderRecur(); });
+function rcFill(r){
+  RC.edit = r ? r.id : null; $('#rc-form-title').textContent = r ? 'Засах: ' + r.name : 'Шинэ давтамжит гүйлгээ';
+  $('#rc-name').value = r ? r.name : ''; $('#rc-acc').value = r ? r.acc : ''; $('#rc-holder').value = r ? (r.holder || '') : ''; $('#rc-desc').value = r ? (r.desc || '') : '';
+  $('#rc-amt').value = r ? numFmt(r.amount) : ''; $('#rc-from').value = r ? (r.fromAcc || '') : ''; $('#rc-cancel').hidden = !r; $('#rc-msg').textContent = '';
+  if (r) $('#rc-form').scrollIntoView({behavior: 'smooth', block: 'center'});
+}
+$('#rc-cancel').addEventListener('click', () => rcFill(null));
+$('#rc-from').innerHTML = '<option value="">— аль ч данснаас —</option>' + FROM_ACCS.map(([a, l]) => `<option value="${a}">${esc(l)}</option>`).join('');
+async function rcSave(v, id){
+  const now = new Date().toISOString(), base = {...v, accN: rcAcc(v.acc)};
+  if (id){
+    const old = (S.recurring || []).find(x => x.id === id) || {};
+    if (isOwner) await db.doc('recurring/' + id).update({...base, status: 'approved', appr: {accN: base.accN, amount: base.amount, name: base.name, at: now, by: me}, editedAt: now, editedBy: me, ownerNotified: true});
+    else await db.doc('recurring/' + id).update({...base, status: 'pending', editedAt: now, editedBy: me, ownerNotified: false, appr: old.appr || null});
+  } else {
+    const doc = {...base, createdAt: now, createdBy: me, order: Date.now(), off: false};
+    if (isOwner) Object.assign(doc, {status: 'approved', appr: {accN: base.accN, amount: base.amount, name: base.name, at: now, by: me}, ownerNotified: true});
+    else Object.assign(doc, {status: 'pending', appr: null, ownerNotified: false});
+    await db.collection('recurring').add(doc);
+  }
+}
+$('#rc-form').addEventListener('submit', async e => {
+  e.preventDefault(); if (!db) return;
+  const v = {name: $('#rc-name').value.trim(), acc: $('#rc-acc').value.trim().replace(/\s/g, ''), holder: $('#rc-holder').value.trim(), desc: $('#rc-desc').value.trim(),
+    amount: parseFloat(String($('#rc-amt').value).replace(/[\s,]/g, '')) || 0, fromAcc: $('#rc-from').value};
+  if (!v.name || !v.acc || !(v.amount > 0)){ $('#rc-msg').textContent = 'Харилцагч, данс, тогтмол дүнг бөглөнө үү.'; return; }
+  try{ await rcSave(v, RC.edit); rcFill(null); $('#rc-msg').textContent = isOwner ? 'Хадгаллаа.' : 'Хадгаллаа — эзэмшигч батласны дараа хүчинтэй болно.'; }
+  catch(err){ console.warn(err); $('#rc-msg').textContent = 'Хадгалж чадсангүй.'; }
+});
+document.addEventListener('click', async e => {
+  const b = e.target.closest('button[data-rc]'); if (!b || !db) return;
+  const r = (S.recurring || []).find(x => x.id === b.dataset.id); if (!r) return; const now = new Date().toISOString();
+  try{
+    if (b.dataset.rc === 'edit') return rcFill(r);
+    if (b.dataset.rc === 'del'){ if (!confirm(`«${r.name}» давтамжит гүйлгээг устгах уу?`)) return; await db.doc('recurring/' + r.id).delete(); return; }
+    if (b.dataset.rc === 'approve') await db.doc('recurring/' + r.id).update({status: 'approved', appr: {accN: rcAcc(r.acc), amount: +r.amount, name: r.name, at: now, by: me}, decidedAt: now});
+    if (b.dataset.rc === 'reject'){
+      if (r.appr) await db.doc('recurring/' + r.id).update({status: 'approved', amount: r.appr.amount, name: r.appr.name, decidedAt: now, rejectedChangeAt: now});   // change rejected: back to the approved version
+      else await db.doc('recurring/' + r.id).update({status: 'rejected', decidedAt: now});
+    }
+  }catch(err){ console.warn(err); alert('Хадгалж чадсангүй.'); }
+});
+// Excel in: sheet like «Давтамжит гүйлгээний мэдээ» (Харилцагч, Данс, Хүлээн авагчийн нэр, Гүйлгээний утга, Тогтмол дүн)
+$('#rc-file').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f || !db) return; $('#rc-msg').textContent = 'Уншиж байна…';
+  try{
+    const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1, raw: true, defval: null});
+    const hi = rows.findIndex(r => r && r.some(c => /харилцагч/i.test(String(c || ''))) && r.some(c => /данс/i.test(String(c || ''))));
+    if (hi < 0) throw new Error('«Харилцагч», «Данс» багана олдсонгүй');
+    const H = rows[hi].map(c => String(c || '').trim()), ix = re => H.findIndex(h => re.test(h));
+    const c = {name: ix(/харилцагч/i), acc: ix(/^данс/i), holder: ix(/хүлээн авагч/i), desc: ix(/утга/i), amt: ix(/тогтмол/i)};
+    const have = new Set((S.recurring || []).map(r => rcAcc(r.acc) + '|' + Math.round(+r.amount)));
+    let n = 0, skip = 0;
+    for (const r of rows.slice(hi + 1)){
+      const name = String(r[c.name] || '').trim(), acc = String(r[c.acc] || '').replace(/\s/g, ''), amount = +String(r[c.amt] == null ? '' : r[c.amt]).replace(/[\s,]/g, '') || 0;
+      if (!name || !acc || !(amount > 0) || /нийт/i.test(name)) continue;
+      if (have.has(rcAcc(acc) + '|' + Math.round(amount))){ skip++; continue; }
+      await rcSave({name, acc, holder: c.holder >= 0 ? String(r[c.holder] || '').trim() : '', desc: c.desc >= 0 ? String(r[c.desc] || '').trim() : '', amount, fromAcc: ''}, null); n++;
+    }
+    $('#rc-msg').textContent = `${n} гүйлгээ нэмлээ${skip ? `, ${skip} аль хэдийн бүртгэлтэй` : ''}${isOwner ? '' : ' — эзэмшигч батлах хүртэл хүлээгдэнэ'}.`;
+  }catch(err){ console.warn(err); $('#rc-msg').textContent = 'Уншиж чадсангүй: ' + (err.message || ''); }
+  e.target.value = '';
+});
+// Excel out: the same layout as the accountant's sheet, for the chosen month
+$('#rc-xlsx').addEventListener('click', () => {
+  const XS = window.XLSX; if (!XS) return; const per = rcPer(); RC.alloc = null;
+  const list = (S.recurring || []).filter(r => !r.off && r.status !== 'rejected').sort((a, b) => (a.order || 0) - (b.order || 0));
+  const aoa = [['Давтамжит гүйлгээний мэдээ'], [per], ['№', 'Харилцагч', 'Данс', 'Хүлээн авагчийн нэр', 'Гүйлгээний утга', 'Тогтмол дүн', 'Шилжсэн дүн', 'Төлөв']];
+  let a = 0, b = 0; list.forEach((r, i) => { const s = rcPaid(r, per).reduce((x, t) => x + (+t.amount || 0), 0); a += +r.amount || 0; b += s; aoa.push([i + 1, r.name, r.acc, r.holder || '', r.desc || '', +r.amount || 0, s, rcStatus(r)[0]]); });
+  aoa.push(['', 'НИЙТ', '', '', '', a, b, '']);
+  const ws = XS.utils.aoa_to_sheet(aoa); ws['!cols'] = [{wch: 4}, {wch: 24}, {wch: 24}, {wch: 24}, {wch: 34}, {wch: 14}, {wch: 14}, {wch: 18}];
+  for (let R = 3; R < aoa.length; R++) for (const C of [5, 6]){ const ref = XS.utils.encode_cell({r: R, c: C}); if (ws[ref]) ws[ref].z = '#,##0'; }
+  const wb = XS.utils.book_new(); XS.utils.book_append_sheet(wb, ws, 'Давтамжит'); XS.writeFile(wb, `VIVI_davtamjit_${per}.xlsx`);
+});
 
 function payUsedLabel(t){                     // bank tab: salary transfers explained by an approved payroll list
   if (!PS.lists.length && !Object.keys(payExempt()).length) return null;
@@ -3188,6 +3359,7 @@ else VIVIFB.start(async () => {
   { const cur = document.querySelector('nav.tabs button[aria-selected="true"]'); if (!cur || cur.hidden){ const first = [...document.querySelectorAll('nav.tabs button')].find(b => !b.hidden); if (first) showTab(first.dataset.tab); } }
   if (!Object.values(ALLOW).some(Boolean)) gate('Танд харах хэсэг сонгогдоогүй байна. Эзэмшигчид хандана уу.', true);
   if (ALLOW.req) db.collection('requests').onSnapshot(s => { S.requests = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.requests.map(r => r.createdBy)); render(); }, onErr);
+  if (ALLOW.req) db.collection('recurring').onSnapshot(s => { S.recurring = s.docs.map(d => ({id:d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.req) db.collection('approvals').onSnapshot(s => { S.approvals = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
   const since = new Date(Date.now() - 45*86400e3).toISOString().slice(0,10);  // last 45 days keeps reads inside the free plan
   let bankRecent = [], bankOld = {};
@@ -3245,6 +3417,7 @@ else VIVIFB.start(async () => {
   // deep link from a notification: ?req=ID or ?tab=bank
   const qp = new URLSearchParams(location.search);
   if (qp.get('tab')) showTab(qp.get('tab'));
+  if (qp.get('rec')){ showTab('req'); setRcMode('rec'); }
   if (qp.get('req')){
     showTab('req'); reqFilter = 'all'; $$('#req-filter button').forEach(x => x.setAttribute('aria-pressed', x.dataset.f === 'all'));
     const want = qp.get('req'); let tries = 0;
