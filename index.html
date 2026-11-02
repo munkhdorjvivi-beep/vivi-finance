@@ -246,6 +246,7 @@ body{margin:0;background:var(--bg)}
       <p class="note" style="margin:0 0 10px">Тухайн хугацааны бүх банкны хуулгыг (Хаан, Голомт, ХХБ, Ариг) оруулна уу. Smart-ын төлбөрийн хэлбэрийн өгөгдлийг «Өдрийн тайлан»-д хадгалснаас автоматаар авна — Smart тайлан дахин оруулах шаардлагагүй (оруулбал түүнийг ашиглана). Бэлэн мөнгө, карт (POS), QPay/шилжүүлэг, зээлийн орлогыг нэг дор тулгана. Файлуудыг таны компьютер дээр тооцоолно.</p>
       <div class="drop" id="drop"><input id="cash-files" type="file" multiple accept=".xlsx,.xls" style="max-width:340px"><div style="margin-top:6px">эсвэл файлуудаа энд чирж оруулна уу</div></div>
       <div class="banner" id="rev-cover" style="margin-top:10px"></div>
+      <div class="row" id="rev-per-row" style="margin-top:10px;align-items:flex-end" hidden><label class="f" style="width:auto">Хяналтын хугацаа<span class="row" style="gap:6px"><input type="date" id="rev-d0" style="width:auto"> – <input type="date" id="rev-d1" style="width:auto"></span></label><span class="note" id="rev-per-note" style="max-width:640px"></span></div>
       <div class="files" id="cash-filelist" style="margin-top:10px"></div>
       <div class="row" style="margin-top:10px"><button class="btn primary" id="cash-save" disabled>Үр дүнг хадгалж нягтланд харуулах</button><span class="note" id="cash-msg"></span></div>
     </div>
@@ -856,16 +857,16 @@ const VIVI = (() => {
   const SMART_CH = {'ХААН банк ПОС':'pos','Голомт банк':'pos','Худалдаа хөгжлийн банк':'pos','QPay':'qpay','Social Pay':'qpay','Хаан шилжүүлэг':'qpay'};
   const smartCh = r => r.form === 'Бэлнээр' ? 'cash' : (SMART_CH[r.bank] || 'credit');
   // ---------- model ----------
-  function build(files){
+  function build(files, opts){ opts = opts || {};
     const smart = files.filter(f=>f.type==='smart').flatMap(f=>f.rows);
     const seen = new Set(), bank = [];
     for (const f of files.filter(f=>f.type==='bank')) for (const t of f.rows){
       const key = `${t.acc}|${+t.dt}|${t.cr}|${t.dr}|${t.desc}`; if (seen.has(key)) continue; seen.add(key); bank.push(t);
     }
     if (!smart.length) return {error:'Smart «Борлуулалт төлбөрийн хэлбэрээр» тайлан алга.'};
-    const sDays = smart.map(r=>r.d).sort(); const d0 = sDays[0];
+    const sDays = smart.map(r=>r.d).sort(); const d0 = opts.d0 || sDays[0];
     const bankMax = bank.length ? iso(new Date(Math.max(...bank.map(t=>+t.dt)))) : sDays[sDays.length-1];
-    const d1 = [sDays[sDays.length-1], addDays(bankMax,-1)].sort()[0];   // last sale day whose deposit could be in statements
+    const d1 = opts.d1 || [sDays[sDays.length-1], addDays(bankMax,-1)].sort()[0];   // last sale day whose deposit could be in statements (or the period chosen)
     const inWin = d => d >= d0 && d <= d1;
     // smart aggregates
     const cashSales = {}, ncSales = {}, credit = {};
@@ -1002,8 +1003,8 @@ const VIVI = (() => {
   const STATUS_TXT = {BRAK:'Тушаагаагүй / BRAK WPŁATY', MNIEJ:'Дутуу тушаасан / Wpłacono mniej', WIECEJ:'Илүү тушаасан / Wpłacono więcej', OK:'Зөв / OK', BEZ_DNIA:'Өдөр тодорхойгүй / Bez dnia'};
   const CH_TXT = {cash:'Бэлэн мөнгө / Gotówka', pos:'Карт (POS) / Karta', qpay:'QPay + шилжүүлэг / QPay + przelewy', credit:'Зээл (StorePay, Pocket) / Kredyt'};
 
-  function report(files){
-    const m = build(files); if (m.error) return m;
+  function report(files, opts){
+    const m = build(files, opts); if (m.error) return m;
     const smart = files.filter(f => f.type === 'smart').flatMap(f => f.rows).filter(r => r.d >= m.d0 && r.d <= m.d1);
     const seen = new Set(), bank = [];
     for (const f of files.filter(f => f.type === 'bank')) for (const t of f.rows){ const k = `${t.acc}|${+t.dt}|${t.cr}|${t.dr}|${t.desc}`; if (!seen.has(k)){ seen.add(k); bank.push(t); } }
@@ -2137,11 +2138,33 @@ async function handleFiles(fl){
     }catch(err){ parsedFiles.push({type:'unknown', label:'Уншиж чадсангүй', rows:[], file:f.name}); }
   }
   $('#cash-filelist').innerHTML = parsedFiles.map(p => `<div>${p.type==='unknown'?'<span class="chip c-bad">?</span>':'<span class="chip c-ok">✓</span>'} ${esc(p.label)} · ${p.rows.length} мөр · ${esc(p.file)}</div>`).join('');
+  revDefaults(); runRev();
+}
+// control period: by default the statements' first day … one day before their last day
+// (card, QPay and cash of the last day reach the bank the next day, so October needs statements up to 1 November)
+const isoU = t => { const d = new Date(t); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`; };
+const addD = (s, n) => { const t = new Date(s + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return isoU(+t); };
+let revPerTouched = false;
+function stmtRange(){ const dts = parsedFiles.filter(f => f.type === 'bank').flatMap(f => f.rows.map(t => +t.dt)).filter(x => x > 0); return dts.length ? [isoU(Math.min(...dts)), isoU(Math.max(...dts))] : null; }
+function revDefaults(){
+  const r = stmtRange(); $('#rev-per-row').hidden = !r; if (!r || revPerTouched) return;
+  let a = r[0], z = addD(r[1], -1); const sm = parsedFiles.filter(f => f.type === 'smart').flatMap(f => f.rows.map(x => x.d)).sort();
+  if (sm.length){ if (sm[0] > a) a = sm[0]; if (sm.at(-1) < z) z = sm.at(-1); }
+  // statements from the 1st of a month to the 1st–3rd of the next one = control of that whole month
+  if (a.slice(8) === '01' && +z.slice(8) <= 3 && z.slice(0, 7) > a.slice(0, 7)) z = addD(z.slice(0, 8) + '01', -1);
+  $('#rev-d0').value = a; $('#rev-d1').value = z < a ? a : z;
+}
+['#rev-d0', '#rev-d1'].forEach(s => $(s).addEventListener('change', () => { revPerTouched = true; runRev(); }));
+function runRev(){
+  if (!parsedFiles.length) return;
+  const d0 = $('#rev-d0').value, d1 = $('#rev-d1').value, r = stmtRange();
+  $('#rev-per-note').innerHTML = r ? `Хуулга: ${r[0]} – ${r[1]}. ${r[1] <= d1 ? `<span style="color:var(--bad)">Хуулга ${addD(d1, 1)}-ний өдрийг агуулаагүй — ${d1}-ний карт, QPay, бэлэн мөнгө банкинд дутуу харагдана.</span>` : 'Карт, QPay, бэлэн мөнгө дараа өдөр нь банкинд ордог тул хуулга хяналтын сүүлийн өдрөөс нэг өдөр илүү байна.'}` : '';
   lastFiles = parsedFiles.slice();
   // Smart side: an uploaded payment-form report wins; otherwise take it from the saved daily reports («Өдрийн тайлан»)
-  const fromDaily = !parsedFiles.some(f => f.type === 'smart') ? dailySmartFile(parsedFiles) : null;
-  if (fromDaily){ lastFiles.push(fromDaily); $('#cash-filelist').insertAdjacentHTML('beforeend', `<div><span class="chip c-ok">✓</span> ${esc(fromDaily.label)} · ${fromDaily.rows.length} мөр</div>`); }
-  const m = VIVI.build(lastFiles);
+  const fromDaily = !parsedFiles.some(f => f.type === 'smart') ? dailySmartFile(parsedFiles, d0, d1) : null;
+  $$('#cash-filelist .auto').forEach(x => x.remove());
+  if (fromDaily){ lastFiles.push(fromDaily); $('#cash-filelist').insertAdjacentHTML('beforeend', `<div class="auto"><span class="chip c-ok">✓</span> ${esc(fromDaily.label)} · ${fromDaily.rows.length} мөр</div>`); }
+  const m = VIVI.build(lastFiles, {d0, d1});
   if (m.error){ $('#cash-msg').textContent = parsedFiles.some(f => f.type === 'bank') ? (window.REV_DAILY === false ? 'Smart «Борлуулалтын жагсаалт /төлбөрийн хэлбэрээр/» тайланг хуулгатай хамт оруулна уу.' : 'Хуулгын хугацаанд «Өдрийн тайлан»-д төлбөрийн хэлбэрийн өгөгдөл алга — тухайн өдрүүдийн Smart тайланг «Өдрийн тайлан»-д оруулна уу.') : 'Банкны хуулгаа оруулна уу.'; return; }
   pendingRun = {d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
   $('#cash-save').disabled = false; $('#cash-msg').textContent = 'Тооцоолсон. Хадгалбал нягтлан тайлбар бичих боломжтой болно.';
@@ -2149,12 +2172,12 @@ async function handleFiles(fl){
 }
 // daily docs (pay[unit][form] = {a, n, k}) → rows in the shape of core's Smart payment-form parser
 const UNIT_CORE = {'Фүүд сити':'Food city', 'Е-март Баянгол':'Е март баянгол-3 давхар', 'Эрдэнэт':'Эрдэнэт салбар'};
-function dailySmartFile(files){
+function dailySmartFile(files, a0, z0){
   if (typeof DR === 'undefined') return null;
   const dts = files.filter(f => f.type === 'bank').flatMap(f => f.rows.map(t => +t.dt)).filter(x => x > 0);
   if (!dts.length) return null;
-  const isoD = t => { const d = new Date(t); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`; };
-  const a = isoD(Math.min(...dts)), z = isoD(Math.max(...dts)), rows = [], days = [], miss = [];
+  const isoD = isoU;
+  const a = a0 || isoD(Math.min(...dts)), z = z0 || isoD(Math.max(...dts)), rows = [], days = [], miss = [];
   for (let t = new Date(a+'T00:00:00Z'); isoD(+t) <= z; t.setUTCDate(t.getUTCDate()+1)){ const d = isoD(+t), D = DR.days[d];
     if (!D || !D.pay){ miss.push(d); continue; } days.push(d);
     for (const [u, U] of Object.entries(D.pay)) for (const [f, F] of Object.entries(U)){
@@ -2251,7 +2274,7 @@ $('#rev-xlsx').addEventListener('click', () => {
   if (!lastFiles || typeof XLSX === 'undefined') return;
   const btn = $('#rev-xlsx'); btn.disabled = true; btn.textContent = 'Бэлтгэж байна…';
   loadStyledXLSX().then(XS => {
-    try{ const r = VIVI.report(lastFiles); if (r.error){ alert(r.error); return; } XS.writeFile(VIVI.toWorkbook(r, XS), r.filename); }
+    try{ const r = VIVI.report(lastFiles, {d0: $('#rev-d0').value, d1: $('#rev-d1').value}); if (r.error){ alert(r.error); return; } XS.writeFile(VIVI.toWorkbook(r, XS), r.filename); }
     catch(err){ console.warn(err); alert('Excel үүсгэж чадсангүй: ' + (err.message || err)); }
     finally{ btn.disabled = false; btn.textContent = '📥 Excel тайлан татах'; }
   });
