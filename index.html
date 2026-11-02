@@ -250,6 +250,13 @@ body{margin:0;background:var(--bg)}
       <div class="files" id="cash-filelist" style="margin-top:10px"></div>
       <div class="row" style="margin-top:10px"><button class="btn primary" id="cash-save" disabled>Үр дүнг хадгалж нягтланд харуулах</button><span class="note" id="cash-msg"></span></div>
     </div>
+    <div class="card" id="rev-arch-card">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">Хадгалсан хяналтууд</h2>
+        <div class="row"><select id="rev-run" style="width:auto;min-width:320px"></select><button class="btn bad" id="rev-run-del" hidden>Устгах</button></div>
+      </div>
+      <p class="note" id="rev-run-note" style="margin:6px 0 0">Хадгалсан хугацаа бүр энд үлдэнэ: сонгоод харах, Excel дахин татах боломжтой. Ижил хугацааг дахин хадгалбал шинэчлэгдэнэ.</p>
+    </div>
     <div class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
         <h2 id="rev-title" style="margin:0">Төлбөрийн хэлбэрээр: Smart ба банк</h2>
@@ -1767,7 +1774,7 @@ const STORE_CODE = {'Food city':'FC','Драгон':'DR','Дархан Үзэс�
 const ST_LABEL = {BRAK:['Тушаагаагүй','c-bad'], MNIEJ:['Дутуу тушаасан','c-warn'], WIECEJ:['Илүү тушаасан','c-grey'], OK:['Зөв','c-ok'], BEZ_DNIA:['Өдөр тодорхойгүй','c-grey']};
 
 let db = null, user = null, me = null, isOwner = false, canWrite = true, assets = null;
-const S = { requests: [], recurring: [], approvals: {}, banktx: [], cash: null, notes: {}, balances: [], names: {} };
+const S = { requests: [], recurring: [], runs: [], approvals: {}, banktx: [], cash: null, notes: {}, balances: [], names: {} };
 let bankDay = today(), loadBankDay = null, loadBankRange = null, reqDay = today(), bankRange = 'day', bankFrom = '', bankTo = '';
 let reqFilter = 'pending', bankFilter = 'all', cashFilter = 'open', cashStore = '', revCh = 'all', revOnly = 'diff', revStore = '';
 let pendingRun = null, lastFiles = null;
@@ -1985,11 +1992,32 @@ function revCover(){
   el.className = 'banner' + (miss.length ? ' bad' : '');
   el.innerHTML = `<b>«Өдрийн тайлан»-гийн өгөгдөл: ${a} – ${z}</b> (${ds.length} өдөр). Банкны хуулгыг <b>${z}</b>-ны өдрийг дуустал, бэлэн мөнгө тушаалтыг харахын тулд <b>${nx.toISOString().slice(0, 10)}</b> хүртэл оруулна уу. Хуулгын ${z}-ээс хойших өдрүүд тулгалтад орохгүй.${miss.length ? `<br>Сүүлийн 60 хоногт тайлангүй өдөр: ${miss.reverse().join(', ')}` : ''}`;
 }
+// saved controls: cashruns/{d0_d1} (+ statements in cashraw/{id}_{i}); cash/latest = the newest period (used by «Бэлэн мөнгө»)
+let revSel = '';
+const runLabel = r => `${r.d0} – ${r.d1}${r.savedAt ? ' · хадгалсан ' + fmtDT(r.savedAt) : ''}${r.by ? ' · ' + nameOf(r.by) : ''}${r.rawN ? '' : ' · Excel-гүй'}`;
+function revRuns(){
+  const list = (S.runs || []).slice();
+  if (S.cash && !list.some(r => r.d0 === S.cash.d0 && r.d1 === S.cash.d1)) list.push({...S.cash, id: 'latest'});
+  return list.sort((a, b) => String(b.d1).localeCompare(String(a.d1)) || String(b.d0).localeCompare(String(a.d0)));
+}
+function selectedRun(){ const L = revRuns(); return L.find(r => r.id === revSel) || L[0] || null; }
+function renderRuns(){
+  const L = revRuns(), el = $('#rev-run'); $('#rev-arch-card').hidden = !L.length; if (!L.length) return;
+  const cur = selectedRun(); const html = L.map(r => `<option value="${esc(r.id)}" ${cur && r.id === cur.id ? 'selected' : ''}>${esc(runLabel(r))}</option>`).join('');
+  if (el.innerHTML !== html) el.innerHTML = html;
+  $('#rev-run-del').hidden = !(isOwner && cur && cur.id !== 'latest');
+}
+$('#rev-run').addEventListener('change', e => { revSel = e.target.value; pendingRun = null; render(); });
+$('#rev-run-del').addEventListener('click', async () => {
+  const r = selectedRun(); if (!r || r.id === 'latest' || !confirm(`${r.d0} – ${r.d1} хяналтыг устгах уу?`)) return;
+  try{ for (let i = 0; i < (r.rawN || 0); i++) await db.doc('cashraw/' + r.id + '_' + i).delete().catch(() => {}); await db.doc('cashruns/' + r.id).delete(); revSel = ''; }
+  catch(err){ alert('Устгаж чадсангүй.'); }
+});
 function renderRev(){
-  revCover();
-  $('#rev-xlsx').disabled = !((lastFiles && lastFiles.some(f => f.type === 'smart')) || (S.cash && S.cash.rawN > 0));
+  revCover(); renderRuns();
+  { const sr = selectedRun(); $('#rev-xlsx').disabled = !((pendingRun && lastFiles && lastFiles.some(f => f.type === 'smart')) || (!pendingRun && sr && sr.rawN > 0)); }
   $('#rev-xlsx-note').hidden = !$('#rev-xlsx').disabled;
-  const run = pendingRun || S.cash;
+  const run = pendingRun || selectedRun();
   const W = run && run.waterfall, F = (run && run.forms) || [];
   $('#rev-title').textContent = run ? `Төлбөрийн хэлбэрээр: Smart ба банк · ${run.d0} – ${run.d1}${pendingRun ? ' (хадгалаагүй)' : ''}` : 'Төлбөрийн хэлбэрээр: Smart ба банк';
   if (!W){ $('#rev-sum').innerHTML = `<tr><td colspan="6" class="empty">${isOwner ? (run ? 'Хадгалсан хяналтад төлбөрийн хэлбэрийн задаргаа алга — Smart тайлан, хуулгаа дахин оруулна уу.' : 'Дээр Smart тайлан болон банкны хуулгаа оруулна уу.') : 'Эзэмшигч хяналт хадгалаагүй байна.'}</td></tr>`; $('#rev-store').innerHTML = '<tr><td colspan="5" class="empty">–</td></tr>'; $('#rev-days').innerHTML = '<tr><td colspan="6" class="empty">–</td></tr>'; return; }
@@ -2186,14 +2214,17 @@ function dailySmartFile(files, a0, z0){
   if (!rows.length) return null;
   return {type: 'smart', label: `Smart – «Өдрийн тайлан»-аас (${days.length} өдөр${miss.length ? `, дутуу: ${miss.join(', ')}` : ''})`, rows, file: 'Өдрийн тайлан', auto: true};
 }
-$('#cash-files').addEventListener('change', e => handleFiles([...e.target.files]));
+$('#cash-files').addEventListener('change', async e => { await handleFiles([...e.target.files]); e.target.value = ''; });
 const drop = $('#drop');
 drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
 drop.addEventListener('dragleave', () => drop.classList.remove('over'));
 drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); handleFiles([...e.dataTransfer.files]); });
 $('#cash-save').addEventListener('click', async () => {
   if (!db || !pendingRun) return; $('#cash-save').disabled = true;
-  try{ $('#cash-msg').textContent = 'Хадгалж байна…'; const rawN = await saveRaw(lastFiles || []); await db.doc('cash/latest').set({...pendingRun, rawN, savedAt: new Date().toISOString(), by: me}); pendingRun = null; parsedFiles.length = 0; lastFiles = null; revPerTouched = false; $('#rev-per-row').hidden = true; $('#cash-filelist').innerHTML = ''; $('#cash-msg').textContent = 'Хадгаллаа.'; render(); }
+  try{ $('#cash-msg').textContent = 'Хадгалж байна…'; const id = pendingRun.d0 + '_' + pendingRun.d1; const rawN = await saveRaw(lastFiles || [], id);
+    const doc = {...pendingRun, rawN, savedAt: new Date().toISOString(), by: me}; await db.doc('cashruns/' + id).set(doc);
+    if (!S.cash || String(S.cash.d1 || '') <= pendingRun.d1) await db.doc('cash/latest').set({...doc, runId: id});   // «Бэлэн мөнгө» follows the newest period
+    revSel = id; pendingRun = null; parsedFiles.length = 0; lastFiles = null; revPerTouched = false; $('#rev-per-row').hidden = true; $('#cash-filelist').innerHTML = ''; $('#cash-msg').textContent = 'Хадгаллаа.'; render(); }
   catch(err){ $('#cash-msg').textContent = err && err.code === 'quota_exceeded' ? 'Өгөгдлийн сангийн хэмжээ хэтэрлээ.' : 'Хадгалж чадсангүй.'; $('#cash-save').disabled = false; }
 });
 
@@ -2272,22 +2303,23 @@ function loadStyledXLSX(){
 }
 // the saved control keeps its statements (in chunks), so anyone who can see it can download the full Excel later
 const RAW_CHUNK = 300000;
-async function saveRaw(files){
+async function saveRaw(files, id){
   const keep = files.filter(f => f.type === 'bank' || f.type === 'smart').map(f => ({type: f.type, bank: f.bank || null, acc: f.acc || null, label: f.label, file: f.file || '', rows: f.rows.map(r => r.dt instanceof Date ? {...r, dt: +r.dt} : r)}));
   const str = JSON.stringify(keep), n = Math.ceil(str.length / RAW_CHUNK);
-  for (let i = 0; i < n; i++) await db.doc('cash/raw_' + i).set({part: str.slice(i * RAW_CHUNK, (i + 1) * RAW_CHUNK), i, by: me, at: new Date().toISOString()});
+  for (let i = 0; i < n; i++) await db.doc('cashraw/' + id + '_' + i).set({part: str.slice(i * RAW_CHUNK, (i + 1) * RAW_CHUNK), i, run: id, by: me, at: new Date().toISOString()});
   return n;
 }
-async function loadRaw(n){
-  let str = ''; for (let i = 0; i < n; i++){ const d = await db.doc('cash/raw_' + i).get(); if (!d.exists) throw new Error('хадгалсан хуулга дутуу'); str += d.data().part; }
+async function loadRaw(n, id){
+  let str = ''; for (let i = 0; i < n; i++){ const d = await db.doc(id && id !== 'latest' ? 'cashraw/' + id + '_' + i : 'cash/raw_' + i).get(); if (!d.exists) throw new Error('хадгалсан хуулга дутуу'); str += d.data().part; }
   return JSON.parse(str).map(f => ({...f, rows: f.rows.map(r => typeof r.dt === 'number' ? {...r, dt: new Date(r.dt)} : r)}));
 }
 $('#rev-xlsx').addEventListener('click', async () => {
   if (typeof XLSX === 'undefined') return;
   const btn = $('#rev-xlsx'); btn.disabled = true; btn.textContent = 'Бэлтгэж байна…';
-  let files = lastFiles && lastFiles.some(f => f.type === 'smart') ? lastFiles : null, d0 = $('#rev-d0').value, d1 = $('#rev-d1').value;
-  if (!files && S.cash && S.cash.rawN){
-    try{ files = await loadRaw(S.cash.rawN); d0 = S.cash.d0; d1 = S.cash.d1;
+  let files = pendingRun && lastFiles && lastFiles.some(f => f.type === 'smart') ? lastFiles : null, d0 = $('#rev-d0').value, d1 = $('#rev-d1').value;
+  const sr = selectedRun();
+  if (!files && sr && sr.rawN){
+    try{ files = await loadRaw(sr.rawN, sr.id); d0 = sr.d0; d1 = sr.d1;
       if (!files.some(f => f.type === 'smart')){ const sm = dailySmartFile(files, d0, d1); if (sm) files.push(sm); } }
     catch(err){ console.warn(err); alert('Хадгалсан хуулгыг уншиж чадсангүй: ' + (err.message || err)); btn.disabled = false; btn.textContent = '📥 Excel тайлан татах'; return; }
   }
@@ -3420,6 +3452,7 @@ else VIVIFB.start(async () => {
   };
   $('#sync-row').hidden = false; $('#sync-btn').hidden = true; syncMsg('Имэйл автоматаар шалгагдана.');
   if (ALLOW.bank) db.doc('meta/sync').onSnapshot(d => { if (!d.exists) return; const m = d.data(); if (m.lastRun) syncMsg(`Имэйл автоматаар шалгасан ${hhmm(m.lastRun)}${m.lastAdded ? ' · сүүлийн шинэ гүйлгээ ' + hhmm(m.lastAdded) : ''}`); }, onErr);
+  if (ALLOW.cash || ALLOW.rev) db.collection('cashruns').onSnapshot(s => { S.runs = s.docs.map(d => ({id:d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.cash || ALLOW.rev) db.doc('cash/latest').onSnapshot(d => { S.cash = d.exists ? d.data() : null; render(); }, onErr);
   if (ALLOW.cash) db.collection('cashnotes').onSnapshot(s => { S.notes = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); resolveNames(Object.values(S.notes).map(n => n.by)); render(); }, onErr);
   if (ALLOW.bal) db.collection('balances').onSnapshot(s => { S.balances = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.balances.map(b => b.by)); render(); }, onErr);
