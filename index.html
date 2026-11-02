@@ -3176,8 +3176,8 @@ else VIVIFB.start(async () => {
   }
   db.doc('config/payees').onSnapshot(d => { const x = d.exists ? d.data() : {}; const base = (x.list || []).length ? x.list : PAYEES_DEFAULT.list;
     PAYEES.set((x.extra || []).concat(PAYEES_DEFAULT.added || [], base)); PAYEES.setDefaults(x.defaults || {}); PBINFO = {file: (x.list || []).length ? (x.file || '') : PBINFO.file, emps: x.emps || PBINFO.emps, extra: x.extra || [], defaults: x.defaults || {}}; renderPayees(); render(); }, onErr);
-  if (ALLOW.daily) db.collection('daily').onSnapshot(s => { DR.days = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
-  $('#cash-upload').hidden = !(isOwner || ALLOW.rev); window.REV_DAILY = isOwner || !!ALLOW.daily;
+  if (ALLOW.daily || ALLOW.rev) db.collection('daily').onSnapshot(s => { DR.days = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
+  $('#cash-upload').hidden = !(isOwner || ALLOW.rev); window.REV_DAILY = isOwner || !!ALLOW.daily || !!ALLOW.rev;
   $('#dr-upload').hidden = !ALLOW.daily; DR.canFlow = isOwner || (ALLOW.bank && ALLOW.bal);
   if (ALLOW.pl){
     db.collection('pl').onSnapshot(s => { PLS.months = Object.fromEntries(s.docs.map(d => [d.id, {id: d.id, ...d.data()}])); render(); }, onErr);
