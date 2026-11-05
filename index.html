@@ -729,7 +729,7 @@ body{margin:0;background:var(--bg)}
   <section class="panel" data-panel="chat" hidden>
     <div class="chat-wrap" id="ch-wrap">
       <div class="card chat-side" id="ch-side">
-        <div class="row" style="justify-content:space-between;gap:6px"><h2 style="margin:0">Чат</h2><button class="btn primary" id="ch-new">+ Шинэ</button></div>
+        <div class="row" style="justify-content:space-between;gap:6px"><h2 style="margin:0">Чат</h2><span class="row" style="gap:6px"><button class="btn" id="ch-sound" title="Шинэ мессеж ирэхэд дуугарах">🔔</button><button class="btn primary" id="ch-new">+ Шинэ</button></span></div>
         <input id="ch-q" placeholder="🔎 Чат, мессеж хайх…" style="margin:8px 0">
         <div id="ch-newbox" hidden style="margin-bottom:8px"></div>
         <div id="ch-list"></div>
@@ -5405,9 +5405,31 @@ async function chMarkRead(){ const c = CH.chats.find(x => x.id === CH.open); if 
   try{ await db.doc('chats/' + c.id).update({['read.' + me]: new Date().toISOString()}); }catch(e){ console.warn('read', e); } }
 const chReadOf = (c, uid) => (c.read || {})[uid] || '';
 
+// ---------- «tu-dum» when a message arrives while the app is open ----------
+let chAC = null, chSeen = null;
+const chSoundOn = () => { try{ return localStorage.getItem('vivi-chat-sound') !== '0'; }catch(e){ return true; } };
+function chDing(){
+  if (!chSoundOn()) return;
+  try{ chAC = chAC || new (window.AudioContext || window.webkitAudioContext)(); if (chAC.state === 'suspended') chAC.resume();
+    const t = chAC.currentTime, note = (f, at, len) => { const o = chAC.createOscillator(), g = chAC.createGain(); o.type = 'sine'; o.frequency.value = f; o.connect(g); g.connect(chAC.destination);
+      g.gain.setValueAtTime(0.0001, t + at); g.gain.exponentialRampToValueAtTime(0.22, t + at + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + at + len); o.start(t + at); o.stop(t + at + len + 0.02); };
+    note(587, 0, 0.16); note(880, 0.13, 0.28);    // tu … dum
+  }catch(e){}
+  try{ if (navigator.vibrate) navigator.vibrate([60, 40, 90]); }catch(e){}
+}
+// unlock the audio on the first touch (browsers allow sound only after the user did something)
+document.addEventListener('pointerdown', () => { try{ chAC = chAC || new (window.AudioContext || window.webkitAudioContext)(); if (chAC.state === 'suspended') chAC.resume(); }catch(e){} }, {once: true});
+function chCheckNew(){
+  if (!CH.loaded) return; const now = {}; for (const c of CH.chats) if (chIsMember(c) && c.last) now[c.id] = c.last.at;
+  if (chSeen){ const fresh = CH.chats.some(c => chIsMember(c) && c.last && c.last.by !== me && now[c.id] && now[c.id] !== chSeen[c.id] && String(now[c.id]) > String(chSeen[c.id] || ''));
+    if (fresh) chDing(); }
+  chSeen = now;
+}
+
 // ---------- list ----------
 function renderChat(){
-  const el = $('#ch-list'); if (!el) return;
+  chCheckNew();
+  const el = $('#ch-list'); if (!el) return; { const sb = $('#ch-sound'); if (sb) sb.textContent = chSoundOn() ? '🔔' : '🔕'; }
   const q = CH.q.toLowerCase(), M = c => !q || chTitle(c).toLowerCase().includes(q) || String((c.last || {}).t || '').toLowerCase().includes(q);
   const mine = CH.chats.filter(chIsMember).filter(M).sort((a, b) => String((b.last || {}).at || b.createdAt).localeCompare(String((a.last || {}).at || a.createdAt)));
   const other = isOwner ? CH.chats.filter(c => !chIsMember(c)).filter(M).sort((a, b) => String((b.last || {}).at || '').localeCompare(String((a.last || {}).at || ''))) : [];
@@ -5510,6 +5532,7 @@ document.addEventListener('click', async e => {
   if (e.target.closest('#ch-rec-send')){ e.preventDefault(); if (CH.rec) CH.rec.stop(); return; }
   if (e.target.id === 'ch-new'){ const b = $('#ch-newbox'); b.hidden = !b.hidden; CH.newSel = new Set(); if (!b.hidden){ await chLoadUsers(); renderChNew(); } return; }
   if (e.target.id === 'ch-newx'){ $('#ch-newbox').hidden = true; return; }
+  if (e.target.closest('#ch-sound')){ const on = !chSoundOn(); try{ localStorage.setItem('vivi-chat-sound', on ? '1' : '0'); }catch(err){} $('#ch-sound').textContent = on ? '🔔' : '🔕'; if (on) chDing(); return; }
   if (e.target.id === 'ch-create'){ const sel = [...CH.newSel]; $('#ch-newbox').hidden = true;
     if (sel.length === 1) return chDm(sel[0]);
     const name = ($('#ch-gname') || {}).value || sel.map(chName).join(', '); const cid = db.collection('chats').doc().id;
@@ -5655,7 +5678,7 @@ else VIVIFB.start(async () => {
   if (ALLOW.req) db.collection('reqdraft').onSnapshot(s => { RS.list = s.docs.map(d => ({id: d.id, ...d.data()})); resolveNames(RS.list.map(x => x.createdBy)); render(); }, onErr);
   else if (ALLOW.reqsub) db.collection('reqdraft').where('createdBy', '==', me).onSnapshot(s => { RS.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   chLoadUsers().then(render);
-  (isOwner ? db.collection('chats') : db.collection('chats').where('members', 'array-contains', me)).onSnapshot(s => { CH.chats = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+  (isOwner ? db.collection('chats') : db.collection('chats').where('members', 'array-contains', me)).onSnapshot(s => { CH.chats = s.docs.map(d => ({id: d.id, ...d.data()})); CH.loaded = true; render(); }, onErr);
   if (ALLOW.contr) db.collection('contracts').onSnapshot(s => { CT.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.inv) db.collection('inv').onSnapshot(s => { IV.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.wh || ALLOW.rcv) db.doc('config/wh').onSnapshot(d => { WS.cfg = d.exists ? d.data() : null; render(); }, onErr);
