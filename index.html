@@ -680,7 +680,7 @@ body{margin:0;background:var(--bg)}
     <div class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">Гэрээ (зээл, лизинг, бусад төлбөр)</h2>
         <div class="filter chips" id="ct-f"><button data-f="act" aria-pressed="true">Идэвхтэй</button><button data-f="all" aria-pressed="false">Бүгд (дууссан)</button></div></div>
-      <p class="note" style="margin:0 0 8px">Гэрээ бүрийн төлөх өдөр, төлбөрийн дүнг бүртгэнэ. Төлөх өдрөөс <b>3 хоногийн өмнө</b> болон тэр өдөр утсанд сануулга ирнэ; сануулга дээр дарахад гэрээ нээгдэнэ. Банкны гүйлгээгээр төлсөн эсэхийг автоматаар шалгана.</p>
+      <p class="note" style="margin:0 0 8px">Гэрээ бүрийн төлөх өдөр, төлбөрийн дүнг бүртгэнэ. Гэрээ бүрт тохируулсан хоногийн өмнө (анхдагч <b>3</b>, жишээ «7, 3, 1») болон төлөх өдөр утсанд сануулга ирнэ; сануулга дээр дарахад гэрээ нээгдэнэ. Банкны гүйлгээгээр төлсөн эсэхийг автоматаар шалгана.</p>
       <div class="tbl"><table><thead><tr><th>Гэрээ</th><th>Зээлдүүлэгч / тал</th><th class="n">Төлбөр</th><th>Дараагийн төлөх өдөр</th><th>Энэ удаагийн төлөв</th><th class="n">Үлдэгдэл төлбөр</th><th></th></tr></thead><tbody id="ct-list"><tr><td colspan="7" class="empty">–</td></tr></tbody></table></div>
       <div id="ct-detail" style="margin-top:12px"></div>
     </div>
@@ -700,6 +700,7 @@ body{margin:0;background:var(--bg)}
         <label class="f">Сарын төлбөр (₮) *<input id="ct-pay" inputmode="decimal" required placeholder="2 500 000"></label>
         <label class="f">Төлөх данс (зээлдүүлэгчийн)<input id="ct-to" inputmode="numeric" data-nofmt placeholder="банкны гүйлгээгээр шалгахад"></label>
         <label class="f">Аль данснаас төлдөг<select id="ct-from"></select></label>
+        <label class="f">🔔 Сануулах — төлөх өдрөөс хэд хоногийн өмнө (таслалаар)<input id="ct-rem" inputmode="numeric" data-nofmt value="3" placeholder="7, 3, 1"></label>
         <label class="f full">Төлбөрийн хуваарь (заавал биш — сар бүр өөр дүнтэй бол; мөр бүрт «огноо = дүн»)<textarea id="ct-sched" rows="3" placeholder="2026-11-15 = 2 512 300&#10;2026-12-15 = 2 498 100"></textarea></label>
         <label class="f full">Тайлбар<textarea id="ct-note" rows="2"></textarea></label>
         <label class="f">Гэрээ (PDF, хэд хэдэн файл; 15 МБ хүртэл)<input id="ct-file" type="file" multiple accept="application/pdf,image/*"></label>
@@ -5268,11 +5269,13 @@ function ctState(c){
   let st = 'later', txt = '';
   if (prev && pPrev === false && ctDiff(t, prev.d) <= 30 && prev.d >= String(c.createdAt || '').slice(0, 10)){ /* dues before the contract was registered are not checked */ st = 'late'; txt = `✗ ${prev.d}-ны төлбөр олдсонгүй (${ctDiff(t, prev.d)} хоног хэтэрсэн)`; }
   else if (next && pNext){ st = 'paid'; txt = `✓ төлсөн ${String(pNext.dt).slice(0, 10)}`; }
-  else if (next && ctDiff(next.d, t) <= 3){ st = 'soon'; txt = ctDiff(next.d, t) === 0 ? '⚠ ӨНӨӨДӨР төлөх' : `⚠ ${ctDiff(next.d, t)} хоногийн дараа`; }
+  else if (next && ctDiff(next.d, t) <= Math.max(3, ...ctRem(c))){ st = 'soon'; txt = ctDiff(next.d, t) === 0 ? '⚠ ӨНӨӨДӨР төлөх' : `⚠ ${ctDiff(next.d, t)} хоногийн дараа`; }
   else if (next){ txt = `${ctDiff(next.d, t)} хоногийн дараа`; }
   if (st !== 'late' && prev && pPrev && !next) txt = '✓ сүүлийн төлбөр төлсөн';
   return {next, prev, pPrev, pNext, st, txt, restN: rest.length, restSum: rest.reduce((a, x) => a + x.amt, 0), done: !next && (!prev || pPrev !== false)};
 }
+// days before the payment day to remind (always also on the day itself)
+const ctRem = c => { const L = String(c.remind == null ? '3' : c.remind).split(/[,;\s]+/).map(x => parseInt(x, 10)).filter(x => x > 0 && x <= 60); return [...new Set(L)].sort((a, b) => b - a); };
 const CT_CLS = {late: 'c-bad', soon: 'c-warn', paid: 'c-ok', later: 'c-grey'};
 
 function renderContr(){
@@ -5285,7 +5288,7 @@ function renderContr(){
   const tbg = $('#t-ct'); if (tbg){ tbg.textContent = warn.length || ''; tbg.hidden = !warn.length; }
   tb.innerHTML = L.length ? L.map(({c, s}) => `<tr class="${s.st === 'late' ? 'sev-bad' : s.st === 'soon' ? 'sev-warn' : ''}" style="cursor:pointer" data-ct-row="${esc(c.id)}">
       <td><b>${esc(c.name)}</b><div class="note">${esc(c.kind || '')}${c.no ? ' · №' + esc(c.no) : ''}${(c.files || []).length ? ' · 📄 ' + c.files.length : ''}</div></td><td>${esc(c.party || '')}<div class="note">${esc(c.borrower || '')}</div></td>
-      <td class="n">${s.next ? fmt(s.next.amt) : fmt(c.payment)} ₮<div class="note">сар бүрийн ${esc(c.payDay || '—')}</div></td><td class="mono">${s.next ? esc(s.next.d) : '—'}</td>
+      <td class="n">${s.next ? fmt(s.next.amt) : fmt(c.payment)} ₮<div class="note">сар бүрийн ${esc(c.payDay || '—')} · 🔔 ${ctRem(c).length ? ctRem(c).join(', ') + ' хоног өмнө' : 'тэр өдөр'}</div></td><td class="mono">${s.next ? esc(s.next.d) : '—'}</td>
       <td><span class="chip ${CT_CLS[s.st]}">${esc(s.txt || (s.done ? 'дууссан' : ''))}</span>${!c.toAcc ? '<div class="note">данс оруулаагүй — төлсөн эсэхийг шалгахгүй</div>' : ''}</td><td class="n">${s.restN ? fmt(s.restSum) + ' ₮<div class="note">' + s.restN + ' удаа</div>' : '–'}</td>
       <td><button class="btn" data-ct-open="${esc(c.id)}">${CT.open === c.id ? 'Хаах' : 'Дэлгэрэнгүй'}</button></td></tr>`).join('')
     : '<tr><td colspan="7" class="empty">Гэрээ бүртгэгдээгүй. Доорх маягтаар нэмнэ үү.</td></tr>';
@@ -5301,16 +5304,16 @@ function renderCtDetail(){
 }
 function ctFill(c){
   CT.edit = c ? c.id : null; $('#ct-form-title').textContent = c ? 'Гэрээ засах: ' + c.name : 'Шинэ гэрээ'; $('#ct-cancel').hidden = !c;
-  if (!c){ $('#ct-form').reset(); return; }
+  if (!c){ $('#ct-form').reset(); $('#ct-rem').value = '3'; return; }
   const v = (id, x) => { $(id).value = x == null ? '' : x; };
   v('#ct-name', c.name); v('#ct-kind', c.kind || 'Зээл'); v('#ct-party', c.party); v('#ct-borrower', c.borrower); v('#ct-no', c.no); v('#ct-principal', c.principal ? numFmt(c.principal) : ''); v('#ct-rate', c.rate);
-  v('#ct-start', c.start); v('#ct-end', c.end); v('#ct-day', c.payDay); v('#ct-pay', numFmt(c.payment)); v('#ct-to', c.toAcc); v('#ct-from', c.fromAcc || ''); v('#ct-sched', c.sched); v('#ct-note', c.note);
+  v('#ct-start', c.start); v('#ct-end', c.end); v('#ct-day', c.payDay); v('#ct-pay', numFmt(c.payment)); v('#ct-to', c.toAcc); v('#ct-from', c.fromAcc || ''); v('#ct-sched', c.sched); v('#ct-note', c.note); v('#ct-rem', c.remind == null ? '3' : c.remind);
   $('#ct-msg').textContent = (c.files || []).length ? `${c.files.length} файл хавсаргасан; шинэ файл нэмэгдэнэ.` : ''; $('#ct-form-card').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 $('#ct-form').addEventListener('submit', async e => {
   e.preventDefault(); if (!db) return; const g = id => $(id).value.trim();
   const c = {name: g('#ct-name'), kind: g('#ct-kind'), party: g('#ct-party'), borrower: g('#ct-borrower'), no: g('#ct-no'), principal: parseAmt(g('#ct-principal')) || 0, rate: g('#ct-rate'),
-    start: g('#ct-start'), end: g('#ct-end'), payDay: Math.max(0, Math.min(31, parseInt(g('#ct-day'), 10) || 0)), payment: parseAmt(g('#ct-pay')) || 0, toAcc: g('#ct-to').replace(/\s/g, ''), fromAcc: g('#ct-from'), sched: $('#ct-sched').value, note: g('#ct-note')};
+    start: g('#ct-start'), end: g('#ct-end'), payDay: Math.max(0, Math.min(31, parseInt(g('#ct-day'), 10) || 0)), payment: parseAmt(g('#ct-pay')) || 0, toAcc: g('#ct-to').replace(/\s/g, ''), fromAcc: g('#ct-from'), sched: $('#ct-sched').value, note: g('#ct-note'), remind: ctRem({remind: g('#ct-rem')}).join(', ')};
   if (!c.name || (!c.payDay && !ctSched(c).length) || (!c.payment && !ctSched(c).length)){ $('#ct-msg').textContent = 'Нэр, төлөх өдөр, сарын төлбөрийг бөглөнө үү (эсвэл хуваарь).'; return; }
   $('#ct-save').disabled = true; $('#ct-msg').textContent = 'Хадгалж байна…';
   try{ const ups = []; for (const f of [...$('#ct-file').files]){ $('#ct-msg').textContent = `Файл хадгалж байна… ${f.name}`; const up = await assets.upload(f); ups.push({id: up.id, type: up.contentType, name: f.name}); }
