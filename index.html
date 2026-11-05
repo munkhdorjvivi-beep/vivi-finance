@@ -4209,11 +4209,12 @@ async function deleteDeliv(id){
   if (sent.length){ alert(`«${D.name}» устгах боломжгүй: ${sent.length} илгээмж дэлгүүр рүү илгээгдсэн. Хүргэлтийг «Хаах» боломжтой.`); return; }
   if (sc){ const t = prompt(`«${D.name}» хүргэлтэд ${sc} ш скан хийгдсэн байна. Устгавал скан, нээлттэй илгээмж бүгд устана, сэргээх боломжгүй.\n\nБаталгаажуулахын тулд УСТГАХ гэж бичнэ үү:`); if ((t || '').trim().toUpperCase() !== 'УСТГАХ') return; }
   else if (!confirm(`«${D.name}» хүргэлтийг (${fmt(D.total)} ш жагсаалт) устгах уу?`)) return;
-  try{ const b = db.batch();
-    for (let i = 0; i < (D.parts || 0); i++) b.delete(db.doc('delivpart/' + id + '_' + i));
-    for (let i = 0; i < (D.xparts || 0); i++) b.delete(db.doc('delivpart/' + id + '_x' + i));
-    for (const s of S2) b.delete(db.doc('ship/' + s.id));
-    b.delete(db.doc('delivcnt/' + id)); b.delete(db.doc('deliv/' + id)); await b.commit();
+  // one document at a time: a list part is big (hundreds of indexed fields) and a single batch is refused as «Transaction too big»
+  const msg = t => { const el = $('#wd-msg'); if (el) el.textContent = t; };
+  try{ const refs = [...S2.map(s => db.doc('ship/' + s.id)), ...Array.from({length: D.parts || 0}, (_, i) => db.doc('delivpart/' + id + '_' + i)),
+      ...Array.from({length: D.xparts || 0}, (_, i) => db.doc('delivpart/' + id + '_x' + i)), db.doc('delivcnt/' + id)];
+    for (let i = 0; i < refs.length; i++){ msg(`Устгаж байна… ${i + 1}/${refs.length + 1}`); await refs[i].delete(); }
+    await db.doc('deliv/' + id).delete(); msg(`«${D.name}» устгагдлаа.`);
     for (const k of Object.keys(WS.open)) if (k.startsWith(id + '|')) delete WS.open[k];
     try{ const chk = await db.doc('deliv/' + id).get({source: 'server'}); if (chk.exists){ alert('Устгал серверт хадгалагдсангүй — интернэт холболтоо шалгаад дахин оролдоно уу.'); return; } }catch(e){ console.warn('verify', e); }
     WS.ships = WS.ships.filter(s => s.deliv !== id); delete WS.parts[id]; delete WS.pend[id]; if (WS.repId === id) renderRecon('');
