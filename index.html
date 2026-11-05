@@ -113,6 +113,10 @@ section[data-panel="req"]:not([data-mode="rec"]) #recur-card{display:none}
 .chat-day{text-align:center;font-size:11px;color:var(--muted,#888);margin:6px 0}
 .chat-compose{border-top:1px solid var(--line,#ddd);padding-top:8px}.chat-back{display:none}
 @media (max-width:760px){.chat-wrap{grid-template-columns:1fr}.chat-back{display:inline-block}.chat-wrap.mobile-list .chat-main{display:none}.chat-wrap:not(.mobile-list) .chat-side{display:none}.chat-main{height:80vh}}
+.rs-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.rs-tile{font:inherit;text-align:left;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface-2,#f3f4f0);cursor:pointer}.rs-tile.on{outline:2px solid var(--accent)}
+.rs-steps{margin-top:10px;display:flex;flex-direction:column;gap:8px}.rs-step{display:flex;gap:10px;align-items:flex-start}.rs-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;background:var(--surface-2,#eee);flex:none}
+.rs-step.done .rs-num{background:rgba(31,157,107,.18);color:#1f9d6b}.rs-step.now .rs-num{background:rgba(183,121,31,.2);color:#b7791f}.rs-step.bad .rs-num{background:rgba(192,57,43,.18);color:#c0392b}
+@media (max-width:640px){.rs-tiles{grid-template-columns:repeat(2,1fr)}}
 .wh-price{font-size:46px;font-weight:800;font-family:ui-monospace,monospace;margin:6px 0;letter-spacing:1px}
 @media (max-width:640px){.wh-big{font-size:30px}}
 body{margin:0;background:var(--bg)}
@@ -672,13 +676,13 @@ body{margin:0;background:var(--bg)}
   <section class="panel" data-panel="rqs" hidden>
     <div class="card">
       <h2 id="rs-title">Төлбөрийн хүсэлт гаргах</h2>
-      <p class="note" style="margin:0 0 8px">Хэдэн төгрөг, юуны төлөө хэрэгтэйгээ бичээд нэхэмжлэх / баримтын зургаа хавсаргана. Нягтлан шалгаад, аль данснаас, ямар зардлаар гэдгийг бөглөж эзэмшигчид илгээнэ. Хүлээн авагчийн данс мэдэгдэж байвал бичнэ үү (заавал биш).</p>
+      <p class="note" style="margin:0 0 8px">Хэдэн төгрөг, юуны төлөө хэрэгтэйгээ бичээд нэхэмжлэх / баримтын зургаа хавсаргана. Нягтлан шалгаад, аль данснаас, ямар зардлаар гэдгийг бөглөж эзэмшигчид илгээнэ. Хүлээн авагчийн <b>дансны дугаар заавал</b> — дансгүй хүсэлт илгээгдэхгүй.</p>
       <form class="grid" id="rs-form" autocomplete="off">
         <label class="f">Дүн (₮) *<input id="rs-amt" required inputmode="decimal" placeholder="150 000 эсвэл 100 500,50"></label>
         <label class="f">Салбар<select id="rs-store"></select></label>
         <label class="f full">Юуны төлөө * (юу авах, хэнд, яагаад)<textarea id="rs-what" rows="2" required placeholder="Жишээ: Онлайн дэлгүүрийн хүргэлтийн уут 500 ш, Хадаа ХХК"></textarea></label>
         <label class="f">Хүлээн авагч<input id="rs-payee" placeholder="Байгууллага / хүний нэр"></label>
-        <label class="f">Данс / IBAN<input id="rs-acc" inputmode="numeric" data-nofmt placeholder="мэдэхгүй бол хоосон"></label>
+        <label class="f">Данс / IBAN *<input id="rs-acc" required inputmode="numeric" data-nofmt placeholder="5005781234 эсвэл MN12…"></label>
         <label class="f">Банк<select id="rs-bank"></select></label>
         <label class="f">Баримт (нэхэмжлэх, зураг) — хэд хэдэн файл<input id="rs-file" type="file" multiple accept="image/*,application/pdf"></label>
         <div class="f full row"><button class="btn primary" type="submit" id="rs-submit">Нягтланд илгээх</button><button class="btn" type="button" id="rs-cancel" hidden>Засварыг болих</button><span class="note" id="rs-msg"></span></div>
@@ -2644,7 +2648,7 @@ function reqCard(r, matches){
     <div><div class="who">${esc(r.payee)}</div>
       <div class="meta">${esc(r.payeeAcc)} · ${esc(r.payeeBank||'')}</div>
       <div class="meta">Данснаас: ${esc(ACC_LABEL[r.fromAcc] || r.fromAcc || '')}${(r.fromEdits || []).length ? ` <span class="note" title="${esc(r.fromEdits.map(x => fmtDT(x.at) + ' · ' + (ACC_LABEL[x.from] || x.from) + ' → ' + (ACC_LABEL[x.to] || x.to) + ' · ' + nameOf(x.by)).join('\n'))}">(солисон: өмнө ${esc(ACC_LABEL[r.fromEdits.at(-1).from] || r.fromEdits.at(-1).from || '—')})</span>` : ''}</div>
-      ${r.requester ? `<div class="meta">📨 Хүсэлт гаргасан: ${esc(nameOf(r.requester))}</div>` : ''}
+      ${r.requester ? `<div class="meta">📨 Хүсэлт гаргасан: ${esc(nameOf(r.requester))}${r.prNo ? ' · ' + esc(r.prNo) : ''}</div>` : ''}
       <div style="margin-top:4px">${esc(r.note||'')}</div>
       <div class="note">${esc(r.category||'')}${r.store ? ' · ' + esc(String(r.store).split(',').join(', ')) + (String(r.store).includes(',') ? ' (' + (ALLOC_LABEL[r.alloc || 'sales'] || '') + ')' : '') : ''} · ${esc(nameOf(r.createdBy))} · ${esc(fmtDT(r.createdAt))}${S.approvals[r.id] && S.approvals[r.id].at && localDay(S.approvals[r.id].at) !== localDay(r.createdAt) ? ' · шийдвэрлэсэн ' + esc(fmtDT(S.approvals[r.id].at)) : ''}</div>
       ${a && a.comment ? `<div class="note">Эзэмшигчийн тайлбар: ${esc(a.comment)}</div>` : ''}
@@ -2814,7 +2818,7 @@ document.addEventListener('click', async e => {
     if (act === 'approve' || act === 'reject'){
       const cm = ($('#cm-'+CSS.escape(id)) || {}).value || '';
       await db.doc('approvals/'+id).set({decision: act === 'approve' ? 'approved' : 'rejected', amount: +r.amount, payeeAcc: r.payeeAcc, comment: cm, at: new Date().toISOString(), by: me, to: r.createdBy || null, payee: r.payee || '', notified: false});
-      if (typeof rsSync === 'function') rsSync(r, act === 'approve' ? 'approved' : 'rejected');
+      if (typeof rsSync === 'function') rsSync(r, act === 'approve' ? 'approved' : 'rejected', cm);
     } else if (act === 'edit'){
       setReqEdit(r);
     } else if (act === 'print'){
@@ -2941,9 +2945,9 @@ $('#req-form').addEventListener('submit', async e => {
       setReqEdit(null); $('#rq-msg').textContent = 'Хүсэлт засагдлаа.';
     } else {
       const D = window.RQ_DRAFT || null, attachments = (D ? (D.attachments || []) : []).concat(ups), attachId = attachments.length ? attachments[0].id : null, attachType = attachments.length ? attachments[0].type : null;
-      const extra = D ? {fromDraft: D.id, requester: D.createdBy} : {};
+      const extra = D ? {fromDraft: D.id, requester: D.createdBy, prNo: typeof rsNo === 'function' ? rsNo(D) : ''} : {};
       const ref = await db.collection('requests').add({payee, payeeAcc: acc, payeeBank: $('#rq-bank').value, amount, fromAcc: $('#rq-from').value, category: $('#rq-cat').value, store: $('#rq-store').value, alloc: $('#rq-store').value.includes(',') ? $('#rq-alloc').value : '', note: $('#rq-note').value.trim(), attachments, attachId, attachType, createdBy: me, createdAt: new Date().toISOString(), ownerNotified: false, ...extra});
-      if (D){ try{ await db.doc('reqdraft/' + D.id).update({status: 'taken', reqId: ref.id, stAt: new Date().toISOString(), stBy: me, subNotified: false}); }catch(err){ console.warn('reqdraft', err); } window.RQ_DRAFT = null; $('#rq-title').textContent = 'Шинэ төлбөрийн хүсэлт'; $('#rq-cancel-edit').hidden = true; }
+      if (D){ try{ await db.doc('reqdraft/' + D.id).update({status: 'taken', reqId: ref.id, stAt: new Date().toISOString(), stBy: me, subNotified: false, hist: firebase.firestore.FieldValue.arrayUnion({st: 'taken', at: new Date().toISOString(), by: me, note: ''})}); }catch(err){ console.warn('reqdraft', err); } window.RQ_DRAFT = null; $('#rq-title').textContent = 'Шинэ төлбөрийн хүсэлт'; $('#rq-cancel-edit').hidden = true; }
       e.target.reset(); $('#rq-msg').textContent = 'Хүсэлт илгээгдлээ.';
     }
   }catch(err){ alertMsg(err); } finally { $('#rq-submit').disabled = false; }
@@ -5212,12 +5216,29 @@ function renderInv(){
 // employee (reqsub): amount, what for, payee/account if known, files → status «new»
 // accountant (req): completes the normal request from it (from-account, category, store) → the draft is «taken» and follows the request
 const RS = {list: [], edit: null};
-const RS_ST = {new: ['Нягтланд илгээсэн', 'c-warn'], taken: ['Нягтлан бөглөж эзэмшигчид илгээсэн', 'c-acc'], returned: ['Буцаасан — засаад дахин илгээнэ үү', 'c-bad'], rejected: ['Татгалзсан', 'c-bad'],
-  approved: ['Эзэмшигч зөвшөөрсөн', 'c-ok'], paid: ['Шилжүүлсэн ✓', 'c-ok'], cancel: ['Цуцлагдсан', 'c-grey']};
+const RS_ST = {new: ['Илгээсэн — нягтлан хүлээж байна', 'c-warn'], review: ['Нягтлан хянаж байна', 'c-warn'], taken: ['Захирлын шийдвэр хүлээж байна', 'c-acc'], returned: ['Засварлах шаардлагатай', 'c-bad'],
+  rejected: ['Татгалзсан', 'c-bad'], approved: ['Батлагдсан — шилжүүлэг хүлээж байна', 'c-ok'], paid: ['Шилжүүлсэн ✓', 'c-ok'], cancel: ['Цуцлагдсан', 'c-grey']};
+// request number shown to the employee: PR-yymmdd-XXXX
+const rsNo = d => d.no || ('PR-' + String(d.createdAt || '').slice(2, 10).replace(/-/g, '') + '-' + String(d.id || '').slice(-4).toUpperCase());
+const rsHist = (st, note) => firebase.firestore.FieldValue.arrayUnion({st, at: new Date().toISOString(), by: me, note: note || ''});
+// the 4 steps of a request: sent → accountant → director → paid
+function rsSteps(d){
+  const s = d.status, H = d.hist || [], at = st => { const h = H.filter(x => (Array.isArray(st) ? st : [st]).includes(x.st)).at(-1); return h ? fmtDT(h.at) : ''; };
+  const step = (title, state, when, note) => ({title, state, when, note});
+  const acc = s === 'new' ? step('Нягтлан', 'wait', '', 'хүлээгдэж байна') : s === 'review' ? step('Нягтлан', 'now', at('review'), 'хянаж байна') : s === 'returned' ? step('Нягтлан', 'bad', at('returned'), 'засварлах шаардлагатай' + (d.comment ? ': ' + d.comment : ''))
+    : s === 'rejected' && !d.dirAt ? step('Нягтлан', 'bad', at('rejected'), 'татгалзсан' + (d.comment ? ': ' + d.comment : '')) : step('Нягтлан', 'done', at('taken'), 'бөглөж захиралд илгээсэн');
+  const dir = ['approved', 'paid'].includes(s) ? step('Захирал', 'done', fmtDT(d.dirAt || ''), 'баталсан' + (d.dirNote ? ': ' + d.dirNote : '')) : s === 'rejected' && d.dirAt ? step('Захирал', 'bad', fmtDT(d.dirAt), 'татгалзсан' + (d.dirNote ? ': ' + d.dirNote : ''))
+    : s === 'taken' ? step('Захирал', 'now', '', 'шийдвэр хүлээж байна') : step('Захирал', 'wait', '', '');
+  const pay = s === 'paid' ? step('Шилжүүлэг', 'done', at('paid'), 'шилжүүлсэн') : s === 'approved' ? step('Шилжүүлэг', 'now', '', 'удахгүй шилжинэ') : step('Шилжүүлэг', 'wait', '', '');
+  return [step('Хүсэлт илгээсэн', 'done', fmtDT(d.createdAt), ''), acc, dir, pay];
+}
+const RS_STEP = {done: ['Дууссан', 'c-ok', '✓'], now: ['Хянаж байна', 'c-warn', '●'], bad: ['Анхаар', 'c-bad', '✗'], wait: ['Хүлээгдэж байна', 'c-grey', '○']};
 const rsAtt = d => (d.attachments || []).map(a => `<a href="#" data-rs-file="${esc(a.id)}">${/pdf/.test(a.type || '') ? '📄 PDF' : '🖼 зураг'}</a>`).join(' · ');
 async function rsOpenFile(id){ const w = window.open('about:blank', '_blank'); try{ const u = await VIVIFB.fileURL(id); if (u && w) w.location = u; else if (w) w.close(); }catch(e){ if (w) w.close(); alert('Файл нээгдсэнгүй.'); } }
 // sets the status of the draft a request came from (approve / reject / paid / cancel are done on the request)
-async function rsSync(r, st){ if (!r || !r.fromDraft || !db) return; try{ await db.doc('reqdraft/' + r.fromDraft).update({status: st, stAt: new Date().toISOString(), stBy: me, subNotified: false}); }catch(e){ console.warn('reqdraft sync', e); } }
+async function rsSync(r, st, note){ if (!r || !r.fromDraft || !db) return; const now = new Date().toISOString(), u = {status: st, stAt: now, stBy: me, subNotified: false, hist: rsHist(st, note)};
+  if (st === 'approved' || st === 'rejected'){ u.dirAt = now; u.dirNote = note || ''; }
+  try{ await db.doc('reqdraft/' + r.fromDraft).update(u); }catch(e){ console.warn('reqdraft sync', e); } }
 
 // ---------- employee ----------
 function rsFill(d){
@@ -5228,23 +5249,31 @@ function rsFill(d){
   $('#rs-form').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 function renderRsMine(){
-  const el = $('#rs-list'); if (!el) return; const L = RS.list.filter(d => d.createdBy === me).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-  el.innerHTML = L.length ? L.map(d => { const st = RS_ST[d.status] || [d.status, ''];
-    return `<div class="req rs"><div><div class="who">${esc(d.what || '')}</div><div class="meta">${esc(d.payee || '')}${d.payeeAcc ? ' · ' + esc(d.payeeAcc) : ''}${d.store ? ' · ' + esc(d.store) : ''}</div>
-      <div class="note">${esc(fmtDT(d.createdAt))}${d.stAt ? ' · төлөв ' + esc(fmtDT(d.stAt)) : ''}${rsAtt(d) ? ' · ' + rsAtt(d) : ''}</div>${d.comment ? `<div class="note" style="color:var(--bad)">Нягтлангийн тайлбар: ${esc(d.comment)}</div>` : ''}</div>
-      <div style="text-align:right"><div class="amt">${fmt(d.amount)} ₮</div><div class="chips" style="justify-content:flex-end;margin-top:6px"><span class="chip ${st[1]}">${st[0]}</span></div></div>
-      ${['new', 'returned'].includes(d.status) ? `<div class="acts"><button class="btn" data-rs="edit" data-id="${esc(d.id)}">✎ Засах</button><button class="btn" data-rs="del" data-id="${esc(d.id)}">Цуцлах</button></div>` : ''}</div>`; }).join('')
-    : '<div class="empty">Хүсэлт алга. Дээрх маягтаар илгээнэ үү.</div>';
+  const el = $('#rs-list'); if (!el) return; const all = RS.list.filter(d => d.createdBy === me).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  const cnt = {all: all.length, wait: all.filter(d => ['new', 'review', 'taken', 'returned', 'approved'].includes(d.status)).length, ok: all.filter(d => ['approved', 'paid'].includes(d.status)).length, bad: all.filter(d => ['rejected', 'cancel'].includes(d.status)).length};
+  const F = RS.f || 'all', L = all.filter(d => F === 'all' || (F === 'wait' ? ['new', 'review', 'taken', 'returned', 'approved'].includes(d.status) : F === 'ok' ? ['approved', 'paid'].includes(d.status) : ['rejected', 'cancel'].includes(d.status)));
+  const tile = (k, t, n, col) => `<button class="rs-tile ${F === k ? 'on' : ''}" data-rs-f="${k}"><div class="note">${t}</div><div style="font-size:28px;font-weight:700;color:${col}">${n}</div></button>`;
+  el.innerHTML = `<div class="rs-tiles">${tile('all', 'Нийт хүсэлт', cnt.all, 'inherit')}${tile('wait', 'Хүлээгдэж буй', cnt.wait, 'var(--warn)')}${tile('ok', 'Батлагдсан', cnt.ok, 'var(--ok)')}${tile('bad', 'Татгалзсан', cnt.bad, 'var(--bad)')}</div>`
+   + (L.length ? L.map(d => { const st = RS_ST[d.status] || [d.status, '']; const open = RS.open === d.id || RS.open == null && d === L[0];
+    const steps = rsSteps(d).map((x, i) => { const S2 = RS_STEP[x.state]; return `<div class="rs-step ${x.state}"><div class="rs-num">${x.state === 'done' ? '✓' : i + 1}</div><div><b>${esc(x.title)}</b> <span class="chip ${S2[1]}">${x.state === 'now' && i === 3 ? 'Хүлээгдэж байна' : x.state === 'bad' ? (x.note.split(':')[0] || S2[0]) : S2[0]}</span><div class="note">${esc(x.when)}${x.note && x.state !== 'bad' ? (x.when ? ' · ' : '') + esc(x.note) : x.state === 'bad' && x.note.includes(':') ? ' · ' + esc(x.note.split(':').slice(1).join(':').trim()) : ''}</div></div></div>`; }).join('');
+    return `<div class="card rs-card" style="margin:10px 0 0"><div class="row" style="justify-content:space-between;gap:8px;cursor:pointer" data-rs-open="${esc(d.id)}"><div><b class="mono">${esc(rsNo(d))}</b><div style="font-size:22px;font-weight:700">${fmt(d.amount)} ₮</div><div class="note">${esc(d.what || '')} · ${esc(fmtDT(d.createdAt).slice(0, 10))}</div></div><span class="chip ${st[1]}">${st[0]}</span></div>
+      ${open ? `<div class="rs-steps">${steps}</div>
+      <div class="note" style="margin-top:6px">Хүлээн авагч: ${esc(d.payee || '—')} · ${esc(d.payeeAcc || '')} ${esc(d.payeeBank || '')}${d.store ? ' · ' + esc(d.store) : ''}${rsAtt(d) ? ' · ' + rsAtt(d) : ''}</div>
+      ${d.comment ? `<div class="note" style="color:var(--bad)">Нягтлангийн тайлбар: ${esc(d.comment)}</div>` : ''}${d.dirNote ? `<div class="note">Захирлын тайлбар: ${esc(d.dirNote)}</div>` : ''}
+      ${['new', 'returned'].includes(d.status) ? `<div class="acts" style="margin-top:6px"><button class="btn" data-rs="edit" data-id="${esc(d.id)}">✎ Засах</button><button class="btn" data-rs="del" data-id="${esc(d.id)}">Цуцлах</button></div>` : ''}` : ''}</div>`; }).join('')
+    : '<div class="empty">Энд хүсэлт алга.</div>');
 }
 $('#rs-form').addEventListener('submit', async e => {
   e.preventDefault(); if (!db) return; const amount = parseAmt($('#rs-amt').value), what = $('#rs-what').value.trim();
   if (!(amount > 0) || !what){ $('#rs-msg').textContent = 'Дүн, юуны төлөө гэдгийг бөглөнө үү.'; return; }
+  { const acc = $('#rs-acc').value.replace(/\s/g, ''), digits = acc.replace(/\D/g, '');
+    if (!acc || digits.length < 6 || !/^(MN)?\d+$/i.test(acc)){ $('#rs-msg').textContent = 'Хүлээн авагчийн дансны дугаарыг зөв бичнэ үү (зөвхөн тоо, эсвэл MN-ээр эхэлсэн IBAN). Дансгүй хүсэлт илгээгдэхгүй.'; $('#rs-acc').focus(); return; } }
   $('#rs-submit').disabled = true; $('#rs-msg').textContent = 'Илгээж байна…';
   try{ const ups = []; for (const f of [...$('#rs-file').files]){ const up = await assets.upload(f); ups.push({id: up.id, type: up.contentType}); }
     const v = {amount, what, payee: $('#rs-payee').value.trim(), payeeAcc: $('#rs-acc').value.trim().replace(/\s/g, ''), payeeBank: $('#rs-bank').value, store: $('#rs-store').value};
     const now = new Date().toISOString();
-    if (RS.edit){ const d = RS.list.find(x => x.id === RS.edit); await db.doc('reqdraft/' + RS.edit).update({...v, attachments: ((d && d.attachments) || []).concat(ups), status: 'new', editedAt: now, comment: '', notified: false}); }
-    else await db.collection('reqdraft').add({...v, attachments: ups, status: 'new', createdBy: me, createdAt: now, notified: false, subNotified: true});
+    if (RS.edit){ const d = RS.list.find(x => x.id === RS.edit); await db.doc('reqdraft/' + RS.edit).update({...v, attachments: ((d && d.attachments) || []).concat(ups), status: 'new', editedAt: now, comment: '', notified: false, hist: rsHist('new', 'засварласан')}); }
+    else { const ref = db.collection('reqdraft').doc(); await ref.set({...v, attachments: ups, status: 'new', createdBy: me, createdAt: now, notified: false, subNotified: false, no: 'PR-' + now.slice(2, 10).replace(/-/g, '') + '-' + ref.id.slice(-4).toUpperCase(), hist: [{st: 'new', at: now, by: me, note: ''}]}); }
     rsFill(null); $('#rs-msg').textContent = 'Нягтланд илгээлээ.';
   }catch(err){ console.warn(err); $('#rs-msg').textContent = err && err.code === 'too_big' ? 'PDF хэт том (700 КБ хүртэл) — зураг болгож оруулна уу.' : 'Илгээж чадсангүй.'; }
   finally { $('#rs-submit').disabled = false; }
@@ -5257,11 +5286,11 @@ $('#rs-cancel').addEventListener('click', () => rsFill(null));
   box.innerHTML = '<h2 style="margin:0 0 6px">📨 Ажилтны хүсэлт <span class="chip c-warn" id="rs-inbox-n"></span></h2><p class="note" style="margin:0 0 8px">Ажилтан дүн, юуны төлөө гэдгийг бичсэн. «Бөглөх» дарахад доорх маягт бөглөгдөнө — аль данснаас, ангилал, салбарыг сонгоод «Хүсэлт илгээх». Баримт нь хамт явна.</p><div id="rs-inbox-list"></div>';
   form.parentNode.insertBefore(box, form); })();
 function renderRsInbox(){
-  const box = $('#rs-inbox'); if (!box) return; const L = RS.list.filter(d => d.status === 'new').sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  const box = $('#rs-inbox'); if (!box) return; const L = RS.list.filter(d => d.status === 'new' || d.status === 'review').sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
   box.hidden = !(window.ALLOWX || {}).req || !L.length; $('#rs-inbox-n').textContent = L.length || '';
   const tb = $('#t-rs'); if (tb){ tb.textContent = L.length || ''; tb.hidden = !L.length || !(window.ALLOWX || {}).req; }
   $('#rs-inbox-list').innerHTML = L.map(d => `<div class="req"><div><div class="who">${esc(d.what || '')}</div><div class="meta">${esc(d.payee || '—')}${d.payeeAcc ? ' · ' + esc(d.payeeAcc) + ' · ' + esc(d.payeeBank || '') : ''}${d.store ? ' · ' + esc(d.store) : ''}</div>
-    <div class="note">📨 ${esc(nameOf(d.createdBy))} · ${esc(fmtDT(d.createdAt))}${d.editedAt ? ' · засварласан' : ''}${rsAtt(d) ? ' · ' + rsAtt(d) : ''}</div></div>
+    <div class="note"><b class="mono">${esc(rsNo(d))}</b> · ${d.status === 'review' ? '<span class="chip c-warn">хянаж байна</span> · ' : ''}📨 ${esc(nameOf(d.createdBy))} · ${esc(fmtDT(d.createdAt))}${d.editedAt ? ' · засварласан' : ''}${rsAtt(d) ? ' · ' + rsAtt(d) : ''}</div></div>
     <div style="text-align:right"><div class="amt">${fmt(d.amount)} ₮</div></div>
     <div class="acts"><button class="btn primary" data-rs="take" data-id="${esc(d.id)}">✍ Бөглөх</button><button class="btn" data-rs="ret" data-id="${esc(d.id)}">↩ Буцаах</button><button class="btn bad" data-rs="rej" data-id="${esc(d.id)}">Татгалзах</button></div></div>`).join('');
 }
@@ -5280,12 +5309,14 @@ document.addEventListener('click', async e => {
   try{
     if (b.dataset.rs === 'edit') return rsFill(d);
     if (b.dataset.rs === 'del'){ if (confirm('Энэ хүсэлтийг цуцлах уу?')) await db.doc('reqdraft/' + d.id).delete(); return; }
-    if (b.dataset.rs === 'take') return rsTake(d);
+    if (b.dataset.rs === 'take'){ rsTake(d); if (d.status === 'new') db.doc('reqdraft/' + d.id).update({status: 'review', stAt: now, stBy: me, subNotified: false, hist: rsHist('review')}).catch(e => console.warn(e)); return; }
     if (b.dataset.rs === 'ret' || b.dataset.rs === 'rej'){ const c = prompt(b.dataset.rs === 'ret' ? 'Юуг засах вэ? (ажилтанд харагдана)' : 'Татгалзсан шалтгаан (ажилтанд харагдана)', ''); if (c == null) return;
-      await db.doc('reqdraft/' + d.id).update({status: b.dataset.rs === 'ret' ? 'returned' : 'rejected', comment: c, stAt: now, stBy: me, subNotified: false}); }
+      const st2 = b.dataset.rs === 'ret' ? 'returned' : 'rejected'; await db.doc('reqdraft/' + d.id).update({status: st2, comment: c, stAt: now, stBy: me, subNotified: false, hist: rsHist(st2, c)}); }
   }catch(err){ console.warn(err); alert('Хадгалж чадсангүй.'); }
 });
 $('#rq-cancel-edit').addEventListener('click', () => { window.RQ_DRAFT = null; });
+document.addEventListener('click', e => { const t = e.target.closest('[data-rs-f]'); if (t){ RS.f = t.dataset.rsF; RS.open = undefined; renderRsMine(); return; }
+  const o = e.target.closest('[data-rs-open]'); if (o){ RS.open = RS.open === o.dataset.rsOpen ? '' : o.dataset.rsOpen; renderRsMine(); } });
 function renderRs(){ renderRsMine(); renderRsInbox(); { const s = $('#rs-store'); if (s && !s.options.length){ s.innerHTML = '<option value="">—</option>' + REQ_STORES.map(u => `<option>${esc(u)}</option>`).join(''); const bk = $('#rs-bank'); bk.innerHTML = '<option value="">—</option>' + $('#rq-bank').innerHTML; } } }
 // ===================== contracts (loans, leasing…): payment day, instalment, PDF; reminder 3 days before =====================
 const CT = {list: [], edit: null, open: '', f: 'act'};
@@ -5605,7 +5636,7 @@ $('#rq-acc').addEventListener('change', () => { const b = PAYEES.get($('#rq-acc'
   if (n) n.textContent = `Сангаас: ${b.name}${b.group ? ' · ' + b.group : ''}${b.holder ? ' · эзэмшигч ' + b.holder : ''}`; });
 // ---------- settings (owner) ----------
 let ACCESS = {emails: [], perms: {}};
-const SECTIONS_WH = [['wh','Агуулах (LPP скан)'],['rcv_fc','Хүлээн авалт – Food City'],['rcv_dr','Хүлээн авалт – Драгон'],['rcv_ns','Хүлээн авалт – Нийслэл'],['rcv_ht','Хүлээн авалт – Бөөн'],['inv','Тооллого – тоолох'],['invadm','Тооллого – удирдах (үүсгэх, тайлан, Smart файл)'],['reqsub','Хүсэлт гаргах (ажилтан: худалдан авалт, онлайн, маркетинг…)'],['contr','Гэрээ (зээл, лизинг)']];
+const SECTIONS_WH = [['wh','Агуулах (LPP скан)'],['rcv_fc','Хүлээн авалт – Food City'],['rcv_dr','Хүлээн авалт – Драгон'],['rcv_ns','Хүлээн авалт – Нийслэл'],['rcv_ht','Хүлээн авалт – Бөөн'],['inv','Тооллого – тоолох'],['invadm','Тооллого – удирдах (үүсгэх, тайлан, Smart файл)'],['reqsub','Хүсэлт гаргах — зөвхөн ажилтанд (нягтланд хэрэггүй)'],['contr','Гэрээ (зээл, лизинг)']];
 const SECTIONS = [['req','Төлбөрийн хүсэлт'],['daily','Өдрийн тайлан'],['bank','Банкны гүйлгээ'],['rev','Орлого тулгалт'],['cash','Бэлэн мөнгө'],['bal','Дансны үлдэгдэл'],['pay','Цалин'],['pl','Дотоод тайлан']];
 const DEFAULT_PERMS = {daily:false, req:true, bank:true, rev:false, cash:true, bal:true, pay:false, pl:false, wh:false, rcv_fc:false, rcv_dr:false, rcv_ns:false, rcv_ht:false, inv:false, invadm:false, reqsub:false, contr:false};
 const permsOf = e => ({...DEFAULT_PERMS, ...((ACCESS.perms || {})[e] || {})});
@@ -5615,7 +5646,7 @@ function renderAccess(){
       <div class="note">Эзэмшигч бүх хэсгийг (Агуулах, бүх дэлгүүрийн «Хүлээн авалт») харж, ажиллана — тусад нь эрх өгөх шаардлагагүй.</div></div>`;
   $('#acc-list').innerHTML = ownRow + (ACCESS.emails.length ? ACCESS.emails.map(e => { const p = permsOf(e);
     return `<div class="acc-row"><div class="row" style="justify-content:space-between"><b>${esc(e)}</b><span><button class="btn" data-preset-sub="${esc(e)}" title="Бүх эрхийг хасаад зөвхөн «Хүсэлт гаргах» үлдээнэ">Зөвхөн хүсэлт гаргагч</button> <button class="btn bad" data-rm="${esc(e)}">Хасах</button></span></div>
-      <div class="row acc-perms">${SECTIONS.concat(SECTIONS_WH).map(([k,l]) => `<label class="row" style="gap:6px;width:auto"><input type="checkbox" style="width:auto" data-perm="${k}" data-email="${esc(e)}" ${p[k] ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div></div>`; }).join('')
+      <div class="row acc-perms">${SECTIONS.concat(SECTIONS_WH).map(([k,l]) => `<label class="row" style="gap:6px;width:auto"><input type="checkbox" style="width:auto" data-perm="${k}" data-email="${esc(e)}" ${p[k] ? 'checked' : ''} ${k === 'reqsub' && p.req ? 'disabled title="«Төлбөрийн хүсэлт» эрхтэй нягтланд хэрэггүй — тэр шууд хүсэлт гаргана"' : ''}> ${esc(l)}</label>`).join('')}</div></div>`; }).join('')
     : '<div class="note">Нягтлан бүртгээгүй байна.</div>');
 }
 $('#acc-form').addEventListener('submit', async e => {
@@ -5669,7 +5700,8 @@ else VIVIFB.start(async () => {
   if (!isOwner){
     try{ const a = await db.doc('config/access').get(); const x = a.exists ? a.data() : {}; ALLOW = {...DEFAULT_PERMS, ...((x.perms || {})[String(user.email()).toLowerCase()] || {})}; }catch(e){ console.warn(e); }
   }
-  ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); ALLOW.inv = !!(ALLOW.inv || ALLOW.invadm); ALLOW.chat = true; window.ALLOWX = ALLOW; if (!isOwner && !ALLOW.req && !ALLOW.rev) $('#role').textContent = 'Ажилтан · ' + user.email();
+  ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); ALLOW.inv = !!(ALLOW.inv || ALLOW.invadm); ALLOW.chat = true; if (ALLOW.req) ALLOW.reqsub = false;   // an accountant makes real requests; the employee form is only for people without «Төлбөрийн хүсэлт»
+  window.ALLOWX = ALLOW; if (!isOwner && !ALLOW.req && !ALLOW.rev) $('#role').textContent = 'Ажилтан · ' + user.email();
   const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv', inv:'inv', reqsub:'rqs', contr:'contr', chat:'chat'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
   for (const k in TABS){ const b = document.querySelector(`nav.tabs button[data-tab="${TABS[k]}"]`); if (b) b.hidden = !ALLOW[k]; if (KPI[k]) $(KPI[k]).closest('.kpi').hidden = !ALLOW[k]; }
   { const cur = document.querySelector('nav.tabs button[aria-selected="true"]'); if (!cur || cur.hidden){ const first = [...document.querySelectorAll('nav.tabs button')].find(b => !b.hidden); if (first) showTab(first.dataset.tab); } }
