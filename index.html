@@ -98,6 +98,17 @@ section[data-panel="req"]:not([data-mode="rec"]) #recur-card{display:none}
 #recur-card td.acts .btn{padding:4px 8px}
 .wh-result{margin-top:12px;border:3px solid var(--line,#ddd);border-radius:12px;padding:18px;text-align:center;min-height:110px}
 .wh-big{font-size:40px;font-weight:700;line-height:1.15;margin-bottom:6px}
+/* chat */
+.chat-wrap{display:grid;grid-template-columns:300px 1fr;gap:12px;align-items:start}
+.chat-side{max-height:78vh;overflow:auto}.chat-main{display:flex;flex-direction:column;height:78vh}
+.chat-item{padding:8px;border-radius:8px;cursor:pointer;border:1px solid transparent}.chat-item:hover{background:var(--surface-2,#eef0ea)}.chat-item.on{border-color:var(--acc,#2a78d6);background:var(--surface-2,#eef0ea)}
+.chat-prev{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:210px;display:inline-block}
+.chat-msgs{flex:1;overflow:auto;padding:10px 4px;display:flex;flex-direction:column;gap:6px}
+.chat-msg{display:flex}.chat-msg.me{justify-content:flex-end}.chat-bub{max-width:75%;padding:7px 10px;border-radius:12px;background:var(--surface-2,#eef0ea)}
+.chat-msg.me .chat-bub{background:rgba(42,120,214,.14)}.chat-msg.hit .chat-bub{outline:2px solid #e0b000}
+.chat-day{text-align:center;font-size:11px;color:var(--muted,#888);margin:6px 0}
+.chat-compose{border-top:1px solid var(--line,#ddd);padding-top:8px}.chat-back{display:none}
+@media (max-width:760px){.chat-wrap{grid-template-columns:1fr}.chat-back{display:inline-block}.chat-wrap.mobile-list .chat-main{display:none}.chat-wrap:not(.mobile-list) .chat-side{display:none}.chat-main{height:80vh}}
 .wh-price{font-size:46px;font-weight:800;font-family:ui-monospace,monospace;margin:6px 0;letter-spacing:1px}
 @media (max-width:640px){.wh-big{font-size:30px}}
 body{margin:0;background:var(--bg)}
@@ -151,6 +162,7 @@ body{margin:0;background:var(--bg)}
     <button role="tab" data-tab="inv" aria-selected="false">Тооллого</button>
     <button role="tab" data-tab="rqs" aria-selected="false">Хүсэлт гаргах</button>
     <button role="tab" data-tab="contr" aria-selected="false">Гэрээ<span class="n" id="t-ct" hidden></span></button>
+    <button role="tab" data-tab="chat" aria-selected="false">💬 Чат<span class="n" id="t-chat" hidden></span></button>
     <button role="tab" data-tab="set" aria-selected="false" id="tab-set" hidden>Тохиргоо</button>
   </nav>
 
@@ -709,6 +721,32 @@ body{margin:0;background:var(--bg)}
     </div>
   </section>
 
+  <!-- CHAT: one-to-one, groups, a conversation under every payment request; voice messages, photos, PDF -->
+  <section class="panel" data-panel="chat" hidden>
+    <div class="chat-wrap" id="ch-wrap">
+      <div class="card chat-side" id="ch-side">
+        <div class="row" style="justify-content:space-between;gap:6px"><h2 style="margin:0">Чат</h2><button class="btn primary" id="ch-new">+ Шинэ</button></div>
+        <input id="ch-q" placeholder="🔎 Чат, мессеж хайх…" style="margin:8px 0">
+        <div id="ch-newbox" hidden style="margin-bottom:8px"></div>
+        <div id="ch-list"></div>
+      </div>
+      <div class="card chat-main" id="ch-main">
+        <div class="row" style="justify-content:space-between;gap:6px;border-bottom:1px solid var(--line,#ddd);padding-bottom:8px"><div class="row" style="gap:8px"><button class="btn chat-back" id="ch-back">←</button><div><b id="ch-title">Чат сонгоно уу</b><div class="note" id="ch-sub"></div></div></div><div id="ch-head-acts"></div></div>
+        <div id="ch-msgs" class="chat-msgs"><div class="empty">Зүүн талаас чат сонгох эсвэл «+ Шинэ» дарна уу.</div></div>
+        <div id="ch-compose" class="chat-compose" hidden>
+          <div id="ch-rec" class="note" hidden></div>
+          <div class="row" style="gap:6px;align-items:flex-end">
+            <label class="btn" title="Зураг, PDF" style="cursor:pointer">📎<input id="ch-file" type="file" multiple accept="image/*,application/pdf" hidden></label>
+            <textarea id="ch-text" rows="1" placeholder="Мессеж бичих… (Enter — илгээх, Shift+Enter — шинэ мөр)" style="flex:1;resize:none;min-height:40px;max-height:140px"></textarea>
+            <button class="btn" id="ch-mic" title="Дуут мессеж: дарж ярих, дахин дарж илгээх">🎤</button>
+            <button class="btn primary" id="ch-send">➤</button>
+          </div>
+        </div>
+        <div id="ch-ro" class="note" hidden style="padding:8px;text-align:center">👁 Зөвхөн харах — та энэ чатын гишүүн биш.</div>
+      </div>
+    </div>
+  </section>
+
   <!-- BALANCES -->
   <section class="panel" data-panel="bal" hidden>
     <div class="card">
@@ -783,6 +821,7 @@ window.VIVIFB = (() => {
       let data, type;
       if (/^image\//.test(file.type)){ data = await shrink(file); type = 'image/jpeg'; }
       else if (file.type === 'application/pdf'){ if (file.size > 15000000) throw { code: 'too_big' }; data = await readAsDataURL(file); type = 'application/pdf'; }
+      else if (/^audio\//.test(file.type)){ if (file.size > 8000000) throw { code: 'too_big' }; data = await readAsDataURL(file); type = file.type.split(';')[0]; }
       else throw { code: 'type' };
       const ref = db.collection('files').doc(), CH = 900000;
       if (data.length <= CH) await ref.set({ data, type, by: current.uid, at: new Date().toISOString() });
@@ -2576,6 +2615,7 @@ function renderInner(){
   try{ renderInv(); }catch(e){ console.warn('inv', e); }
   try{ renderRs(); }catch(e){ console.warn('rs', e); }
   try{ renderContr(); }catch(e){ console.warn('contr', e); }
+  try{ renderChat(); }catch(e){ console.warn('chat', e); }
   try{ renderDaily(); }catch(e){ console.warn('daily', e); }
 }
 function reqCard(r, matches){
@@ -2587,6 +2627,7 @@ function reqCard(r, matches){
   if (canWrite && s === 'approved') acts += `<button class="btn primary" data-act="paid" data-id="${esc(r.id)}">Шилжүүлсэн гэж тэмдэглэх</button>`;
   if (s === 'approved' || s === 'paid') acts += `<button class="btn" data-act="print" data-id="${esc(r.id)}">🖨 Зарлагын баримт</button>`;
   if (canWrite && s === 'paid') acts += `<select data-fromacc="${esc(r.id)}" style="width:auto" title="Бодитоор аль данснаас шилжүүлсэн"><option value="">🏦 Данс солих…</option>${FROM_ACCS.filter(([a]) => a !== r.fromAcc).map(([a, l]) => `<option value="${a}">${esc(l)}</option>`).join('')}</select>`;
+  if (typeof chatBtn === 'function') acts += chatBtn(r);
   if (canWrite && s !== 'rejected' && s !== 'pending' && s !== 'hold') acts += `<label class="btn" style="cursor:pointer">📎 Баримт нэмэх<input type="file" multiple accept="image/*,application/pdf" hidden data-attach="${esc(r.id)}"></label>`;
   if (canWrite && (s === 'pending' || s === 'hold') && (r.createdBy === me || isOwner)) acts += `<button class="btn" data-act="edit" data-id="${esc(r.id)}">✎ Засах</button>`;
   if (canWrite && (s === 'pending' || s === 'hold') && r.createdBy === me) acts += `<button class="btn" data-act="cancel" data-id="${esc(r.id)}">Цуцлах</button>`;
@@ -5338,6 +5379,143 @@ document.addEventListener('click', async e => {
     const cat = [...$('#rq-cat').options].find(o => /зээл/i.test(o.text)); if (cat) $('#rq-cat').value = cat.value;
     $('#rq-note').value = `${c.kind || 'Зээл'}ийн төлбөр: ${c.name}${c.no ? ' №' + c.no : ''} · ${s.next.d}`; $('#rq-msg').textContent = 'Гэрээнээс бөглөсөн — шалгаад илгээнэ үү.'; }
 });
+// ===================== chat: one-to-one, groups, a thread under each payment request =====================
+// chats/{cid}: type dm|group|req, name, members [uid], last {t, at, by}, n, read {uid: iso}, reqId
+// msgs/{mid}: cid, members (copy, for the rules), by, at, t (text), files [{id, type, name}], au {id, type, dur}, notified
+// the owner sees every chat (section «👁 Бусад чат»); reading there leaves no trace (no read mark, no membership, no input)
+const CH = {chats: [], users: {}, open: '', msgs: {}, sub: null, subCid: '', q: '', rec: null, newSel: new Set(), mobileList: true};
+try{ const q = new URLSearchParams(location.search); if (q.get('c') && q.get('tab') === 'chat') CH.open = q.get('c'); }catch(e){}
+const chName = uid => uid === me ? 'Та' : ((CH.users[uid] || {}).name || S.names[uid] || (CH.users[uid] || {}).email || 'Хэрэглэгч');
+const chIsMember = c => !!c && (c.members || []).includes(me);
+const chUnread = c => chIsMember(c) && c.last && c.last.by !== me && String(c.last.at || '') > String((c.read || {})[me] || '');
+const chTitle = c => { if (!c) return ''; if (c.type === 'dm'){ const o = (c.members || []).find(u => u !== me) || (c.members || [])[0]; return chIsMember(c) ? chName(o) : (c.members || []).map(chName).join(' ↔ '); }
+  if (c.type === 'req'){ const r = (S.requests || []).find(x => x.id === c.reqId); return '💳 ' + (r ? `${r.payee} · ${fmt(r.amount)} ₮` : (c.name || 'Хүсэлт')); } return '👥 ' + (c.name || 'Бүлэг'); };
+async function chLoadUsers(){ if (!db) return; try{ const s = await db.collection('users').get(); for (const d of s.docs) CH.users[d.id] = d.data(); }catch(e){ console.warn('users', e); } }
+function chSubMsgs(cid){
+  if (CH.subCid === cid) return; if (CH.sub){ try{ CH.sub(); }catch(e){} } CH.sub = null; CH.subCid = cid; if (!cid || !db) return;
+  let q = db.collection('msgs').where('cid', '==', cid); if (!isOwner) q = q.where('members', 'array-contains', me);
+  CH.sub = q.onSnapshot(s => { CH.msgs[cid] = s.docs.map(d => ({id: d.id, ...d.data()})).sort((a, b) => String(a.at).localeCompare(String(b.at))); renderChatMsgs(); chMarkRead(); }, e => console.warn('msgs', e));
+}
+async function chMarkRead(){ const c = CH.chats.find(x => x.id === CH.open); if (!c || !chIsMember(c) || !chUnread(c) || document.hidden || $('section[data-panel="chat"]').hidden) return;
+  try{ await db.doc('chats/' + c.id).update({['read.' + me]: new Date().toISOString()}); }catch(e){ console.warn('read', e); } }
+const chReadOf = (c, uid) => (c.read || {})[uid] || '';
+
+// ---------- list ----------
+function renderChat(){
+  const el = $('#ch-list'); if (!el) return;
+  const q = CH.q.toLowerCase(), M = c => !q || chTitle(c).toLowerCase().includes(q) || String((c.last || {}).t || '').toLowerCase().includes(q);
+  const mine = CH.chats.filter(chIsMember).filter(M).sort((a, b) => String((b.last || {}).at || b.createdAt).localeCompare(String((a.last || {}).at || a.createdAt)));
+  const other = isOwner ? CH.chats.filter(c => !chIsMember(c)).filter(M).sort((a, b) => String((b.last || {}).at || '').localeCompare(String((a.last || {}).at || ''))) : [];
+  const row = c => `<div class="chat-item ${c.id === CH.open ? 'on' : ''}" data-ch-open="${esc(c.id)}"><div class="row" style="justify-content:space-between;gap:6px"><b>${esc(chTitle(c))}</b><span class="note">${c.last ? esc(fmtDT(c.last.at).slice(5, 16)) : ''}</span></div>
+    <div class="row" style="justify-content:space-between;gap:6px"><span class="note chat-prev">${c.last ? esc((c.last.by === me ? 'Та: ' : (c.type !== 'dm' ? chName(c.last.by) + ': ' : '')) + c.last.t) : 'мессеж алга'}</span>${chUnread(c) ? '<span class="chip c-bad">●</span>' : ''}</div></div>`;
+  const grp = (t, L) => L.length ? `<div class="note" style="margin:8px 0 4px;font-weight:700">${t}</div>` + L.map(row).join('') : '';
+  el.innerHTML = (grp('Чат', mine.filter(c => c.type !== 'req')) + grp('💳 Хүсэлтийн чат', mine.filter(c => c.type === 'req')) + grp('👁 Бусад чат (зөвхөн танд харагдана)', other)) || '<div class="empty">Чат алга — «+ Шинэ» дарна уу.</div>';
+  const n = CH.chats.filter(chUnread).length, tb = $('#t-chat'); if (tb){ tb.textContent = n || ''; tb.hidden = !n; }
+  $('#ch-wrap').classList.toggle('mobile-list', CH.mobileList || !CH.open);
+  renderChatHead(); if (CH.open) chSubMsgs(CH.open);
+}
+function renderChatHead(){
+  const c = CH.chats.find(x => x.id === CH.open) || CH.pending;
+  $('#ch-title').textContent = c ? chTitle(c) : 'Чат сонгоно уу';
+  $('#ch-sub').textContent = c ? (c.members || []).map(chName).join(', ') : '';
+  const member = c && (chIsMember(c) || c === CH.pending); $('#ch-compose').hidden = !member; $('#ch-ro').hidden = !c || member;
+  $('#ch-head-acts').innerHTML = c && c.type === 'req' ? `<button class="btn" data-ch-req="${esc(c.reqId)}">Хүсэлт харах</button>` : '';
+  if (!c) $('#ch-msgs').innerHTML = '<div class="empty">Зүүн талаас чат сонгох эсвэл «+ Шинэ» дарна уу.</div>';
+}
+function renderChatMsgs(){
+  const box = $('#ch-msgs'); const c = CH.chats.find(x => x.id === CH.open) || CH.pending; if (!c) return;
+  const L = CH.msgs[c.id] || [], q = CH.q.toLowerCase(), atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+  let day = '';
+  box.innerHTML = L.length ? L.map((m, i) => { const mineM = m.by === me, d = localDay(m.at); const sep = d !== day ? `<div class="chat-day">${esc(d)}</div>` : ''; day = d;
+    const hit = q && String(m.t || '').toLowerCase().includes(q);
+    const files = (m.files || []).map(f => /^image\//.test(f.type) ? `<a href="#" data-file="${esc(f.id)}"><img class="thumb" data-file-img="${esc(f.id)}" alt="зураг" style="max-width:220px"></a>` : `<a href="#" data-file="${esc(f.id)}">📄 ${esc(f.name || 'PDF')}</a>`).join(' ');
+    const au = m.au ? `<button class="btn chat-play" data-ch-play="${esc(m.au.id)}" data-type="${esc(m.au.type || '')}">▶ ${m.au.dur ? Math.floor(m.au.dur / 60) + ':' + String(Math.round(m.au.dur % 60)).padStart(2, '0') : ''} дуут мессеж</button>` : '';
+    const last = mineM && i === L.length - 1 && chIsMember(c), others = (c.members || []).filter(u => u !== me), seen = others.filter(u => String(chReadOf(c, u)) >= String(m.at));
+    return sep + `<div class="chat-msg ${mineM ? 'me' : ''} ${hit ? 'hit' : ''}"><div class="chat-bub">${!mineM || !chIsMember(c) ? `<div class="note" style="font-weight:700">${esc(chName(m.by))}</div>` : ''}${m.t ? `<div style="white-space:pre-wrap">${esc(m.t)}</div>` : ''}${files}${au}
+      <div class="note" style="text-align:right">${esc(String(fmtDT(m.at)).slice(11, 16))}${last ? (c.type === 'dm' ? (seen.length ? ' · ✓✓ уншсан' : ' · ✓') : ` · уншсан ${seen.length}/${others.length}`) : ''}</div></div></div>`; }).join('')
+    : '<div class="empty">Мессеж алга. Эхний мессежээ бичнэ үү.</div>';
+  if (typeof hydrateFiles === 'function') hydrateFiles(); else $$('img[data-file-img]').forEach(img => { if (img.src) return; VIVIFB.fileURL(img.dataset.fileImg).then(u => { if (u) img.src = u; }).catch(() => {}); });
+  if (atBottom || CH.scrollDown){ box.scrollTop = box.scrollHeight; CH.scrollDown = false; }
+}
+
+// ---------- open / create ----------
+function chOpen(cid, pending){ CH.open = cid; CH.pending = pending || null; CH.mobileList = false; CH.scrollDown = true; renderChat(); renderChatMsgs(); chMarkRead(); }
+const ownerUid = () => Object.keys(CH.users).find(u => String((CH.users[u] || {}).email || '').toLowerCase() === String(VIVIFB.OWNER || '').toLowerCase());
+async function chDm(uid){ const ids = [me, uid].sort(), cid = 'dm_' + ids.join('_'); chOpen(cid, CH.chats.some(c => c.id === cid) ? null : {id: cid, type: 'dm', members: ids, createdBy: me}); }
+// the conversation under a payment request: accountants, the owner, who made it and the employee who asked for it
+async function chForReq(reqId){
+  const cid = 'req_' + reqId; showTab('chat'); if (CH.chats.some(c => c.id === cid)) return chOpen(cid);
+  const r = (S.requests || []).find(x => x.id === reqId) || {}; let acc = {}; try{ const a = await db.doc('config/access').get(); acc = a.exists ? a.data() : {}; }catch(e){}
+  const reqEmails = Object.entries(acc.perms || {}).filter(([, p]) => p && p.req).map(([e]) => e.toLowerCase());
+  const members = [...new Set([me, ownerUid(), r.createdBy, r.requester, ...Object.keys(CH.users).filter(u => reqEmails.includes(String((CH.users[u] || {}).email || '').toLowerCase()))].filter(Boolean))];
+  chOpen(cid, {id: cid, type: 'req', reqId, name: `${r.payee || ''} · ${fmt(r.amount)} ₮`, members, createdBy: me});
+}
+function renderChNew(){
+  const box = $('#ch-newbox'); const U = Object.entries(CH.users).filter(([u]) => u !== me).sort((a, b) => String(a[1].name || '').localeCompare(String(b[1].name || '')));
+  box.innerHTML = `<div class="banner"><b>Шинэ чат</b><div class="note">Нэг хүн сонговол хувийн чат, хэд хэдэн хүн сонговол бүлэг.</div>
+    <div style="max-height:220px;overflow:auto;margin:6px 0">${U.map(([u, x]) => `<label class="row note" style="gap:6px;width:auto;display:flex"><input type="checkbox" data-ch-u="${esc(u)}" ${CH.newSel.has(u) ? 'checked' : ''} style="width:auto"> <b>${esc(x.name || x.email)}</b> <span>${esc(x.email || '')}</span></label>`).join('') || '<div class="note">Хэрэглэгч алга (системд нэвтэрсэн хүмүүс энд гарна).</div>'}</div>
+    <input id="ch-gname" placeholder="Бүлгийн нэр (хэд хэдэн хүн бол)" ${CH.newSel.size > 1 ? '' : 'hidden'}><div class="row" style="gap:6px;margin-top:6px"><button class="btn primary" id="ch-create" ${CH.newSel.size ? '' : 'disabled'}>Эхлүүлэх</button><button class="btn" id="ch-newx">Болих</button></div></div>`;
+}
+
+// ---------- send ----------
+async function chSend(extra){
+  const c = CH.chats.find(x => x.id === CH.open) || CH.pending; if (!c || !db) return; const t = $('#ch-text').value.trim(); if (!t && !extra) return;
+  const now = new Date().toISOString(), members = c.members || [], ref = db.collection('msgs').doc();
+  const m = {cid: c.id, members, by: me, at: now, t, notified: false, ...(extra || {})};
+  const prev = (m.au ? '🎤 дуут мессеж' : (m.files || []).length ? '📎 ' + (t || 'файл') : t).slice(0, 120);
+  try{
+    if (!CH.chats.some(x => x.id === c.id)){ const base = {type: c.type, members, createdBy: me, createdAt: now, n: 0, read: {}}; if (c.name) base.name = c.name; if (c.reqId) base.reqId = c.reqId; await db.doc('chats/' + c.id).set(base); CH.pending = null; }
+    const b = db.batch(); b.set(ref, m); b.update(db.doc('chats/' + c.id), {last: {t: prev, at: now, by: me}, n: firebase.firestore.FieldValue.increment(1), ['read.' + me]: now}); await b.commit();
+    if (!extra){ $('#ch-text').value = ''; $('#ch-text').style.height = ''; } CH.scrollDown = true;
+  }catch(err){ console.warn(err); alert('Илгээж чадсангүй.'); }
+}
+async function chFiles(files){
+  const ups = []; for (const f of files){ try{ const up = await assets.upload(f); ups.push({id: up.id, type: up.contentType, name: f.name}); }catch(e){ alert('Файл илгээгдсэнгүй: ' + f.name); } }
+  if (ups.length) await chSend({files: ups});
+}
+// voice: tap 🎤 to record, tap again to send (✕ cancels)
+async function chMic(){
+  if (CH.rec){ CH.rec.stop(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder){ alert('Энэ төхөөрөмж дуу бичихийг дэмжихгүй байна.'); return; }
+  let stream; try{ stream = await navigator.mediaDevices.getUserMedia({audio: true}); }catch(e){ alert('Микрофоны зөвшөөрөл өгнө үү.'); return; }
+  const type = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+  const rec = new MediaRecorder(stream, type ? {mimeType: type, audioBitsPerSecond: 24000} : {}), chunks = [], t0 = Date.now(); CH.rec = rec; CH.recCancel = false;
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  const tick = setInterval(() => { const s = Math.round((Date.now() - t0) / 1000); $('#ch-rec').innerHTML = `🔴 Бичиж байна ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} — 🎤 дахин дарж илгээнэ · <a href="#" id="ch-rec-x">✕ болих</a>`; if (s >= 300) rec.stop(); }, 300);
+  $('#ch-rec').hidden = false; $('#ch-mic').textContent = '⏹';
+  rec.onstop = async () => { clearInterval(tick); stream.getTracks().forEach(t => t.stop()); CH.rec = null; $('#ch-mic').textContent = '🎤'; $('#ch-rec').hidden = true;
+    if (CH.recCancel || !chunks.length) return; const blob = new Blob(chunks, {type: (rec.mimeType || type || 'audio/webm').split(';')[0]}), dur = (Date.now() - t0) / 1000;
+    if (dur < 0.7) return; const f = new File([blob], 'voice.' + (/mp4|aac/.test(blob.type) ? 'm4a' : 'webm'), {type: blob.type});
+    $('#ch-rec').hidden = false; $('#ch-rec').textContent = 'Илгээж байна…';
+    try{ const up = await assets.upload(f); await chSend({au: {id: up.id, type: blob.type, dur: Math.round(dur)}}); }catch(e){ console.warn(e); alert('Дуут мессеж илгээгдсэнгүй.'); } finally { $('#ch-rec').hidden = true; } };
+  rec.start(1000);
+}
+
+// ---------- events ----------
+document.addEventListener('click', async e => {
+  const o = e.target.closest('[data-ch-open]'); if (o){ chOpen(o.dataset.chOpen); return; }
+  const p = e.target.closest('[data-ch-play]'); if (p){ const id = p.dataset.chPlay; p.disabled = true; try{ const u = await VIVIFB.fileURL(id); const a = document.createElement('audio'); a.controls = true; a.src = u; a.style.maxWidth = '240px'; p.replaceWith(a); a.play().catch(() => {}); }catch(err){ p.disabled = false; alert('Тоглуулж чадсангүй.'); } return; }
+  const rq = e.target.closest('[data-chat-req]'); if (rq){ e.preventDefault(); return chForReq(rq.dataset.chatReq); }
+  const hv = e.target.closest('[data-ch-req]'); if (hv){ showTab('req'); setTimeout(() => { const el = document.querySelector(`[data-req="${CSS.escape(hv.dataset.chReq)}"]`); if (el) el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 300); return; }
+  if (e.target.id === 'ch-rec-x'){ e.preventDefault(); CH.recCancel = true; if (CH.rec) CH.rec.stop(); return; }
+  if (e.target.id === 'ch-new'){ const b = $('#ch-newbox'); b.hidden = !b.hidden; CH.newSel = new Set(); if (!b.hidden){ await chLoadUsers(); renderChNew(); } return; }
+  if (e.target.id === 'ch-newx'){ $('#ch-newbox').hidden = true; return; }
+  if (e.target.id === 'ch-create'){ const sel = [...CH.newSel]; $('#ch-newbox').hidden = true;
+    if (sel.length === 1) return chDm(sel[0]);
+    const name = ($('#ch-gname') || {}).value || sel.map(chName).join(', '); const cid = db.collection('chats').doc().id;
+    try{ await db.doc('chats/' + cid).set({type: 'group', name: name.trim(), members: [me, ...sel], createdBy: me, createdAt: new Date().toISOString(), n: 0, read: {}}); chOpen(cid); }catch(err){ alert('Бүлэг үүсгэж чадсангүй.'); } return; }
+  if (e.target.id === 'ch-back'){ CH.mobileList = true; renderChat(); return; }
+  if (e.target.id === 'ch-send') return chSend();
+  if (e.target.id === 'ch-mic') return chMic();
+});
+document.addEventListener('change', e => { const u = e.target.closest('input[data-ch-u]'); if (!u) return; if (u.checked) CH.newSel.add(u.dataset.chU); else CH.newSel.delete(u.dataset.chU); renderChNew(); });
+$('#ch-file').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; if (f.length) chFiles(f); });
+$('#ch-text').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); chSend(); } });
+$('#ch-text').addEventListener('input', e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(140, e.target.scrollHeight) + 'px'; });
+$('#ch-q').addEventListener('input', e => { CH.q = e.target.value; renderChat(); renderChatMsgs(); });
+document.addEventListener('visibilitychange', chMarkRead);
+// a chat button under every payment request (count of messages, ● when unread)
+function chatBtn(r){ const c = CH.chats.find(x => x.id === 'req_' + r.id); return `<button class="btn" data-chat-req="${esc(r.id)}" title="Энэ хүсэлтийн чат">💬${c && c.n ? ' ' + c.n : ''}${c && chUnread(c) ? ' <span style="color:var(--bad)">●</span>' : ''}</button>`; }
 
 function payUsedLabel(t){                     // bank tab: salary transfers explained by an approved payroll list
   if (!PS.lists.length && !Object.keys(payExempt()).length) return null;
@@ -5436,14 +5614,16 @@ else VIVIFB.start(async () => {
   if (!isOwner){
     try{ const a = await db.doc('config/access').get(); const x = a.exists ? a.data() : {}; ALLOW = {...DEFAULT_PERMS, ...((x.perms || {})[String(user.email()).toLowerCase()] || {})}; }catch(e){ console.warn(e); }
   }
-  ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); ALLOW.inv = !!(ALLOW.inv || ALLOW.invadm); window.ALLOWX = ALLOW;
-  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv', inv:'inv', reqsub:'rqs', contr:'contr'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
+  ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); ALLOW.inv = !!(ALLOW.inv || ALLOW.invadm); ALLOW.chat = true; window.ALLOWX = ALLOW; if (!isOwner && !ALLOW.req && !ALLOW.rev) $('#role').textContent = 'Ажилтан · ' + user.email();
+  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv', inv:'inv', reqsub:'rqs', contr:'contr', chat:'chat'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
   for (const k in TABS){ const b = document.querySelector(`nav.tabs button[data-tab="${TABS[k]}"]`); if (b) b.hidden = !ALLOW[k]; if (KPI[k]) $(KPI[k]).closest('.kpi').hidden = !ALLOW[k]; }
   { const cur = document.querySelector('nav.tabs button[aria-selected="true"]'); if (!cur || cur.hidden){ const first = [...document.querySelectorAll('nav.tabs button')].find(b => !b.hidden); if (first) showTab(first.dataset.tab); } }
   if (!Object.values(ALLOW).some(Boolean)) gate('Танд харах хэсэг сонгогдоогүй байна. Эзэмшигчид хандана уу.', true);
   if (ALLOW.req) db.collection('requests').onSnapshot(s => { S.requests = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.requests.map(r => r.createdBy)); render(); }, onErr);
   if (ALLOW.req) db.collection('reqdraft').onSnapshot(s => { RS.list = s.docs.map(d => ({id: d.id, ...d.data()})); resolveNames(RS.list.map(x => x.createdBy)); render(); }, onErr);
   else if (ALLOW.reqsub) db.collection('reqdraft').where('createdBy', '==', me).onSnapshot(s => { RS.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+  chLoadUsers().then(render);
+  (isOwner ? db.collection('chats') : db.collection('chats').where('members', 'array-contains', me)).onSnapshot(s => { CH.chats = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.contr) db.collection('contracts').onSnapshot(s => { CT.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.inv) db.collection('inv').onSnapshot(s => { IV.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.wh || ALLOW.rcv) db.doc('config/wh').onSnapshot(d => { WS.cfg = d.exists ? d.data() : null; render(); }, onErr);
