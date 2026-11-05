@@ -2198,18 +2198,21 @@ const INV = (() => {
     const C = {}, outside = {}, unknown = {};
     const homeOf = c => { const L = (byCode[c] || []).filter(inF); if (L.length) return L.sort((a, b) => b.q - a.q)[0].l; return null; };
     const add = (l, c, n) => { const k = l + '|' + c; C[k] = (C[k] || 0) + n; };
+    const wrong = {};   // counted in a zone of one location, Smart keeps the code on another one
+    const noteWrong = (c, zl, n, zname) => { const at = (byCode[c] || []).filter(x => scope.has(x.l)); if (!at.length || at.some(x => x.l === zl)) return; const o = wrong[c + '|' + zl] = wrong[c + '|' + zl] || {c, name: at[0].n, from: at.map(x => x.l).join(', '), to: zl, n: 0, zones: new Set()}; o.n += n; o.zones.add(zname); };
     const total = {};   // per code, all zones
     for (const [zi, M] of Object.entries(counts || {})){ const z = zones[+zi] || {}; for (const [c, n] of Object.entries(M || {})){ if (!n) continue; total[c] = total[c] || {n: 0, z: {}}; total[c].n += n; total[c].z[zi] = (total[c].z[zi] || 0) + n; } }
     for (const [c, n] of Object.entries(re || {})) if (n != null){ total[c] = total[c] || {n: 0, z: {}}; total[c].re = n; }
     for (const [c, T] of Object.entries(total)){
       const home = homeOf(c);
       if (T.re != null){   // recount: the whole quantity of this code, on its own location
+        for (const [zi, n] of Object.entries(T.z)){ const zl = (zones[+zi] || {}).l || ''; if (zl && home) noteWrong(c, zl, n, (zones[+zi] || {}).z); }
         const l = home || (Object.keys(T.z).map(zi => (zones[+zi] || {}).l).find(Boolean));
         if (l && scope.has(l) && home) add(l, c, T.re); else if ((byCode[c] || []).length) outside[c] = {c, n: T.re, at: byCode[c].map(x => x.l).join(', '), name: byCode[c][0].n}; else unknown[c] = {c, n: T.re, zones: Object.keys(T.z).map(zi => (zones[+zi] || {}).z).join(', ')};
         continue; }
       for (const [zi, n] of Object.entries(T.z)){ const zl = (zones[+zi] || {}).l || '';
         const l = zl || home;
-        if (l && scope.has(l) && (home || !(byCode[c] || []).length)) add(l, c, n);
+        if (l && scope.has(l) && (home || !(byCode[c] || []).length)){ add(l, c, n); if (zl && home) noteWrong(c, zl, n, (zones[+zi] || {}).z); }
         else if ((byCode[c] || []).length){ const o = outside[c] = outside[c] || {c, n: 0, at: byCode[c].map(x => x.l).join(', '), name: byCode[c][0].n}; o.n += n; }
         else { const u = unknown[c] = unknown[c] || {c, n: 0, zones: ''}; u.n += n; u.zones = [...new Set([...u.zones.split(', ').filter(Boolean), (zones[+zi] || {}).z])].join(', '); } }
     }
@@ -2221,10 +2224,16 @@ const INV = (() => {
     lines.sort((a, b) => a.l.localeCompare(b.l) || a.c.localeCompare(b.c));
     const sum = {}; for (const x of lines){ const o = sum[x.l] = sum[x.l] || {l: x.l, lines: 0, b: 0, cnt: 0, s: 0, e: 0, short: 0, shortN: 0, over: 0, overN: 0, ok: 0, imp: 0};
       o.lines++; o.b += x.b; o.cnt += x.cnt; o.s += x.s; o.e += x.e; o.imp += x.imp; if (x.d < 0){ o.short += -x.d; o.shortN++; } else if (x.d > 0){ o.over += x.d; o.overN++; } else o.ok++; }
-    return {lines, sum, outside: Object.values(outside), unknown: Object.values(unknown)};
+    return {lines, sum, outside: Object.values(outside), unknown: Object.values(unknown), wrong: Object.values(wrong).map(o => ({...o, zones: [...o.zones].join(', ')}))};
   }
   // pieces to check again: the biggest differences (before the sales correction is known, the raw count)
-  function recountList(res, max){ return res.lines.filter(x => x.d !== 0).sort((a, b) => Math.abs(b.d) - Math.abs(a.d) || b.b - a.b).slice(0, max || 100); }
+  // first the shortages of codes also sold during the count (only a recount at the end tells a sale after counting from a real loss),
+  // then the biggest differences
+  //  (a code whose shortage the sales explain may also be a loss sold after counting → it is checked too); one row per code
+  function recountList(res, max){ const amb = x => x.e > 0 || (x.d < 0 && x.s > 0) ? 1 : 0;
+    const L = res.lines.filter(x => x.d !== 0 || x.e > 0).sort((a, b) => amb(b) - amb(a) || Math.abs(b.d) - Math.abs(a.d) || b.b - a.b), seen = {}, out = [];
+    for (const x of L){ if (seen[x.c]){ if (!seen[x.c].l.split(', ').includes(x.l)) seen[x.c].l += ', ' + x.l; seen[x.c].d += x.d; continue; } seen[x.c] = {...x}; out.push(seen[x.c]); }
+    return out.slice(0, max || 100); }
   // Smart «Count» import: Barcode, Qty, ItemId, UnitCost (cost is filled by Smart)
   function countAoa(lines){ return [['Barcode', 'Qty', 'ItemId', 'UnitCost'], ['Бааркод', 'Тоо хэмжээ', 'Барааны код', 'Нэгж өртөг'], ...lines.map(x => [x.c, x.imp, x.c, null])]; }
   const R = {fmatch, parseAging, parseSales, compute, recountList, countAoa, storeOfLoc, codeOf};
@@ -4927,13 +4936,14 @@ async function renderIvRep(){
     ${ivAdm() ? `<div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
       <label class="btn" style="cursor:pointer">🧾 Тооллогын үеийн борлуулалт (Smart «Борлуулалтын жагсаалт»)<input type="file" id="iv-sales-file" accept=".xlsx,.xls" hidden></label>
       <button class="btn" data-iv-mkre="${esc(id)}">🔁 Дахин тоолох жагсаалт үүсгэх</button>
-      <button class="btn primary" data-iv-x="${esc(id)}">📊 Тайлан Excel</button></div>
+      <button class="btn primary" data-iv-x="${esc(id)}">📊 Тайлан Excel</button><button class="btn" data-iv-countall="1">📥 Count — бүх байршил</button><button class="btn" data-iv-act="${esc(id)}">🖨 Тооллогын акт</button>${I.recount && I.recount.length ? `<button class="btn" data-iv-reprint="${esc(id)}">🖨 Дахин тоолох жагсаалт</button>` : ''}</div>
       <div class="note" style="margin-top:4px">${I.sales ? `Борлуулалт: ${esc(I.sales.d0)} – ${esc(I.sales.d1)} · ${fmt(I.sales.lines)} мөр (${esc(I.sales.file || '')}).` : '<b style="color:var(--warn)">Тооллогын үеийн борлуулалт оруулаагүй</b> — дэлгүүр нээлттэй үед тоолсон бол заавал оруулна: тоолохоос өмнө зарагдсан бараа «дутуу» гэж харагдахгүй, Count файл одоогийн үлдэгдлээр гарна.'}
       Count файлд байршлын <b>бүх</b> код орно (олдоогүй = 0) — байршлын бүх бүсийг дуусгаад, борлуулалтаа оруулсны дараа татна. Smart өртгийг өөрөө бөглөнө.${I.recount && I.recount.length ? ` Дахин тоолох жагсаалт: ${I.recount.length} код.` : ''}</div>` : ''}
     <div class="filter chips" id="iv-rep-f" style="margin:10px 0 6px">${[['short', 'Дутуу'], ['over', 'Илүү'], ['sold', 'Борлуулалтаар тайлбарласан'], ['loc', 'Өөр байршилд бүртгэлтэй'], ['all', 'Бүх код']].map(([v, t]) => `<button data-f="${v}" aria-pressed="${f === v}">${t}</button>`).join('')}</div>
     <div class="tbl" style="max-height:440px;overflow:auto"><table><thead><tr><th>Код</th><th>Бараа</th><th>Байршил</th><th class="n">Smart</th><th class="n">Тоолсон</th><th class="n">Борлуулалт</th><th class="n">Зөрүү</th><th class="n">Count-д</th><th>Нас</th></tr></thead><tbody>${rows.slice(0, 400).map(x => `<tr><td class="mono">${esc(x.c)}</td><td>${esc(x.n)}</td><td>${esc(x.l)}${x.other ? `<div class="note">мөн ${esc(x.other)}</div>` : ''}</td><td class="n">${fmt(x.b)}</td><td class="n">${fmt(x.cnt)}</td><td class="n">${x.s ? fmt(x.s) + (x.e ? ` <span class="note">(${x.e} тайлб.)</span>` : '') : '–'}</td><td class="n"><b style="color:${x.d < 0 ? 'var(--bad)' : x.d > 0 ? 'var(--warn)' : 'inherit'}">${x.d > 0 ? '+' : ''}${fmt(x.d)}</b></td><td class="n">${fmt(x.imp)}</td><td class="note">${x.ag && x.ag.length ? AGE.map((a, i) => x.ag[i] ? a + ':' + x.ag[i] : '').filter(Boolean).join(' ') : ''}</td></tr>`).join('') || '<tr><td colspan="9" class="empty">–</td></tr>'}</tbody></table></div>
     ${rows.length > 400 ? `<div class="note">Эхний 400 мөр — бүгдийг Excel-ээр.</div>` : ''}
     ${res.unknown.length ? `<div class="banner bad" style="margin-top:8px"><b>Smart-ын үлдэгдэлд байхгүй код (${res.unknown.length}):</b> ${res.unknown.slice(0, 40).map(u => `${esc(u.c)} ×${u.n}${u.zones ? ' (' + esc(u.zones) + ')' : ''}`).join(', ')} — Count файлд орохгүй, шалгана уу.</div>` : ''}
+    ${res.wrong.length ? `<div class="banner" style="margin-top:8px"><b>Буруу байршилд байсан бараа (${res.wrong.length} код, ${fmt(res.wrong.reduce((a, o) => a + o.n, 0))} ш):</b> ${res.wrong.slice(0, 30).map(o => `${esc(o.c)} ×${o.n} ${esc(o.from)} → ${esc(o.to)}`).join(', ')} — Count файлд тоолсон байршлаараа орно (нэг байршилд илүү, нөгөөд дутуу); барааг буцааж байранд нь тавина.</div>` : ''}
     ${res.outside.length ? `<div class="banner" style="margin-top:8px"><b>Тооллогын бус байршилд бүртгэлтэй бараа (${res.outside.length} код, ${fmt(res.outside.reduce((a, o) => a + o.n, 0))} ш):</b> ${res.outside.slice(0, 30).map(o => `${esc(o.c)} ×${o.n} → ${esc(o.at)}`).join(', ')} — тэр байршлыг тоолоогүй тул Count-д орохгүй.</div>` : ''}`;
   $$('#iv-rep-f button').forEach(b => b.addEventListener('click', () => { IV.repF = b.dataset.f; renderIvRep(); }));
   const sf = $('#iv-sales-file'); if (sf) sf.addEventListener('change', e => { const file = e.target.files[0]; if (file) ivUploadSales(id, file); e.target.value = ''; });
@@ -4956,11 +4966,11 @@ async function ivMakeRecount(id){
   if (!confirm(`Хамгийн их зөрүүтэй ${L.length} кодыг дахин тоолох уу? «Тоолох» хэсэгт «🔁 Дахин тоололт» бүс гарч ирнэ — тэнд тоолсон тоо тухайн кодын нийт тоог орлоно.`)) return;
   try{ await db.doc('inv/' + id).update({recount: L, recountAt: new Date().toISOString()}); }catch(err){ whErr(err); }
 }
-function ivCountFile(loc){
+function ivCountFile(loc, quiet){
   const res = IV.repRes, I = ivOf(IV.rep); if (!res || !I) return; const Z = IV.zones[I.id] || {};
   const open = (I.zones || []).filter((z, i) => (!z.l || z.l === loc) && (Z[i] || {}).status !== 'done');
-  if (open.length && !confirm(`${open.length} бүс дуусаагүй байна (${open.map(z => z.z).join(', ')}). Count файлд олдоогүй код 0 гэж орно. Үргэлжлүүлэх үү?`)) return;
-  if (!I.sales && !confirm('Тооллогын үеийн борлуулалт оруулаагүй байна. Дэлгүүр нээлттэй үед тоолсон бол эхлээд оруулна уу. Үргэлжлүүлэх үү?')) return;
+  if (!quiet && open.length && !confirm(`${open.length} бүс дуусаагүй байна (${open.map(z => z.z).join(', ')}). Count файлд олдоогүй код 0 гэж орно. Үргэлжлүүлэх үү?`)) return;
+  if (!quiet && !I.sales && !confirm('Тооллогын үеийн борлуулалт оруулаагүй байна. Дэлгүүр нээлттэй үед тоолсон бол эхлээд оруулна уу. Үргэлжлүүлэх үү?')) return;
   const L = res.lines.filter(x => x.l === loc); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(INV.countAoa(L)), 'Sheet1');
   XLSX.writeFile(wb, `Count_${loc}_${I.date || ''}.xlsx`);
 }
@@ -4981,8 +4991,37 @@ async function ivExcel(id){
   add('Бүсүүд', [['Бүс', 'Байршил', 'Төлөв', 'Тоолсон (ш)', 'Код', 'Хэн (ш)'], ...(I.zones || []).map((z, i) => { const x = Z[i] || {}; return [z.z, z.l || 'Smart-ын байршлаар', x.status === 'done' ? 'дууссан' : 'тоолж байна', x.tot || 0, Object.keys(x.c || {}).length, Object.entries(x.by || {}).map(([u, n]) => dk(u) + ': ' + n).join(', ')]; })]);
   add('Тодорхойгүй код', [['Код', 'Тоолсон', 'Бүс'], ...res.unknown.map(u => [u.c, u.n, u.zones])]);
   add('Өөр байршил', [['Код', 'Бараа', 'Тоолсон', 'Smart-ын байршил'], ...res.outside.map(o => [o.c, o.name, o.n, o.at])]);
+  add('Буруу байршил', [['Код', 'Бараа', 'Тоолсон (ш)', 'Smart-ын байршил', 'Тоолсон байршил', 'Бүс'], ...res.wrong.map(o => [o.c, o.name, o.n, o.from, o.to, o.zones])]);
   if (I.recount && I.recount.length){ const re = ivCounts(id).re; add('Дахин тоололт', [['Код', 'Бараа', 'Байршил', 'Анхны зөрүү', 'Дахин тоолсон'], ...I.recount.map(r => [r.c, r.n, r.l, r.d, re[r.c] != null ? re[r.c] : ''])]); }
   XLSX.writeFile(wb, `Toollogo_${I.store}_${I.date || ''}.xlsx`);
+}
+function ivPrint(title, html){
+  const w = window.open('', '_blank'); if (!w){ alert('Цонх нээгдсэнгүй — хөтчийн popup зөвшөөрнө үү.'); return; }
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>@page{size:A4;margin:12mm} body{font-family:Arial,sans-serif;font-size:11px;margin:0} h1{font-size:17px;margin:0 0 4px} table{border-collapse:collapse;width:100%;margin-top:8px} th,td{border:1px solid #888;padding:3px 5px} th{background:#eee;text-align:left} .n{text-align:right} .m{font-family:monospace} .sig{display:flex;gap:30px;margin-top:28px;flex-wrap:wrap} .sig div{min-width:220px} @media screen{body{margin:16px}} @media print{.bar{display:none}} tr{page-break-inside:avoid} thead{display:table-header-group}</style></head><body><div class="bar"><button onclick="print()" style="font-size:16px;padding:6px 14px">🖨 Хэвлэх</button></div>${html}</body></html>`);
+  w.document.close(); setTimeout(() => { try{ w.focus(); w.print(); }catch(e){} }, 400);
+}
+// the count report for signatures (акт): totals per location, zones and who counted
+async function ivAct(id){
+  const {I, res} = await ivResult(id); const Z = IV.zones[id] || {}, S = Object.values(res.sum);
+  const who = {}; for (const x of Object.values(Z)) for (const [u, n] of Object.entries(x.by || {})) who[dk(u)] = (who[dk(u)] || 0) + n;
+  const T = S.reduce((a, o) => { for (const k of ['b', 'cnt', 's', 'e', 'short', 'over', 'imp']) a[k] = (a[k] || 0) + o[k]; return a; }, {});
+  ivPrint('Тооллогын акт', `<div style="color:#444">Вивекавикториа ХХК · VIVI</div><h1>Тооллогын акт — ${esc(I.name)}</h1>
+    <div>Дэлгүүр: <b>${esc(I.store)}</b> · байршил: <b>${esc((I.locs || []).join(', '))}</b>${I.flt ? ' · бараа: ' + esc(I.flt.inc || '') + (I.flt.exc ? ' (хасах ' + esc(I.flt.exc) + ')' : '') : ''}</div>
+    <div>Smart үлдэгдэл: ${esc(I.date)} · тооллого эхэлсэн: ${esc(fmtDT(I.createdAt))} · хэвлэсэн: ${esc(fmtDT(new Date().toISOString()))}${I.sales ? ` · тооллогын үеийн борлуулалт ${esc(I.sales.d0)} – ${esc(I.sales.d1)}` : ' · <b>борлуулалт оруулаагүй</b>'}</div>
+    <table><thead><tr><th>Байршил</th><th class="n">Smart үлдэгдэл</th><th class="n">Тоолсон</th><th class="n">Борлуулалт</th><th class="n">Борлуулалтаар тайлбарласан</th><th class="n">Дутуу (ш)</th><th class="n">Илүү (ш)</th><th class="n">Тохирсон код</th></tr></thead><tbody>
+    ${S.map(o => `<tr><td>${esc(o.l)}</td><td class="n">${fmt(o.b)}</td><td class="n">${fmt(o.cnt)}</td><td class="n">${fmt(o.s)}</td><td class="n">${fmt(o.e)}</td><td class="n"><b>${fmt(o.short)}</b> (${o.shortN} код)</td><td class="n"><b>${fmt(o.over)}</b> (${o.overN} код)</td><td class="n">${fmt(o.ok)}/${fmt(o.lines)}</td></tr>`).join('')}
+    <tr><td><b>Нийт</b></td><td class="n"><b>${fmt(T.b || 0)}</b></td><td class="n"><b>${fmt(T.cnt || 0)}</b></td><td class="n">${fmt(T.s || 0)}</td><td class="n">${fmt(T.e || 0)}</td><td class="n"><b>${fmt(T.short || 0)}</b></td><td class="n"><b>${fmt(T.over || 0)}</b></td><td></td></tr></tbody></table>
+    <table><thead><tr><th>Бүс</th><th>Байршил</th><th>Төлөв</th><th class="n">Тоолсон (ш)</th></tr></thead><tbody>${(I.zones || []).map((z, i) => `<tr><td>${esc(z.z)}</td><td>${esc(z.l || 'Smart-ын байршлаар')}</td><td>${(Z[i] || {}).status === 'done' ? 'дууссан' : 'дуусаагүй'}</td><td class="n">${fmt((Z[i] || {}).tot || 0)}</td></tr>`).join('')}</tbody></table>
+    <table><thead><tr><th>Тоолсон хүн</th><th class="n">Ширхэг</th></tr></thead><tbody>${Object.entries(who).map(([u, n]) => `<tr><td>${esc(u)}</td><td class="n">${fmt(n)}</td></tr>`).join('')}</tbody></table>
+    ${res.unknown.length ? `<p>Smart-д бүртгэлгүй код: ${res.unknown.length} (${fmt(res.unknown.reduce((a, u) => a + u.n, 0))} ш). Буруу байршилд: ${res.wrong.length} код.</p>` : ''}
+    <div class="sig"><div>Тоолсон: ____________________</div><div>Дэлгүүрийн эрхлэгч: ____________________</div><div>Нягтлан бодогч: ____________________</div><div>Захирал: ____________________</div></div>`);
+}
+// recount list on paper: where the pieces should be, blank column for the result
+function ivRePrint(id){
+  const I = ivOf(id); if (!I || !(I.recount || []).length) return;
+  ivPrint('Дахин тоолох жагсаалт', `<h1>Дахин тоолох жагсаалт — ${esc(I.name)}</h1><div>${I.recount.length} код · кодын бүх ширхгийг дэлгүүрийн хаана ч байсан тоолно</div>
+    <table><thead><tr><th>#</th><th>Код</th><th>Бараа</th><th>Байршил</th><th class="n">Тоо</th></tr></thead><tbody>${I.recount.map((r, i) => `<tr><td>${i + 1}</td><td class="m">${esc(r.c)}</td><td>${esc(r.n || '')}</td><td>${esc(r.l || '')}</td><td style="width:70px"></td></tr>`).join('')}</tbody></table>
+    <div class="sig"><div>Тоолсон: ____________________</div><div>Огноо: ______________</div></div>`);
 }
 async function ivDelete(id){
   const I = ivOf(id); if (!I) return; const t = prompt(`«${I.name}» тооллогыг бүх скантай нь устгах уу? Сэргээх боломжгүй.\n\nБаталгаажуулахын тулд УСТГАХ гэж бичнэ үү:`); if (t == null) return; if (!delWordOk(t)){ alert('Баталгаажуулах үг буруу — «УСТГАХ» гэж бичнэ үү (эсвэл DELETE). Устгаагүй.'); return; }
@@ -5020,12 +5059,18 @@ $('#ivn-save').addEventListener('click', ivCreate);
 document.addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
   if (d.ivUndo != null) return ivUndo(+d.ivUndo);
-  if (d.ivZero){ const id = IV.active; if (!id) return; try{ await db.doc(ivZoneDoc(id, 're')).set({inv: id, zi: 're', z: 'Дахин тоололт', status: 'open', c: {[ek(d.ivZero)]: 0}}, {merge: true}); }catch(err){ whErr(err); } return; }
+  if (d.ivZero){ const id = IV.active; if (!id) return; await ivFlush(); try{ const ref = db.doc(ivZoneDoc(id, 're')); await ref.set({inv: id, zi: 're', z: 'Дахин тоололт', status: 'open'}, {merge: true}); await ref.update({['c.' + ek(d.ivZero)]: 0}); }catch(err){ whErr(err); } return; }
   if (d.ivRep){ IV.rep = IV.rep === d.ivRep && $('#iv-rep').innerHTML ? '' : d.ivRep; return renderIvRep(); }
   if (d.ivSt){ try{ await db.doc('inv/' + d.id).update({status: d.ivSt, [d.ivSt === 'closed' ? 'closedAt' : 'openedAt']: new Date().toISOString()}); }catch(err){ whErr(err); } return; }
   if (d.ivDel) return ivDelete(d.ivDel);
   if (d.ivMkre) return ivMakeRecount(d.ivMkre);
   if (d.ivX) return ivExcel(d.ivX);
+  if (d.ivAct) return ivAct(d.ivAct);
+  if (d.ivCountall){ const I = ivOf(IV.rep), Z = IV.zones[IV.rep] || {}; if (!I || !IV.repRes) return; const open = (I.zones || []).filter((z, i) => (Z[i] || {}).status !== 'done');
+    if (open.length && !confirm(`${open.length} бүс дуусаагүй байна (${open.map(z => z.z).join(', ')}). Үргэлжлүүлэх үү?`)) return;
+    if (!I.sales && !confirm('Тооллогын үеийн борлуулалт оруулаагүй байна. Үргэлжлүүлэх үү?')) return;
+    for (const l of Object.keys(IV.repRes.sum)){ ivCountFile(l, true); await new Promise(r => setTimeout(r, 400)); } return; }
+  if (d.ivReprint) return ivRePrint(d.ivReprint);
   if (d.ivCount) return ivCountFile(d.ivCount);
 });
 setInterval(() => { const a = document.activeElement, free = !a || a === document.body, inp = $('#iv-input');
