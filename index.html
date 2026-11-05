@@ -636,7 +636,10 @@ body{margin:0;background:var(--bg)}
           <label class="f">Насжилтын тайлан (Excel)<input id="ivn-file" type="file" accept=".xlsx,.xls"></label>
           <label class="f">Дэлгүүр / агуулах<select id="ivn-store"></select></label>
           <label class="f full">Тоолох байршил<div class="row" id="ivn-locs" style="gap:10px;flex-wrap:wrap"></div></label>
-          <label class="f full">Бүсүүд (мөр бүрт нэг бүс; «Нэр=байршил» гэвэл тэр бүсэд тоолсон бүх бараа тэр байршилд бүртгэгдэнэ)<textarea id="ivn-zones" rows="4" placeholder="Хувцас — зүүн хана&#10;Хувцас — төв&#10;Гутал=222-1&#10;Агуулах тавиур"></textarea></label>
+          <div class="f full"><span>Барааны шүүлтүүр (заавал биш) — зөвхөн тодорхой бараа тоолох: нийлүүлэгч, хүүхдийн, эмэгтэй…</span>
+            <div class="row" id="ivn-presets" style="gap:6px;flex-wrap:wrap;margin:4px 0"></div>
+            <div class="row" style="gap:8px"><input id="ivn-inc" placeholder="Нэрэнд агуулсан (таслалаар): ^MD, ^HT, хүүхд… «^» = нэрийн эхэнд (нийлүүлэгчийн код)" style="flex:2"><input id="ivn-exc" placeholder="Хасах үгс (таслалаар)" style="flex:1"></div></div>
+          <label class="f full">Бүсүүд (мөр бүрт нэг бүс; «Нэр=байршил» гэвэл тэр бүсэд тоолсон бүх бараа тэр байршилд бүртгэгдэнэ). Хоосон бол нэг «Үндсэн» бүс үүснэ.<textarea id="ivn-zones" rows="4" placeholder="Жишээ:&#10;Хувцас — зүүн хана&#10;Хувцас — төв&#10;Гутал=222-1"></textarea></label>
         </div>
         <div id="ivn-info" class="note" style="margin-top:6px"></div>
         <div class="row" style="margin-top:8px"><button class="btn primary" id="ivn-save" disabled>Тооллого үүсгэх</button><span class="note" id="ivn-msg"></span></div>
@@ -2142,6 +2145,13 @@ const INV = (() => {
   const pad = n => String(n).padStart(2, '0');
   const xlDay = v => { if (typeof v === 'number'){ const t = new Date(Math.round((v - 25569) * 86400) * 1000); return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`; }
     const m = String(v || '').match(/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/); return m ? `${m[1]}-${pad(m[2])}-${pad(m[3])}` : ''; };
+  // product filter of a count: terms separated by commas; «^MD» = name starts with MD (supplier prefix), other terms = name contains (any case)
+  const fterms = t => String(t || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+  function fmatch(flt, name){
+    if (!flt || (!flt.inc && !flt.exc)) return true; const n = String(name || '').toLowerCase(), hit = t => t[0] === '^' ? n.startsWith(t.slice(1)) && /^[^\p{L}\p{N}]|^$/u.test(n.slice(t.length - 1, t.length)) : n.includes(t);
+    const inc = fterms(flt.inc), exc = fterms(flt.exc);
+    return (!inc.length || inc.some(hit)) && !exc.some(hit);
+  }
   // the store a location belongs to: «220-2» → «220»
   const storeOfLoc = l => String(l).split('-')[0];
 
@@ -2182,10 +2192,11 @@ const INV = (() => {
   //  quantity for the Smart «Count» import (stock right now) = C − (S − E)
   // inv: {locs: [in scope], zones: [{z, l}]}; book: items; counts: {zoneIndex: {code: n}}; re: {code: n}; sold: {loc|code: n}
   function compute(inv, book, counts, re, sold){
-    const scope = new Set(inv.locs || []), zones = inv.zones || [];
+    const scope0 = new Set(inv.locs || []), zones = inv.zones || [], flt = inv.flt || null;
+    const scope = {has: l => scope0.has(l)}, inF = it => scope0.has(it.l) && fmatch(flt, it.n);
     const B = {}, byCode = {}; for (const it of book){ const k = it.l + '|' + it.c; B[k] = it; (byCode[it.c] = byCode[it.c] || []).push(it); }
     const C = {}, outside = {}, unknown = {};
-    const homeOf = c => { const L = (byCode[c] || []).filter(x => scope.has(x.l)); if (L.length) return L.sort((a, b) => b.q - a.q)[0].l; return null; };
+    const homeOf = c => { const L = (byCode[c] || []).filter(inF); if (L.length) return L.sort((a, b) => b.q - a.q)[0].l; return null; };
     const add = (l, c, n) => { const k = l + '|' + c; C[k] = (C[k] || 0) + n; };
     const total = {};   // per code, all zones
     for (const [zi, M] of Object.entries(counts || {})){ const z = zones[+zi] || {}; for (const [c, n] of Object.entries(M || {})){ if (!n) continue; total[c] = total[c] || {n: 0, z: {}}; total[c].n += n; total[c].z[zi] = (total[c].z[zi] || 0) + n; } }
@@ -2194,16 +2205,16 @@ const INV = (() => {
       const home = homeOf(c);
       if (T.re != null){   // recount: the whole quantity of this code, on its own location
         const l = home || (Object.keys(T.z).map(zi => (zones[+zi] || {}).l).find(Boolean));
-        if (l && scope.has(l)) add(l, c, T.re); else if ((byCode[c] || []).length) outside[c] = {c, n: T.re, at: byCode[c].map(x => x.l).join(', '), name: byCode[c][0].n}; else unknown[c] = {c, n: T.re, zones: Object.keys(T.z).map(zi => (zones[+zi] || {}).z).join(', ')};
+        if (l && scope.has(l) && home) add(l, c, T.re); else if ((byCode[c] || []).length) outside[c] = {c, n: T.re, at: byCode[c].map(x => x.l).join(', '), name: byCode[c][0].n}; else unknown[c] = {c, n: T.re, zones: Object.keys(T.z).map(zi => (zones[+zi] || {}).z).join(', ')};
         continue; }
       for (const [zi, n] of Object.entries(T.z)){ const zl = (zones[+zi] || {}).l || '';
         const l = zl || home;
-        if (l && scope.has(l)) add(l, c, n);
+        if (l && scope.has(l) && (home || !(byCode[c] || []).length)) add(l, c, n);
         else if ((byCode[c] || []).length){ const o = outside[c] = outside[c] || {c, n: 0, at: byCode[c].map(x => x.l).join(', '), name: byCode[c][0].n}; o.n += n; }
         else { const u = unknown[c] = unknown[c] || {c, n: 0, zones: ''}; u.n += n; u.zones = [...new Set([...u.zones.split(', ').filter(Boolean), (zones[+zi] || {}).z])].join(', '); } }
     }
     const lines = [];
-    const keys = new Set([...Object.keys(B).filter(k => scope.has(k.split('|')[0])), ...Object.keys(C)]);
+    const keys = new Set([...Object.keys(B).filter(k => inF(B[k])), ...Object.keys(C)]);
     for (const k of keys){ const [l, c] = [k.slice(0, k.indexOf('|')), k.slice(k.indexOf('|') + 1)]; const it = B[k] || {c, n: ((byCode[c] || [])[0] || {}).n || '', l, q: 0, ag: []};
       const b = it.q || 0, cn = C[k] || 0, s = (sold || {})[k] || 0, e = cn < b && s > 0 ? Math.min(s, b - cn) : 0, d = cn - b + e, imp = Math.max(0, cn - (s - e));
       lines.push({c, n: it.n, l, b, cnt: cn, s, e, d, imp, ag: it.ag || [], other: !B[k] && (byCode[c] || []).some(x => x.l !== l) ? byCode[c].filter(x => x.l !== l).map(x => x.l).join(', ') : ''}); }
@@ -2216,7 +2227,7 @@ const INV = (() => {
   function recountList(res, max){ return res.lines.filter(x => x.d !== 0).sort((a, b) => Math.abs(b.d) - Math.abs(a.d) || b.b - a.b).slice(0, max || 100); }
   // Smart «Count» import: Barcode, Qty, ItemId, UnitCost (cost is filled by Smart)
   function countAoa(lines){ return [['Barcode', 'Qty', 'ItemId', 'UnitCost'], ['Бааркод', 'Тоо хэмжээ', 'Барааны код', 'Нэгж өртөг'], ...lines.map(x => [x.c, x.imp, x.c, null])]; }
-  const R = {parseAging, parseSales, compute, recountList, countAoa, storeOfLoc, codeOf};
+  const R = {fmatch, parseAging, parseSales, compute, recountList, countAoa, storeOfLoc, codeOf};
   if (typeof module !== 'undefined') module.exports = R;
   return R;
 })();
@@ -4792,15 +4803,17 @@ async function ivScan(raw){
   const manual = $('#iv-manual').checked, n = manual ? Math.max(1, parseInt($('#iv-qty').value, 10) || 1) : 1;
   if (!manual && c0 === IV.lastE && now - IV.lastAt < 250) return; IV.lastE = c0; IV.lastAt = now;
   const B = await ivBook(id); let L = B.by[c0] || B.by0[c0.replace(/^0+/, '')] || []; const c = L.length ? L[0].c : c0;
-  const scope = new Set(I.locs || []), inScope = L.filter(x => scope.has(x.l)), zl = zi === 're' ? '' : ((I.zones || [])[+zi] || {}).l || '';
+  const scope = new Set(I.locs || []), inScope = L.filter(x => scope.has(x.l) && INV.fmatch(I.flt, x.n)), inLoc = L.filter(x => scope.has(x.l)), zl = zi === 're' ? '' : ((I.zones || [])[+zi] || {}).l || '';
   let kind = 'ok', note = '';
   if (!L.length){ kind = 'bad'; note = 'Smart-ын үлдэгдэлд байхгүй код — тусад нь тавьж шалгана'; }
+  else if (!inScope.length && inLoc.length){ kind = 'warn'; IV.outF = true; note = 'Энэ тооллогод хамаарахгүй бараа (шүүлтүүрт ороогүй) — тоологдохгүй, буцааж тавина'; }
   else if (!inScope.length){ kind = 'warn'; note = `Энэ тооллогын байршилд биш: Smart-д ${[...new Set(L.map(x => x.l))].join(', ')}`; }
   else if (zl && !inScope.some(x => x.l === zl)){ kind = 'warn'; note = `Буруу байршил: Smart-д ${inScope.map(x => x.l).join(', ')}, тоолж буй бүс ${zl}`; }
   ivAdd(id, zi, c, n);
   const here = ((ivCounts(id).counts[zi] || {})[c] || 0) + (zi === 're' ? (ivCounts(id).re[c] || 0) : 0);
   const name = L.length ? L[0].n : '';
-  ivShow(kind, kind === 'bad' ? 'ТОДОРХОЙГҮЙ КОД' : (n > 1 ? `+${n} ш` : '✓'), `<b>${esc(name || c)}</b><div class="mono">${esc(c)}${inScope.length ? ' · ' + esc(inScope.map(x => x.l).join(', ')) : ''}</div><div class="note">энэ бүсэд энэ код: ${fmt(zi === 're' ? (ivCounts(id).re[c] || 0) : here)} ш</div>${note ? `<div style="margin-top:4px"><b>${esc(note)}</b></div>` : ''}`);
+  const outF = IV.outF; IV.outF = false;
+  ivShow(kind, kind === 'bad' ? 'ТОДОРХОЙГҮЙ КОД' : outF ? 'ХАМААРАХГҮЙ' : (n > 1 ? `+${n} ш` : '✓'), `<b>${esc(name || c)}</b><div class="mono">${esc(c)}${inScope.length ? ' · ' + esc(inScope.map(x => x.l).join(', ')) : ''}</div><div class="note">энэ бүсэд энэ код: ${fmt(zi === 're' ? (ivCounts(id).re[c] || 0) : here)} ш</div>${note ? `<div style="margin-top:4px"><b>${esc(note)}</b></div>` : ''}`);
   beep(kind === 'bad' ? 'bad' : kind === 'warn' ? 'extra' : 'ok');
   IV.last.unshift({t: new Date().toTimeString().slice(0, 8), c, n, name, kind, note, id, zi}); IV.last = IV.last.slice(0, 12);
   try{ localStorage.setItem('vivi-iv-last-' + id, JSON.stringify(IV.last)); }catch(e){}
@@ -4830,7 +4843,7 @@ function renderIvScan(){
   if ($('#iv-zone').innerHTML !== zh) $('#iv-zone').innerHTML = zh;
   if (I && IV.zone !== '' && IV.zone !== 're' && !(I.zones || [])[+IV.zone]) IV.zone = '';
   const done = I ? (I.zones || []).filter((z, i) => (Z[i] || {}).status === 'done').length : 0;
-  $('#iv-prog').innerHTML = I ? `<b>${esc(I.name)}</b> · ${esc((I.locs || []).join(', '))} · бүс ${done}/${(I.zones || []).length} дууссан · нийт тоолсон ${fmt((I.zones || []).reduce((a, z, i) => a + zoneTot(I.id, String(i)), 0))} ш` : '';
+  $('#iv-prog').innerHTML = I ? `<b>${esc(I.name)}</b> · ${esc((I.locs || []).join(', '))}${I.flt ? ' · шүүлтүүр: ' + esc([I.flt.inc, I.flt.exc ? 'хасах ' + I.flt.exc : ''].filter(Boolean).join(' · ')) : ''} · бүс ${done}/${(I.zones || []).length} дууссан · нийт тоолсон ${fmt((I.zones || []).reduce((a, z, i) => a + zoneTot(I.id, String(i)), 0))} ш` : '';
   const zs = I && IV.zone !== '' ? (Z[IV.zone] || {}) : null;
   $('#iv-zone-info').innerHTML = zs ? (IV.zone === 're' ? `Дахин тоололт: жагсаалтын код бүрийг <b>дэлгүүрийн хаана ч байсан</b> бүгдийг нь тоолно. Энд тоолсон тоо тухайн кодын нийт тоог орлоно.` : `Энэ бүсэд ${fmt(zoneTot(I.id, IV.zone))} ш тоолсон${zs.status === 'done' ? ' · <b>дууссан</b>' : ''}${zs.by ? ' · ' + Object.keys(zs.by).length + ' хүн' : ''}`) : '';
   $('#iv-zone-done').hidden = !zs || IV.zone === 're' || zs.status === 'done'; $('#iv-zone-open').hidden = !zs || IV.zone === 're' || zs.status !== 'done';
@@ -4849,26 +4862,33 @@ function ivNewRender(){
   const nameOf = s => (A.locs[s] || A.locs[Object.keys(A.locs).find(l => INV.storeOfLoc(l) === s)] || {}).name || s;
   if (!st.dataset.drawn){ st.innerHTML = stores.map(s => `<option value="${esc(s)}">${esc(s)} — ${esc(String(nameOf(s)).split('-')[0].trim())}</option>`).join(''); st.dataset.drawn = '1'; }
   const s = st.value || stores[0], locs = Object.values(A.locs).filter(l => INV.storeOfLoc(l.l) === s);
+  { const f = {}; for (const x of A.items) if (INV.storeOfLoc(x.l) === s){ const w = (String(x.n).split(/\s+/)[0] || '').toUpperCase(); if (/^[A-ZА-ЯӨҮЁ]{2,8}$/.test(w)) f[w] = (f[w] || 0) + x.q; }
+    const top = Object.entries(f).sort((a, b) => b[1] - a[1]).slice(0, 14).map(([w]) => w);
+    $('#ivn-presets').innerHTML = [['Хүүхдийн', 'хүүхд, хүүхэд, охид, охин, хөвгүүд, хүүгийн, хүү , нярай, kids, baby'], ['Эмэгтэй', 'эмэгтэй, women, бүсгүй'], ['Эрэгтэй', 'эрэгтэй'], ...top.map(w => [w, '^' + w.toLowerCase()])]
+      .map(([t, v]) => `<button type="button" class="chip c-grey" data-ivn-pre="${esc(v)}" style="border:0;cursor:pointer" title="${esc(v)}">+ ${esc(t)}</button>`).join('') + '<button type="button" class="chip" data-ivn-pre="" style="border:0;cursor:pointer">✕ цэвэрлэх</button>'; }
   $('#ivn-locs').innerHTML = locs.map(l => `<label class="row note" style="gap:4px;width:auto"><input type="checkbox" data-ivn-loc="${esc(l.l)}" checked style="width:auto"> <b>${esc(l.l)}</b> ${esc(l.name)} · ${fmt(l.q)} ш</label>`).join('');
   ivNewInfo();
 }
 function ivNewInfo(){
   const A = IV.newA; if (!A) return; const sel = $$('input[data-ivn-loc]').filter(x => x.checked).map(x => x.dataset.ivnLoc);
-  const q = sel.reduce((a, l) => a + (A.locs[l] || {}).q, 0), n = sel.reduce((a, l) => a + (A.locs[l] || {}).lines, 0), z = ivNewZones();
-  $('#ivn-info').innerHTML = `Үлдэгдлийн огноо <b>${esc(A.date)}</b> · сонгосон ${sel.length} байршил · ${fmt(n)} код · <b>${fmt(q)} ш</b> · ${z.length} бүс${z.some(x => x.l && !sel.includes(x.l)) ? ' · <b style="color:var(--bad)">бүсийн байршил сонгоогүй байршилд байна</b>' : ''}`;
-  $('#ivn-save').disabled = !sel.length || !z.length;
+  const flt = ivNewFlt(), its = A.items.filter(x => sel.includes(x.l) && INV.fmatch(flt, x.n)), q = its.reduce((a, x) => a + x.q, 0), n = its.length, z = ivNewZones();
+  $('#ivn-info').innerHTML = `Үлдэгдлийн огноо <b>${esc(A.date)}</b> · сонгосон ${sel.length} байршил${flt ? ' · <b>шүүлтүүртэй</b>' : ''} · ${fmt(n)} код · <b>${fmt(q)} ш</b> · ${z.length} бүс${z.some(x => x.l && !sel.includes(x.l)) ? ' · <b style="color:var(--bad)">бүсийн байршил сонгоогүй байршилд байна</b>' : ''}`
+    + (!sel.length ? ' · <b style="color:var(--bad)">тоолох байршлаа сонгоно уу</b>' : !n ? ' · <b style="color:var(--bad)">шүүлтүүрт тохирох бараа алга</b>' : '')
+    + (flt && n ? `<div class="note">Жишээ: ${its.slice(0, 4).map(x => esc(x.n)).join(' · ')}</div>` : '');
+  $('#ivn-save').disabled = !sel.length || !n;
 }
-function ivNewZones(){ return String($('#ivn-zones').value || '').split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^(.*?)=\s*([\w-]+)\s*$/); return m ? {z: m[1].trim(), l: m[2]} : {z: s, l: ''}; }); }
+function ivNewZones(){ const z = String($('#ivn-zones').value || '').split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^(.*?)=\s*([\w-]+)\s*$/); return m ? {z: m[1].trim(), l: m[2]} : {z: s, l: ''}; }); return z.length ? z : [{z: 'Үндсэн', l: ''}]; }
+function ivNewFlt(){ const inc = $('#ivn-inc').value.trim(), exc = $('#ivn-exc').value.trim(); return inc || exc ? {inc, exc} : null; }
 async function ivCreate(){
   const A = IV.newA; if (!A || !db) return; const s = $('#ivn-store').value, locs = $$('input[data-ivn-loc]').filter(x => x.checked).map(x => x.dataset.ivnLoc), zones = ivNewZones();
   if (!locs.length || !zones.length) return; const name = $('#ivn-name').value.trim() || `${s} тооллого ${A.date}`;
-  const items = A.items.filter(x => INV.storeOfLoc(x.l) === s);     // the whole store: a piece found on another location is recognised
+  const items = A.items.filter(x => INV.storeOfLoc(x.l) === s), flt = ivNewFlt();     // the whole store: a piece found on another location is recognised
   $('#ivn-save').disabled = true; const msg = t => $('#ivn-msg').textContent = t;
   try{ const ref = db.collection('inv').doc(), id = ref.id, CH = 2000, parts = Math.ceil(items.length / CH);
     for (let i = 0; i < parts; i++){ msg(`Хадгалж байна… ${i + 1}/${parts}`); await db.doc('invpart/' + id + '_' + i).set({inv: id, i, items: items.slice(i * CH, (i + 1) * CH)}); }
-    await ref.set({name, store: s, locs, zones, date: A.date, file: A.file || '', parts, nItems: items.length, bookQ: items.filter(x => locs.includes(x.l)).reduce((a, x) => a + x.q, 0), status: 'open', createdAt: new Date().toISOString(), by: me, sales: null, recount: []});
+    await ref.set({name, store: s, locs, zones, flt, date: A.date, file: A.file || '', parts, nItems: items.length, bookQ: items.filter(x => locs.includes(x.l) && INV.fmatch(flt, x.n)).reduce((a, x) => a + x.q, 0), status: 'open', createdAt: new Date().toISOString(), by: me, sales: null, recount: []});
     IV.active = id; try{ localStorage.setItem('vivi-iv-active', id); }catch(e){}
-    IV.newA = null; $('#ivn-file').value = ''; $('#ivn-name').value = ''; $('#ivn-zones').value = ''; $('#ivn-store').dataset.drawn = ''; ivNewRender(); $('#ivn-info').textContent = ''; msg('Үүсгэлээ — «Тоолох» хэсэгт бүсээ сонгоод эхэлнэ үү.');
+    IV.newA = null; $('#ivn-file').value = ''; $('#ivn-name').value = ''; $('#ivn-zones').value = ''; $('#ivn-inc').value = ''; $('#ivn-exc').value = ''; $('#ivn-store').dataset.drawn = ''; ivNewRender(); $('#ivn-info').textContent = ''; msg('Үүсгэлээ — «Тоолох» хэсэгт бүсээ сонгоод эхэлнэ үү.');
   }catch(err){ whErr(err); msg('Хадгалж чадсангүй.'); $('#ivn-save').disabled = false; }
 }
 
@@ -4878,7 +4898,7 @@ function renderIvList(){
   const L = IV.list.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   for (const x of L) if (x.status !== 'closed') ivSub(x.id);
   tb.innerHTML = L.length ? L.map(x => { const Z = IV.zones[x.id] || {}, done = (x.zones || []).filter((z, i) => (Z[i] || {}).status === 'done').length, cnt = (x.zones || []).reduce((a, z, i) => a + zoneTot(x.id, String(i)), 0);
-    return `<tr><td><b>${esc(x.name)}</b><div class="note">${esc(fmtDT(x.createdAt))}</div></td><td>${esc(x.store)} · ${esc((x.locs || []).join(', '))}</td><td class="mono">${esc(x.date || '')}</td><td class="n">${fmt(x.bookQ || 0)}</td><td class="n">${IV.zones[x.id] ? fmt(cnt) : '…'}</td><td>${done}/${(x.zones || []).length}</td>
+    return `<tr><td><b>${esc(x.name)}</b><div class="note">${esc(fmtDT(x.createdAt))}</div></td><td>${esc(x.store)} · ${esc((x.locs || []).join(', '))}${x.flt ? `<div class="note">шүүлтүүр: ${esc(x.flt.inc || '')}${x.flt.exc ? ' · хасах ' + esc(x.flt.exc) : ''}</div>` : ''}</td><td class="mono">${esc(x.date || '')}</td><td class="n">${fmt(x.bookQ || 0)}</td><td class="n">${IV.zones[x.id] ? fmt(cnt) : '…'}</td><td>${done}/${(x.zones || []).length}</td>
       <td>${x.status === 'closed' ? '<span class="chip c-grey">Хаасан</span>' : '<span class="chip c-ok">Тоолж байна</span>'}</td>
       <td style="white-space:nowrap"><button class="btn primary" data-iv-rep="${esc(x.id)}">📊 Тайлан</button>${ivAdm() ? (x.status === 'closed' ? `<button class="btn" data-iv-st="open" data-id="${esc(x.id)}">Нээх</button>` : `<button class="btn" data-iv-st="closed" data-id="${esc(x.id)}">Хаах</button>`) + `<button class="btn" data-iv-del="${esc(x.id)}" style="color:var(--bad)">🗑</button>` : ''}</td></tr>`; }).join('')
     : '<tr><td colspan="8" class="empty">Тооллого алга.</td></tr>';
@@ -4990,7 +5010,9 @@ $('#ivn-file').addEventListener('change', async e => {
 });
 $('#ivn-store').addEventListener('change', ivNewRender);
 document.addEventListener('change', e => { if (e.target.closest('#ivn-locs')) ivNewInfo(); });
-$('#ivn-zones').addEventListener('input', ivNewInfo);
+$('#ivn-zones').addEventListener('input', ivNewInfo); $('#ivn-inc').addEventListener('input', ivNewInfo); $('#ivn-exc').addEventListener('input', ivNewInfo);
+$('#ivn-presets').addEventListener('click', e => { const b = e.target.closest('button[data-ivn-pre]'); if (!b) return; const v = b.dataset.ivnPre, el = $('#ivn-inc');
+  el.value = !v ? '' : [...new Set([...el.value.split(',').map(x => x.trim()).filter(Boolean), ...v.split(',').map(x => x.trim())])].join(', '); if (!v) $('#ivn-exc').value = ''; ivNewInfo(); });
 $('#ivn-save').addEventListener('click', ivCreate);
 document.addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
