@@ -1953,10 +1953,15 @@ const WH = (() => {
   }
 
   // --- scan: the next piece of model|size goes to the store with the most of its plan still open (overflow → warehouse) ---
-  function pick(k, planK, cnt, cfgIn){
-    const cfg = cfgOf(cfgIn); const p = planK || {}, c = cnt || {};
-    let best = null, bestR = -1;
-    for (const s of cfg.stores){ const want = p[s.key] || 0; if (!want) continue; const open = want - (c[s.key] || 0); if (open <= 0) continue; const r = open / want; if (r > bestR){ bestR = r; best = s.key; } }
+  // tot = pieces already scanned per store for the whole truck: among sizes' equally open stores the one furthest below
+  // its truck percentage goes first, so every batch sent during the day keeps the 40/30/30 split (not only the finished truck)
+  function pick(k, planK, cnt, cfgIn, tot){
+    const cfg = cfgOf(cfgIn); const p = planK || {}, c = cnt || {}, T = tot || {};
+    const S = cfg.stores.filter(s => s.pct > 0), P = S.reduce((a, s) => a + s.pct, 0) || 1, all = S.reduce((a, s) => a + (T[s.key] || 0), 0) + 1;
+    const def = key => { const s = S.find(x => x.key === key); return (s ? s.pct / P : 0) - (T[key] || 0) / all; };
+    let best = null, bestR = -1, bestD = -9;
+    for (const s of cfg.stores){ const want = p[s.key] || 0; if (!want) continue; const open = want - (c[s.key] || 0); if (open <= 0) continue; const r = open / want, d = def(s.key);
+      if (r > bestR + 1e-9 || (Math.abs(r - bestR) <= 1e-9 && d > bestD)){ bestR = r; bestD = d; best = s.key; } }
     return best || cfg.over.key;
   }
   // an extra piece (not on the truck list, found in the master file): the store furthest below its percentage overall
@@ -3859,7 +3864,7 @@ async function onScan(raw){
   const P = await loadParts(id); if (!P){ showResult('bad', 'Хүргэлт ачаалж чадсангүй', ''); return; }
   let k = P.eans[e], it = k ? P.items[k] : null, st, kind = 'ok';
   if (it && it.x){ st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1); }
-  else if (it){ st = WH.pick(k, P.plan[k], cntK(id, k), whCfg()); if (st === whCfg().over.key) kind = 'over'; addPend(id, 'c|' + k, st, 1); }
+  else if (it){ st = WH.pick(k, P.plan[k], cntK(id, k), whCfg(), totOf(id)); if (st === whCfg().over.key) kind = 'over'; addPend(id, 'c|' + k, st, 1); }
   else {
     const M = await loadMaster(), m = M && M[e];
     if (!m){ addPend(id, 'u|' + e, '_', 1); showResult('bad', 'ТӨЛӨВЛӨГӨӨНД БАЙХГҮЙ', `${e} — мастер файлд ч байхгүй. Тусад нь тавиад, дараа шалгана.`); beep('bad'); pushLast({e, n: '—', s: '', st: '', kind: 'bad'}); return; }
@@ -4079,6 +4084,7 @@ let WD = null;   // parsed list waiting to be saved
 function wdPctInputs(){
   const cfg = whCfg(); $('#wd-pct').innerHTML = cfg.stores.map(s => `<label class="note" style="display:inline-flex;flex-direction:column">${esc(s.name)} (${esc(s.base)})<span class="row" style="gap:4px"><input data-wd-pct="${s.key}" inputmode="numeric" value="${s.on ? s.pct : 0}" style="width:70px;text-align:right">%</span></label>`).join('')
     + `<span class="note" id="wd-pct-sum"></span>`;
+  setTimeout(wdPreview, 0);
 }
 function wdCfg(){ const cfg = whCfg(); return {...cfg, stores: cfg.stores.map(s => { const el = $(`input[data-wd-pct="${s.key}"]`); const p = el ? (+String(el.value).replace(/[^\d.]/g, '') || 0) : s.pct; return {...s, pct: p, on: p > 0}; })}; }
 function wdMatchInfo(){
@@ -4093,8 +4099,11 @@ function wdMatchInfo(){
   return parts.join('<br>');
 }
 function wdPreview(){
+  const c = wdCfg(), sum = c.stores.reduce((a, s) => a + s.pct, 0);
+  $('#wd-pct-sum').innerHTML = `нийт <b style="color:${sum === 100 ? 'inherit' : 'var(--bad)'}">${sum}%</b>${sum === 100 ? '' : ` <b style="color:var(--bad)">— нийлбэр 100% байх ёстой (${sum < 100 ? 'дутуу ' + (100 - sum) : 'илүү ' + (sum - 100)}%)</b>`}`;
+  const why = !WD ? 'Эхлээд LPP жагсаалтын Excel файлаа сонгоно уу.' : sum !== 100 ? 'Хувийн нийлбэрийг 100% болгоно уу.' : '';
+  { const cur = $('#wd-msg').textContent; $('#wd-msg').textContent = !WD && cur.startsWith('Хадгаллаа') ? cur : why; }
   if (!WD){ $('#wd-info').textContent = ''; $('#wd-save').disabled = true; return; }
-  const c = wdCfg(), sum = c.stores.reduce((a, s) => a + s.pct, 0); $('#wd-pct-sum').innerHTML = `нийт <b style="color:${sum === 100 ? 'inherit' : 'var(--bad)'}">${sum}%</b>`;
   const r = WH.plan(WD.items, c); if (r.error){ $('#wd-info').textContent = r.error; $('#wd-save').disabled = true; return; }
   WD.plan = r; const models = new Set(Object.values(WD.items).map(i => i.m)).size;
   $('#wd-info').innerHTML = `${fmt(WD.pcs)} ш · ${fmt(models)} загвар · ${fmt(WD.lines)} хэмжээ${WD.bad ? ` · ${WD.bad} мөр алгассан` : ''}<br>${wdMatchInfo()}<br>Төлөвлөгөө: ${c.stores.filter(s => s.pct).map(s => `<b style="color:${STORE_COLOR[s.key]}">${esc(s.name)}</b> ${fmt(r.got[s.key] || 0)} ш (${WD.pcs ? (r.got[s.key] / WD.pcs * 100).toFixed(1) : 0}%)`).join(' · ')}`;
@@ -4112,7 +4121,7 @@ async function wdSave(){
     WS.active = id; try{ localStorage.setItem('vivi-wh-active', id); }catch(e){}
     if (isOwner && WS.master){ const add = {}; for (const [e, k] of Object.entries(WD.eans || {})) if (!WS.master[e]){ const it = WD.items[k]; add[e] = [it.m, it.s, it.n, it.b, it.g, it.c, it.p, 0, 0]; }
       if (Object.keys(add).length){ $('#wd-msg').textContent = 'Шинэ баркодуудыг мастер файлд нэмж байна…'; try{ await saveMaster({...WS.master, ...add}, (WS.masterMeta && WS.masterMeta.file) || 'master'); }catch(e){ console.warn('master add', e); } } }
-    WD = null; $('#wd-file').value = ''; $('#wd-name').value = ''; wdPreview(); $('#wd-msg').textContent = 'Хадгаллаа — «Скан» хэсэгт сканнердаж эхэлнэ үү.';
+    WD = null; $('#wd-file').value = ''; $('#wd-name').value = ''; $('#wd-msg').textContent = 'Хадгаллаа — «Скан» хэсэгт сканнердаж эхэлнэ үү.'; wdPreview();
   }catch(err){ alertMsg(err); $('#wd-msg').textContent = 'Хадгалж чадсангүй.'; $('#wd-save').disabled = false; }
 }
 // ---------- delivery report: list vs really scanned ----------
