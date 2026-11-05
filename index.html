@@ -332,8 +332,8 @@ body{margin:0;background:var(--bg)}
       <p class="note" style="margin:0 0 8px">Дэлгүүрийн Smart код, анхдагч хувь, ангилал тус бүрийн дэд байршил. Шинэ хүргэлт үүсгэхэд хувийг тухайн тракаар өөрчилж болно.</p>
       <div id="whs-body"></div>
       <h3 style="margin:14px 0 6px;font-size:14px">LPP мастер файл (Казахстаны нөөц)</h3>
-      <p class="note" style="margin:0 0 6px">Жагсаалтад байхгүй баркод уншигдвал мэдээллийг эндээс авна. vivi-master-kz.json эсвэл KZ_ALL Excel.</p>
-      <div class="row"><input id="whm-file" type="file" accept=".json,.xlsx,.xls" style="max-width:320px"><span class="note" id="whm-msg"></span></div>
+      <p class="note" style="margin:0 0 6px">Бараа бүрийг <b>баркодоор</b> таньдаг — нэр ямар ч орчуулгаар ирсэн нэг баркод = нэг нэр, нэг ангилал. Шинэ файл оруулахад өмнө байсан баркодууд нэрээ хадгална, шинэ баркод нэмэгдэнэ. vivi-master-kz.json эсвэл Excel (англи/монгол толгойтой).</p>
+      <div class="row"><input id="whm-file" type="file" accept=".json,.xlsx,.xls" style="max-width:320px"><label class="row note" style="gap:6px;width:auto"><input type="checkbox" id="whm-replace" style="width:auto"> Бүгдийг солих</label><span class="note" id="whm-msg"></span></div>
     </div>
     <div class="card">
       <h2>Харилцагчийн сан</h2>
@@ -545,7 +545,7 @@ body{margin:0;background:var(--bg)}
 
     <div class="card" id="wh-deliv-card" hidden>
       <h2>Шинэ хүргэлт (трак)</h2>
-      <p class="note" style="margin:0 0 8px">LPP-ийн жагсаалтыг (MODEL, SIZE, EAN, ITEM_DESC, CATEGORY, QTY баганатай Excel) оруулж, энэ тракын хувийг тохируулна. Том хэмжээ хувиар хуваагдана (дэлгүүр бүр бүрэн хэмжээний цуглуулга авна), 1–2 ширхэгтэй хэмжээ тухайн загвар хамгийн ихээр очсон дэлгүүрт, жижиг загвар бүтнээрээ нэг дэлгүүрт очно — нийт тракын хувь яг хадгалагдана.</p>
+      <p class="note" style="margin:0 0 8px">LPP-ийн жагсаалтыг (англи эсвэл монгол толгойтой Excel — баркод, загвар, хэмжээ, тоо ширхэг) оруулж. Бараа баркодоор танигдана, нэр/ангилал мастер файлаас, энэ тракын хувийг тохируулна. Том хэмжээ хувиар хуваагдана (дэлгүүр бүр бүрэн хэмжээний цуглуулга авна), 1–2 ширхэгтэй хэмжээ тухайн загвар хамгийн ихээр очсон дэлгүүрт, жижиг загвар бүтнээрээ нэг дэлгүүрт очно — нийт тракын хувь яг хадгалагдана.</p>
       <div class="grid">
         <label class="f">Нэр (TIR / трак)<input id="wd-name" placeholder="TIR 6 — 2026-11"></label>
         <label class="f">LPP жагсаалт (Excel)<input id="wd-file" type="file" accept=".xlsx,.xls"></label>
@@ -1838,23 +1838,67 @@ const WH = (() => {
   const keyOf = (model, size) => String(model) + '|' + String(size);
   const eanOf = v => { if (v == null) return ''; const s = typeof v === 'number' ? v.toFixed(0) : String(v).trim(); return s.replace(/\.0+$/, ''); };
 
-  // --- LPP list (same columns as KZ_ALL_ENRICHED: MODEL, SIZE, EAN, ITEM_DESC, GENDER, CATEGORY, QTY, BRAND, RRP MN2027 …) ---
-  function parseList(rows){
-    const hi = rows.findIndex(r => r && r.some(c => /^EAN$/i.test(String(c || '').trim())) && r.some(c => /^MODEL$/i.test(String(c || '').trim())));
-    if (hi < 0) return {error: '«MODEL», «EAN» багана олдсонгүй (LPP-ийн жагсаалт уу?)'};
-    const H = rows[hi].map(c => String(c == null ? '' : c).trim()), ix = (...n) => { for (const x of n){ const i = H.findIndex(h => h.toLowerCase() === x.toLowerCase()); if (i >= 0) return i; } return -1; };
-    const c = {model: ix('MODEL'), size: ix('SIZE'), ean: ix('EAN'), desc: ix('ITEM_DESC', 'Барааны нэр (МН)'), mn: ix('Барааны нэр (МН)'), gender: ix('GENDER'), cat: ix('CATEGORY'),
-      qty: ix('QTY'), brand: ix('BRAND'), price: ix('RRP MN2027'), base: ix('Undsen une'), carton: ix('CARTON')};
-    const items = {}, eans = {}; let pcs = 0, bad = 0;
-    for (const r of rows.slice(hi + 1)){
-      if (!r) continue; const ean = eanOf(r[c.ean]), model = String(r[c.model] == null ? '' : r[c.model]).trim(), size = String(r[c.size] == null ? '' : r[c.size]).trim(), q = c.qty >= 0 ? num(r[c.qty]) : 1;
-      if (!ean || !model){ if (r.some(v => v != null && v !== '')) bad++; continue; }
-      const k = keyOf(model, size), g = String(r[c.gender] || ''), cat = String(r[c.cat] || '');
-      const it = items[k] = items[k] || {k, m: model, s: size, e: ean, q: 0, n: c.mn >= 0 && r[c.mn] ? String(r[c.mn]) : (TR ? TR.tr(r[c.desc], g, cat)[0] : String(r[c.desc] || '')),
-        raw: c.desc >= 0 ? String(r[c.desc] || '') : '', g, c: cat, b: String(r[c.brand] || ''), p: c.price >= 0 ? num(r[c.price]) : 0};
-      it.q += q; pcs += q; eans[ean] = k;
+  // --- LPP list: any language of headers (LPP English, our Mongolian, Russian/Polish) ---
+  // identity of a piece = its barcode (EAN); model / size / category are checked against the master file,
+  // so a different translation of the name never changes which item it is
+  const SYN = {
+    ean: ['ean', 'баркод', 'баркод (ean)', 'barcode', 'штрихкод', 'штрих-код', 'kod kreskowy', 'ean13'],
+    model: ['model', 'загвар', 'загвар (өнгөтэй)', 'модель', 'артикул'],
+    item: ['item', 'барааны код', 'sku', 'код товара', 'indeks'],
+    size: ['size', 'хэмжээ', 'размер', 'rozmiar'],
+    qty: ['qty', 'тоо', 'тоо ширхэг', 'тоо хэмжээ', 'кол-во', 'количество', 'ilość', 'ilosc', 'pcs'],
+    mn: ['барааны нэр (мн)', 'барааны нэр', 'нэр (мн)', 'нэр'],
+    desc: ['item_desc', 'нэр (эх хувь, kz/ru)', 'описание', 'наименование', 'opis'],
+    eng: ['eng', 'english', 'description'],
+    cat: ['category'], catmn: ['ангилал'], gender: ['gender', 'хүйс'], brand: ['brand', 'брэнд', 'бренд', 'marka'],
+    price: ['rrp mn2027', 'мн үнэ 2027', 'борлуулах үнэ 2027 (₮)', 'үнэ (₮)'], carton: ['carton', 'картон №', 'хайрцаг', 'короб'],
+  };
+  const norm = v => String(v == null ? '' : v).trim().toLowerCase().replace(/\s+/g, ' ');
+  const isEan = v => /^\d{8,14}$/.test(eanOf(v));
+  const eanOk = e => { if (!/^\d{13}$/.test(e)) return /^\d{8,14}$/.test(e); let s2 = 0; for (let i = 0; i < 12; i++) s2 += (+e[i]) * (i % 2 ? 3 : 1); return (10 - s2 % 10) % 10 === +e[12]; };
+  // English item description → LPP category (when the file has none and the master does not know the barcode)
+  const ENG_CAT = [[/SHOE|BOOT|SANDAL|SNEAKER|TRAINER|SLIPPER|FLIP|MOCCASIN|LOAFER|PUMPS|ESPADRILLE/, 'SHOES'], [/BAG|BACKPACK|WALLET|PURSE/, 'BAGS'],
+    [/EARRING|NECKLACE|BRACELET|RING|JEWEL|HAT|CAP|BEANIE|SCARF|GLOVE|BELT|SOCKS|TIGHTS|HAIR|SUNGLASS|BALACLAVA|BAND/, 'ACCESSORIES'],
+    [/CANDLE|PILLOW|CUSHION|BLANKET|TOWEL|MUG|PLATE|BOWL|VASE|BASKET|DECOR|ORNAMENT|FRAME|RUG|KITCHEN|HOME|CHRISTMAS/, 'HOME ACCESSORIES']];
+  const MN_CAT = [[/гутал|шаахай|пүүз|бутс|босоо түрийтэй/i, 'SHOES'], [/цүнх|түрийвч/i, 'BAGS'], [/ээмэг|зүүлт|бугуйвч|бөгж|малгай|ороолт|бээлий|бүс|оймс|трико|үсний|нүдний шил/i, 'ACCESSORIES'],
+    [/лаа|дэр|хөнжил|алчуур|аяга|таваг|ваар|сагс|чимэглэл|гэр ахуй|шинэ жил/i, 'HOME ACCESSORIES'], [/тоглоом/i, 'TOYS'], [/бичиг хэрэг|дэвтэр|үзэг/i, 'STATIONERY']];
+  function parseList(rows, opts){
+    opts = opts || {}; const M = opts.master || null, nameSrc = opts.nameSrc || 'master';
+    const findCol = (H, keys) => { for (const k of keys){ const i = H.indexOf(k); if (i >= 0) return i; } return -1; };
+    // header row: the first row naming a barcode column; otherwise the row above the first barcode-looking value
+    let hi = rows.findIndex(r => r && r.some(c => SYN.ean.includes(norm(c))));
+    if (hi < 0){ const first = rows.findIndex(r => r && r.some(isEan)); if (first > 0) hi = first - 1; }
+    if (hi < 0) return {error: 'Баркод (EAN) багана олдсонгүй'};
+    const H = rows[hi].map(norm), body = rows.slice(hi + 1).filter(r => r && r.some(v => v != null && v !== ''));
+    const c = {}; for (const k of Object.keys(SYN)) c[k] = findCol(H, SYN[k]);
+    // the barcode column by content when the header is unknown / wrong
+    const share = (i, f) => { if (i < 0) return 0; let n = 0, ok = 0; for (const r of body.slice(0, 300)){ if (r[i] == null || r[i] === '') continue; n++; if (f(r[i])) ok++; } return n ? ok / n : 0; };
+    if (share(c.ean, isEan) < 0.8){ let best = -1, bs = 0; for (let i = 0; i < H.length; i++){ const sh = share(i, isEan); if (sh > bs){ bs = sh; best = i; } } if (bs >= 0.8) c.ean = best; else return {error: 'Баркод (EAN) багана олдсонгүй'}; }
+    // model with colour (12345-99X): among the candidate columns take the one that looks like it
+    const looksModel = v => /^[A-Z0-9]{4,6}-[A-Z0-9]{2,3}$/i.test(String(v || '').trim());
+    const cands = H.map((h, i) => i).filter(i => SYN.model.includes(H[i]) || share(i, looksModel) > 0.8).sort((a, b) => share(b, looksModel) - share(a, looksModel));
+    c.model = cands.length && share(cands[0], looksModel) > 0.5 ? cands[0] : c.model;
+    const items = {}, eans = {}; let pcs = 0, bad = 0, badEan = 0, mism = [], unknown = 0, conflicts = [];
+    for (const r of body){
+      const e = eanOf(r[c.ean]); if (!isEan(e)){ bad++; continue; }
+      if (!eanOk(e)) badEan++;
+      const m = M && M[e];
+      let model = String(c.model >= 0 && r[c.model] != null ? r[c.model] : '').trim(), size = String(c.size >= 0 && r[c.size] != null ? r[c.size] : '').trim();
+      if (!model && c.item >= 0 && r[c.item]){ const it2 = String(r[c.item]).trim(); const p2 = it2.split('-'); if (p2.length >= 3){ model = p2.slice(0, -1).join('-'); if (!size) size = p2.at(-1); } }
+      if (m){ if (model && (m[0] !== model || (size && String(m[1]) !== size)) && mism.length < 50) mism.push({e, file: model + ' ' + size, master: m[0] + ' ' + m[1]}); model = m[0]; size = String(m[1]); }   // the master decides model/size
+      else unknown++;
+      if (!model) model = e;
+      const q = c.qty >= 0 ? num(r[c.qty]) : 1; if (!(q > 0)) continue;
+      const k = keyOf(model, size);
+      if (eans[e] && eans[e] !== k){ conflicts.push({e, a: eans[e], b: k}); continue; }
+      const eng = c.eng >= 0 ? String(r[c.eng] || '') : '', raw = c.desc >= 0 ? String(r[c.desc] || '') : '';
+      const cat = (m && m[5]) || (c.cat >= 0 && r[c.cat] ? String(r[c.cat]).toUpperCase() : '') || ((ENG_CAT.find(([re]) => re.test(eng.toUpperCase())) || [])[1]) || ((MN_CAT.find(([re]) => re.test((c.catmn >= 0 ? r[c.catmn] || '' : '') + ' ' + (c.mn >= 0 ? r[c.mn] || '' : ''))) || [])[1]) || 'MIX';
+      const fileName = c.mn >= 0 && r[c.mn] ? String(r[c.mn]).trim() : '';
+      const name = nameSrc === 'file' ? (fileName || (m && m[2]) || (TR ? TR.tr(raw, '', cat)[0] : raw)) : ((m && m[2]) || fileName || (TR ? TR.tr(raw, '', cat)[0] : raw));
+      const it = items[k] = items[k] || {k, m: model, s: size, e, q: 0, n: name, raw: raw || eng, g: (m && m[4]) || String(r[c.gender] || ''), c: cat, b: (m && m[3]) || String(r[c.brand] || ''), p: c.price >= 0 ? num(r[c.price]) : (m ? +m[6] || 0 : 0)};
+      it.q += q; pcs += q; eans[e] = k;
     }
-    return {items, eans, pcs, lines: Object.keys(items).length, bad};
+    return {items, eans, pcs, lines: Object.keys(items).length, bad, badEan, mism, unknown, conflicts, cols: Object.fromEntries(Object.entries(c).filter(([, v]) => v >= 0).map(([k, v]) => [k, rows[hi][v]]))};
   }
 
   // --- plan: how many pieces of every model|size go to which store ---
@@ -3923,12 +3967,23 @@ function wdPctInputs(){
     + `<span class="note" id="wd-pct-sum"></span>`;
 }
 function wdCfg(){ const cfg = whCfg(); return {...cfg, stores: cfg.stores.map(s => { const el = $(`input[data-wd-pct="${s.key}"]`); const p = el ? (+String(el.value).replace(/[^\d.]/g, '') || 0) : s.pct; return {...s, pct: p, on: p > 0}; })}; }
+function wdMatchInfo(){
+  const E = Object.keys(WD.eans || {}), tot = E.length, known = E.filter(e => WS.master && WS.master[e]).length;
+  const mix = Object.values(WD.items).filter(i => i.c === 'MIX').reduce((a, i) => a + i.q, 0);
+  const parts = [`Хуудас «${esc(WD.sheet || '')}» · баганууд: ${esc(Object.values(WD.cols || {}).join(', '))}`];
+  parts.push(WD.hasMaster ? `🔎 Бараа баркодоор танигдана (нэрээр биш): <b>${fmt(known)}</b>/${fmt(tot)} мастер файлд байна — нэр, ангилал мастер файлаас` + (tot - known ? ` · <b style="color:var(--warn)">${fmt(tot - known)} шинэ баркод</b> (файлын нэрээр${isOwner ? ', хадгалахад мастер файлд нэмэгдэнэ' : ''})` : '') : '<b style="color:var(--warn)">Мастер файл ачаалаагүй</b> — нэр, ангилал энэ файлаас');
+  if (WD.mism && WD.mism.length) parts.push(`<b style="color:var(--warn)">${WD.mism.length} баркодын загвар/хэмжээ мастер файлтай зөрсөн</b> (мастер файлынхаар авлаа): ${WD.mism.slice(0, 5).map(x => esc(x.e + ': ' + x.file + ' → ' + x.master)).join('; ')}`);
+  if (WD.conflicts && WD.conflicts.length) parts.push(`<b style="color:var(--bad)">${WD.conflicts.length} баркод хоёр өөр бараанд давхардсан — алгассан</b>`);
+  if (WD.badEan) parts.push(`${WD.badEan} баркодын шалгах орон буруу`);
+  if (mix) parts.push(`<b style="color:var(--warn)">${fmt(mix)} ш ангилалгүй</b> → «MIX» байршил`);
+  return parts.join('<br>');
+}
 function wdPreview(){
   if (!WD){ $('#wd-info').textContent = ''; $('#wd-save').disabled = true; return; }
   const c = wdCfg(), sum = c.stores.reduce((a, s) => a + s.pct, 0); $('#wd-pct-sum').innerHTML = `нийт <b style="color:${sum === 100 ? 'inherit' : 'var(--bad)'}">${sum}%</b>`;
   const r = WH.plan(WD.items, c); if (r.error){ $('#wd-info').textContent = r.error; $('#wd-save').disabled = true; return; }
   WD.plan = r; const models = new Set(Object.values(WD.items).map(i => i.m)).size;
-  $('#wd-info').innerHTML = `${fmt(WD.pcs)} ш · ${fmt(models)} загвар · ${fmt(WD.lines)} хэмжээ${WD.bad ? ` · ${WD.bad} мөр алгассан` : ''}<br>Төлөвлөгөө: ${c.stores.filter(s => s.pct).map(s => `<b style="color:${STORE_COLOR[s.key]}">${esc(s.name)}</b> ${fmt(r.got[s.key] || 0)} ш (${WD.pcs ? (r.got[s.key] / WD.pcs * 100).toFixed(1) : 0}%)`).join(' · ')}`;
+  $('#wd-info').innerHTML = `${fmt(WD.pcs)} ш · ${fmt(models)} загвар · ${fmt(WD.lines)} хэмжээ${WD.bad ? ` · ${WD.bad} мөр алгассан` : ''}<br>${wdMatchInfo()}<br>Төлөвлөгөө: ${c.stores.filter(s => s.pct).map(s => `<b style="color:${STORE_COLOR[s.key]}">${esc(s.name)}</b> ${fmt(r.got[s.key] || 0)} ш (${WD.pcs ? (r.got[s.key] / WD.pcs * 100).toFixed(1) : 0}%)`).join(' · ')}`;
   $('#wd-save').disabled = sum !== 100;
 }
 async function wdSave(){
@@ -3941,6 +3996,8 @@ async function wdSave(){
     await db.doc('delivcnt/' + id).set({deliv: id, c: {}, x: {}, u: {}, tot: {}});
     await ref.set({name, createdAt: new Date().toISOString(), by: me, status: 'active', total: WD.pcs, lines: WD.lines, parts, pct: Object.fromEntries(c.stores.map(s => [s.key, s.pct])), planTot: WD.plan.got, file: WD.file || ''});
     WS.active = id; try{ localStorage.setItem('vivi-wh-active', id); }catch(e){}
+    if (isOwner && WS.master){ const add = {}; for (const [e, k] of Object.entries(WD.eans || {})) if (!WS.master[e]){ const it = WD.items[k]; add[e] = [it.m, it.s, it.n, it.b, it.g, it.c, it.p, 0, 0]; }
+      if (Object.keys(add).length){ $('#wd-msg').textContent = 'Шинэ баркодуудыг мастер файлд нэмж байна…'; try{ await saveMaster({...WS.master, ...add}, (WS.masterMeta && WS.masterMeta.file) || 'master'); }catch(e){ console.warn('master add', e); } } }
     WD = null; $('#wd-file').value = ''; $('#wd-name').value = ''; wdPreview(); $('#wd-msg').textContent = 'Хадгаллаа — «Скан» хэсэгт сканнердаж эхэлнэ үү.';
   }catch(err){ alertMsg(err); $('#wd-msg').textContent = 'Хадгалж чадсангүй.'; $('#wd-save').disabled = false; }
 }
@@ -4037,10 +4094,10 @@ $('#rc-finish').addEventListener('click', rcFinish);
 $('#rc-close').addEventListener('click', async () => { await rcFlush(); WS.rc = {ship: '', pend: {}, last: []}; renderRcvCount(); });
 $('#wd-file').addEventListener('change', async e => {
   const f = e.target.files[0]; if (!f) return; $('#wd-info').textContent = 'Уншиж байна…';
-  try{ const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let best = null;
-    for (const n of wb.SheetNames){ const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null}); const r = WH.parseList(rows); if (!r.error && (!best || r.pcs > best.pcs)) best = r; }
-    if (!best){ $('#wd-info').textContent = 'LPP жагсаалт олдсонгүй (MODEL, SIZE, EAN, QTY баганатай байх ёстой).'; WD = null; return; }
-    WD = {...best, file: f.name}; if (!$('#wd-name').value) $('#wd-name').value = f.name.replace(/\.[^.]+$/, ''); wdPreview();
+  try{ const M = await loadMaster(); const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let best = null;
+    for (const n of wb.SheetNames){ const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null}); const r = WH.parseList(rows, {master: M}); if (!r.error && (!best || r.pcs > best.pcs)) best = {...r, sheet: n}; }
+    if (!best){ $('#wd-info').textContent = 'Жагсаалт олдсонгүй — баркод (EAN) болон тоо ширхэгийн багана байх ёстой.'; WD = null; return; }
+    WD = {...best, file: f.name, hasMaster: !!M}; if (!$('#wd-name').value) $('#wd-name').value = f.name.replace(/\.[^.]+$/, ''); wdPreview();
   }catch(err){ console.warn(err); $('#wd-info').textContent = 'Уншиж чадсангүй.'; }
 });
 document.addEventListener('input', e => { if (e.target.closest('#wd-pct')) wdPreview(); });
@@ -4083,17 +4140,25 @@ async function saveWhSettings(){
   try{ await db.doc('config/wh').set(cfg); $('#whs-msg').textContent = 'Хадгаллаа.'; }catch(err){ alertMsg(err); }
 }
 // master file: our JSON (EAN → [model, size, name МН, brand, gender, category, price, base price, qty]) or the KZ Excel
+async function saveMaster(M, file){
+  const str = JSON.stringify(M), CH = 400000, n = Math.ceil(str.length / CH);
+  for (let i = 0; i < n; i++){ const m2 = $('#whm-msg'); if (m2) m2.textContent = `Хадгалж байна… ${i + 1}/${n}`; await db.doc('whmaster/p_' + i).set({part: str.slice(i * CH, (i + 1) * CH), i}); }
+  WS.masterMeta = {n, count: Object.keys(M).length, at: new Date().toISOString(), by: me, file};
+  await db.doc('whmaster/meta').set(WS.masterMeta); WS.master = M;
+}
 async function uploadMaster(f){
   const msg = t => $('#whm-msg').textContent = t; msg('Уншиж байна…');
-  try{ let M = null;
+  try{ let M = null; const old = await loadMaster(), replace = $('#whm-replace') && $('#whm-replace').checked;
     if (/\.json$/i.test(f.name)){ const j = JSON.parse(await f.text()); M = j.rows || j; }
-    else { const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); const sh = wb.Sheets[wb.SheetNames.find(n => /final|бүх/i.test(n)) || wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sh, {header: 1, raw: true, defval: null}); const r = WH.parseList(rows); if (r.error) throw new Error(r.error);
-      M = {}; for (const it of Object.values(r.items)) M[it.e] = [it.m, it.s, it.n, it.b, it.g, it.c, it.p, 0, it.q]; }
-    const str = JSON.stringify(M), CH = 400000, n = Math.ceil(str.length / CH);
-    for (let i = 0; i < n; i++){ msg(`Хадгалж байна… ${i + 1}/${n}`); await db.doc('whmaster/p_' + i).set({part: str.slice(i * CH, (i + 1) * CH), i}); }
-    await db.doc('whmaster/meta').set({n, count: Object.keys(M).length, at: new Date().toISOString(), by: me, file: f.name});
-    WS.master = M; msg(`✓ ${fmt(Object.keys(M).length)} баркод хадгаллаа.`);
+    else { const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let best = null;
+      for (const n of wb.SheetNames){ const r = WH.parseList(XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null}), {nameSrc: 'file'}); if (!r.error && (!best || r.pcs > best.pcs)) best = r; }
+      if (!best) throw new Error('баркод (EAN) багана олдсонгүй');
+      M = {}; for (const [e, k] of Object.entries(best.eans)){ const it = best.items[k]; M[e] = [it.m, it.s, it.n, it.b, it.g, it.c, it.p, 0, it.q]; } }
+    // merge: barcodes already in the master keep their name/category (one item = one name forever); new barcodes are added
+    let added = Object.keys(M).length, kept = 0;
+    if (old && !replace){ added = 0; for (const e of Object.keys(M)){ if (old[e]) kept++; else added++; } M = {...M, ...old}; }
+    await saveMaster(M, f.name);
+    msg(`✓ Нийт ${fmt(Object.keys(M).length)} баркод · ${fmt(added)} шинэ нэмэгдсэн${kept ? ` · ${fmt(kept)} өмнөх нэрээрээ үлдсэн` : ''}.`);
   }catch(err){ console.warn(err); msg('Алдаа: ' + (err.message || err)); }
 }
 
