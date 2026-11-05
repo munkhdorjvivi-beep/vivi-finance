@@ -98,6 +98,7 @@ section[data-panel="req"]:not([data-mode="rec"]) #recur-card{display:none}
 #recur-card td.acts .btn{padding:4px 8px}
 .wh-result{margin-top:12px;border:3px solid var(--line,#ddd);border-radius:12px;padding:18px;text-align:center;min-height:110px}
 .wh-big{font-size:40px;font-weight:700;line-height:1.15;margin-bottom:6px}
+.wh-price{font-size:46px;font-weight:800;font-family:ui-monospace,monospace;margin:6px 0;letter-spacing:1px}
 @media (max-width:640px){.wh-big{font-size:30px}}
 body{margin:0;background:var(--bg)}
 #gate{max-width:420px;margin:12vh auto 0;text-align:center}
@@ -519,7 +520,7 @@ body{margin:0;background:var(--bg)}
 
   <!-- WAREHOUSE (LPP): deliveries, scanner, shipments -->
   <section class="panel" data-panel="wh" hidden>
-    <div class="filter chips" id="wh-mode" style="margin-bottom:12px"><button data-m="scan" aria-pressed="true">📦 Скан</button><button data-m="ship" aria-pressed="false">🚚 Илгээмж<span class="n badge" id="wh-ship-n" hidden></span></button><button data-m="deliv" aria-pressed="false">🗂 Хүргэлт (трак)</button></div>
+    <div class="filter chips" id="wh-mode" style="margin-bottom:12px"><button data-m="scan" aria-pressed="true">📦 Скан</button><button data-m="price" aria-pressed="false">🏷 Үнэ шалгах</button><button data-m="ship" aria-pressed="false">🚚 Илгээмж<span class="n badge" id="wh-ship-n" hidden></span></button><button data-m="deliv" aria-pressed="false">🗂 Хүргэлт (трак)</button></div>
 
     <div class="card" id="wh-scan-card">
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
@@ -532,7 +533,18 @@ body{margin:0;background:var(--bg)}
       <div class="tbl" style="margin-top:12px"><table><thead><tr><th>Дэлгүүр</th><th class="n">Төлөвлөгөө</th><th class="n">Скан</th><th class="n">Үлдсэн</th><th class="n">Нээлттэй илгээмж</th><th></th></tr></thead><tbody id="wh-stores"></tbody></table></div>
       <h3 style="margin:14px 0 6px;font-size:14px">Сүүлийн скан</h3>
       <div class="tbl"><table><thead><tr><th>Цаг</th><th>Баркод</th><th>Бараа</th><th>Хэмжээ</th><th>Хаашаа</th><th></th></tr></thead><tbody id="wh-last"></tbody></table></div>
+      <div class="row" style="margin-top:12px;justify-content:space-between"><span class="note">Скан бүр шууд хадгалагдана — завсарлага авч, дараа нь (өөр компьютерээс ч) үргэлжлүүлж болно.</span><button class="btn primary" id="wh-end">⏹ Скан дуусгах — бүх нээлттэй илгээмжийг илгээх</button></div>
+      <div id="wh-session" style="margin-top:10px"></div>
       <div id="wh-unk" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card" id="wh-price-card" hidden>
+      <h2>🏷 Үнэ шалгах</h2>
+      <p class="note" style="margin:0 0 8px">Баркод уншуулахад наах үнэ гарна. Хуваарилалт, тоололд нөлөөлөхгүй. Үнэ: эхлээд идэвхтэй хүргэлтийн файлаас, байхгүй бол мастер файлаас.</p>
+      <input id="wh-price-input" autocomplete="off" inputmode="none" placeholder="Баркод уншуулна уу…" style="font-size:22px;padding:14px;text-align:center;letter-spacing:1px">
+      <div id="wh-price-result" class="wh-result"><div class="wh-big">—</div><div class="note">Үнэ энд гарна</div></div>
+      <h3 style="margin:14px 0 6px;font-size:14px">Сүүлд шалгасан</h3>
+      <div class="tbl"><table><thead><tr><th>Цаг</th><th>Баркод</th><th>Бараа</th><th>Загвар · хэмжээ</th><th class="n">Үнэ</th></tr></thead><tbody id="wh-price-last"></tbody></table></div>
     </div>
 
     <div class="card" id="wh-ship-card" hidden>
@@ -561,7 +573,7 @@ body{margin:0;background:var(--bg)}
   <!-- STORE RECEIVING (тулгалт) -->
   <section class="panel" data-panel="rcv" hidden>
     <div class="card">
-      <h2>Хүлээн авах илгээмж</h2>
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">Хүлээн авах илгээмж</h2><div class="filter chips" id="rc-f"><button data-f="act" aria-pressed="true">Хүлээгдэж буй</button><button data-f="all" aria-pressed="false">Архив (бүгд)</button></div></div>
       <p class="note" style="margin:0 0 8px">Агуулахаас ирсэн бараа бүрийг сканнердана. Тоолж дуустал илгээсэн тоо харагдахгүй — «Тулгалт дуусгах» дарсны дараа зөрүү гарна.</p>
       <div class="tbl"><table><thead><tr><th>№</th><th>Дэлгүүр</th><th>Хүргэлт</th><th>Илгээсэн огноо</th><th>Төлөв</th><th></th></tr></thead><tbody id="rc-ships"></tbody></table></div>
     </div>
@@ -3759,7 +3771,7 @@ $('#rc-xlsx').addEventListener('click', () => {
 // Firestore: config/wh (settings) · deliv/{id} · delivpart/{id}_{i} (items + plan) · delivcnt/{id} (scanned per model|size per store)
 //            ship/{id} (one shipment to a store: l = sent per EAN, r = received per EAN) · whmaster/{p_i} (KZ master file, chunks)
 const WS = {cfg: null, delivs: [], active: '', parts: {}, cnt: {}, ships: [], master: null, masterMeta: null, mode: 'scan', shipF: 'act', detail: '',
-  pend: {}, pendN: 0, last: [], lastKey: '', lastAt: 0, open: {}, flushing: false, rc: {ship: '', pend: {}, pendN: 0, last: []}};
+  pend: {}, pendN: 0, last: [], lastKey: '', lastAt: 0, open: {}, flushing: false, rc: {ship: '', pend: {}, pendN: 0, last: []}, rcF: 'act', priceLast: [], session: null};
 const whCfg = () => WH.cfgOf(WS.cfg);
 const fv = () => firebase.firestore.FieldValue;
 // field names inside maps: Firestore dotted paths need simple identifiers
@@ -3842,22 +3854,36 @@ async function onScan(raw){
   else {
     const M = await loadMaster(), m = M && M[e];
     if (!m){ addPend(id, 'u|' + e, '_', 1); showResult('bad', 'ТӨЛӨВЛӨГӨӨНД БАЙХГҮЙ', `${e} — мастер файлд ч байхгүй. Тусад нь тавиад, дараа шалгана.`); beep('bad'); pushLast({e, n: '—', s: '', st: '', kind: 'bad'}); return; }
-    k = WH.keyOf(m[0], m[1]); it = {k, m: m[0], s: m[1], e, n: m[2], c: m[5], b: m[3]}; st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1);
+    k = WH.keyOf(m[0], m[1]); it = {k, m: m[0], s: m[1], e, n: m[2], c: m[5], b: m[3], p: +m[6] || 0}; st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1);
   }
   let sh = openShip(id, st), sid = sh ? sh.id : WS.open[id + '|' + st], base = null;
   if (!sid){ sid = db.collection('ship').doc().id; WS.open[id + '|' + st] = sid; base = newShipBase(id, st); WS.ships.push({id: sid, ...base, _local: true}); }
   const loc = WH.locs(it, st, whCfg());
-  addShipPend(sid, base, e, 1, {n: it.n || '', k, l: loc.suf, x: kind === 'extra' ? 1 : 0});
+  addShipPend(sid, base, e, 1, {n: it.n || '', k, l: loc.suf, x: kind === 'extra' ? 1 : 0, p: it.p || 0});
   const c = cntK(id, k), planned = (P.plan[k] || {})[st] || 0;
-  showResult(kind, storeName(st), `${it.n || ''} · ${it.m} · ${it.s} — байршил ${loc.to}${kind === 'over' ? ' · төлөвлөгөөнөөс илүү → агуулахад үлдэнэ' : kind === 'extra' ? ' · жагсаалтад байгаагүй (мастер файлаас)' : ` · энэ хэмжээ ${c[st] || 0}/${planned}`}`, st);
+  showResult(kind, storeName(st), (it.p ? `<div class="wh-price">${fmt(it.p)}₮</div>` : '<div class="note"><b>үнэ алга</b></div>') + esc(`${it.n || ''} · ${it.m} · ${it.s} — байршил ${loc.to}${kind === 'over' ? ' · төлөвлөгөөнөөс илүү → агуулахад үлдэнэ' : kind === 'extra' ? ' · жагсаалтад байгаагүй (мастер файлаас)' : ` · энэ хэмжээ ${c[st] || 0}/${planned}`}`), st, true);
   beep(kind); pushLast({e, n: it.n, s: it.m + ' ' + it.s, st, kind, k, sid});
   renderWhStores();
 }
-function pushLast(x){ WS.last.unshift({...x, t: new Date().toTimeString().slice(0, 8)}); WS.last = WS.last.slice(0, 25); renderWhLast(); }
-function showResult(kind, big, small, st){
+function pushLast(x){ WS.last.unshift({...x, t: new Date().toTimeString().slice(0, 8)}); WS.last = WS.last.slice(0, 25); try{ localStorage.setItem('vivi-wh-last-' + WS.active, JSON.stringify(WS.last)); }catch(e){} renderWhLast(); }
+function restoreLast(){ if (WS.lastFor === WS.active) return; WS.lastFor = WS.active; try{ WS.last = JSON.parse(localStorage.getItem('vivi-wh-last-' + WS.active) || '[]'); }catch(e){ WS.last = []; } }
+// ---------- price check (does not touch counts) ----------
+async function priceCheck(raw){
+  const e = WH.eanOf(raw); if (!e) return; const el = $('#wh-price-result');
+  let it = null, src = '';
+  const P = WS.active ? await loadParts(WS.active) : null; if (P && P.eans[e]){ it = P.items[P.eans[e]]; src = 'хүргэлтийн файл'; }
+  if (!it || !it.p){ for (const d of WS.delivs){ const Q = WS.parts[d.id]; if (Q && Q.eans[e] && Q.items[Q.eans[e]].p){ it = Q.items[Q.eans[e]]; src = d.name; break; } } }
+  if (!it || !it.p){ const M = await loadMaster(), m = M && M[e]; if (m){ it = {m: m[0], s: m[1], n: m[2], c: m[5], p: +m[6] || 0}; src = 'мастер файл'; } }
+  if (!it){ el.style.borderColor = '#c0392b'; el.innerHTML = `<div class="wh-big" style="color:#c0392b">ОЛДСОНГҮЙ</div><div class="mono">${esc(e)}</div>`; beep('bad'); return; }
+  el.style.borderColor = '#1f9d6b'; el.innerHTML = `<div class="wh-price" style="font-size:64px">${it.p ? fmt(it.p) + '₮' : 'үнэ алга'}</div><div><b>${esc(it.n || '')}</b> · ${esc(it.m)} · ${esc(it.s)} · ${esc((WHTR.CAT_MN || {})[it.c] || it.c || '')}</div><div class="note">эх сурвалж: ${esc(src)}</div>`;
+  beep(it.p ? 'ok' : 'extra');
+  WS.priceLast.unshift({t: new Date().toTimeString().slice(0, 8), e, n: it.n || '', ms: it.m + ' · ' + it.s, p: it.p}); WS.priceLast = WS.priceLast.slice(0, 15);
+  $('#wh-price-last').innerHTML = WS.priceLast.map(x => `<tr><td class="mono">${x.t}</td><td class="mono">${esc(x.e)}</td><td>${esc(x.n)}</td><td class="mono">${esc(x.ms)}</td><td class="n"><b>${x.p ? fmt(x.p) + '₮' : '–'}</b></td></tr>`).join('');
+}
+function showResult(kind, big, small, st, html){
   const el = $('#wh-result'); if (!el) return; const col = st ? STORE_COLOR[st] || '#555' : kind === 'bad' ? '#c0392b' : '#555';
   el.style.borderColor = col; el.style.background = kind === 'bad' ? 'rgba(192,57,43,.10)' : st ? col + '1a' : '';
-  el.innerHTML = `<div class="wh-big" style="color:${col}">${esc(big)}</div><div>${esc(small)}</div>`;
+  el.innerHTML = `<div class="wh-big" style="color:${col}">${esc(big)}</div><div>${html ? small : esc(small)}</div>`;
 }
 async function undoScan(i){
   const x = WS.last[i]; if (!x || x.undone || x.kind === 'bad') return; const id = WS.active;
@@ -3868,6 +3894,49 @@ async function sendShip(sid){
   if (!confirm(`${storeName(s.store)} руу ${s.tq || 0} ширхэг илгээх үү? Илгээсний дараа энэ илгээмжид нэмж скан хийхгүй (шинэ илгээмж нээгдэнэ).`)) return;
   try{ await db.doc('ship/' + sid).update({status: 'sent', sentAt: new Date().toISOString(), sentBy: me, notifyStore: false}); delete WS.open[s.deliv + '|' + s.store]; }
   catch(err){ alertMsg(err); }
+}
+
+async function endSession(){
+  await flush(); const id = WS.active, over = whCfg().over.key;
+  const L = WS.ships.filter(s => s.deliv === id && s.status === 'open' && s.store !== over && (s.tq || 0) > 0);
+  if (!L.length){ alert('Илгээх нээлттэй илгээмж алга.'); return; }
+  if (!confirm('Скан дуусгаж дараах илгээмжийг илгээх үү?\n\n' + L.map(s => `${storeName(s.store)}: ${s.tq} ш`).join('\n') + '\n\nДараагийн скан шинэ илгээмж болж эхэлнэ.')) return;
+  const now = new Date().toISOString(), b = db.batch();
+  for (const s of L){ b.update(db.doc('ship/' + s.id), {status: 'sent', sentAt: now, sentBy: me, notifyStore: false}); delete WS.open[s.deliv + '|' + s.store]; }
+  try{ await b.commit(); WS.session = {at: now, ids: L.map(s => s.id)}; renderSession(); }catch(err){ alertMsg(err); }
+}
+function renderSession(){
+  const el = $('#wh-session'); if (!el) return; const S = WS.session; if (!S){ el.innerHTML = ''; return; }
+  const L = S.ids.map(i => WS.ships.find(s => s.id === i)).filter(Boolean);
+  el.innerHTML = `<div class="banner"><b>✓ ${esc(fmtDT(S.at))} — ${L.length} илгээмж илгээлээ</b> (${fmt(L.reduce((a, s) => a + (s.tq || 0), 0))} ш). Дэлгүүр бүрийн хуваарилалтын жагсаалт:
+    <div class="row" style="margin-top:6px;gap:6px">${L.map(s => `<button class="btn" data-wh-list="${esc(s.id)}">📄 ${esc(storeName(s.store))} · ${fmt(s.tq || 0)} ш</button>`).join('')}<button class="btn primary" data-wh-listall="1">📄 Бүгд нэг Excel-д</button><button class="btn" data-wh-sessx="1">✕</button></div>
+    <div class="note" style="margin-top:4px">Smart-ын хөдөлгөөний файл дэлгүүр тоолж хүлээн авсны дараа «Илгээмж» хэсэгт гарна (бодит хүлээн авсан тоогоор).</div></div>`;
+}
+// allocation / packing list of shipments (what goes to which store, with location and price)
+function shipRows(s){
+  const L = decMap(s.l), I = decMap(s.i), cfg = whCfg(), st = WH.storeOf(s.store, cfg) || {base: ''}; const P = WS.parts[s.deliv];
+  return Object.entries(L).filter(([, n]) => n > 0).map(([e, n]) => { const i = I[e] || {}, it = P && P.eans[e] ? P.items[P.eans[e]] : null; const [m, sz] = String(i.k || '').split('|');
+    return [e, i.n || '', m || '', sz || '', s.store === cfg.over.key ? st.base : st.base + (i.l || ''), i.p || (it && it.p) || '', n, i.x ? 'жагсаалтгүй' : '']; })
+    .sort((a, b) => String(a[4]).localeCompare(String(b[4])) || String(a[2]).localeCompare(String(b[2])) || String(a[3]).localeCompare(String(b[3])));
+}
+const SHIP_HEAD = ['Баркод', 'Барааны нэр', 'Загвар', 'Хэмжээ', 'Байршил', 'Үнэ (₮)', 'Тоо', 'Тэмдэглэл'];
+async function listFile(ids){
+  if (typeof XLSX === 'undefined') return; const L = ids.map(i => WS.ships.find(s => s.id === i)).filter(Boolean); if (!L.length) return;
+  for (const s of L) await loadParts(s.deliv);
+  const wb = XLSX.utils.book_new();
+  if (L.length > 1) XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Илгээмж', 'Дэлгүүр', 'Хүргэлт', 'Илгээсэн', 'Ширхэг', 'Төлөв'], ...L.map(s => [s.no, storeName(s.store), s.dname || '', fmtDT(s.sentAt || s.createdAt), s.tq || 0, (SHIP_ST[s.status] || [s.status])[0]])]), 'Хураангуй');
+  for (const s of L){ const rows = shipRows(s); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([[`${s.no} · ${storeName(s.store)} · ${s.dname || ''} · ${fmtDT(s.sentAt || s.createdAt)}`], SHIP_HEAD, ...rows, [], ['', 'Нийт', '', '', '', '', rows.reduce((a, r) => a + r[6], 0)]]), String(storeName(s.store) + ' ' + s.no).replace(/[\\/?*\[\]:]/g, '').slice(0, 31)); }
+  XLSX.writeFile(wb, L.length > 1 ? `Huvaarilalt_${localDay(L[0].sentAt || L[0].createdAt)}_${L.length}.xlsx` : `Huvaarilalt_${L[0].no}.xlsx`);
+}
+// receipt report: sent vs counted
+function rcvFile(sid){
+  const s = WS.ships.find(x => x.id === sid); if (!s || typeof XLSX === 'undefined') return; const cmp = WH.compare(decMap(s.l), decMap(s.r)), I = decMap(s.i), res = decMap(s.res);
+  const aoa = [[`${s.no} · ${storeName(s.store)} · ${s.dname || ''}`], [`Илгээсэн: ${fmtDT(s.sentAt)} · Хүлээн авсан: ${fmtDT(s.recvAt)} · ${s.recvBy || ''}`], [`Илгээсэн ${cmp.sent} · тоолсон ${cmp.recv} · дутуу ${cmp.miss} · илүү ${cmp.extra}`], [],
+    ['Баркод', 'Барааны нэр', 'Загвар|хэмжээ', 'Илгээсэн', 'Тоолсон', 'Зөрүү', 'Шийдвэр']];
+  const all = {...decMap(s.l)}; for (const e of Object.keys(decMap(s.r))) all[e] = all[e] || 0;
+  for (const e of Object.keys(all).sort()){ const a = +(decMap(s.l)[e] || 0), b = +(decMap(s.r)[e] || 0); const r = res[e] || {};
+    aoa.push([e, (I[e] || {}).n || '', (I[e] || {}).k || '', a, b, b - a, ((RES.find(([v]) => v === r.how) || [, ''])[1] || '') + (r.note ? ' · ' + r.note : '')]); }
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'Тулгалт'); XLSX.writeFile(wb, `Tulgalt_${s.no}.xlsx`);
 }
 
 // ---------- render: scanner ----------
@@ -3908,7 +3977,7 @@ function renderWhShips(){
     return `<tr class="${s.status === 'diff' ? 'sev-bad' : ''}"><td class="mono">${esc(s.no || s.id)}</td><td><b style="color:${STORE_COLOR[s.store] || '#555'}">${esc(storeName(s.store))}</b></td><td>${esc(s.dname || '')}</td>
       <td class="n">${fmt(s.tq || 0)}</td><td class="n">${s.status === 'open' || s.status === 'sent' ? '–' : fmt(s.rq || 0)}</td><td><span class="chip ${st[1]}">${st[0]}</span>${s.cmp && !s.cmp.ok ? `<div class="note">дутуу ${fmt(s.cmp.miss)} · илүү ${fmt(s.cmp.extra)}</div>` : ''}</td>
       <td class="note">${esc(fmtDT(s.sentAt || s.createdAt))}${s.recvAt ? '<br>хүлээн авсан ' + esc(fmtDT(s.recvAt)) : ''}</td>
-      <td style="white-space:nowrap"><button class="btn" data-wh-det="${esc(s.id)}">Дэлгэрэнгүй</button>${s.status === 'open' && s.store !== whCfg().over.key ? `<button class="btn" data-wh-send="${esc(s.id)}">🚚 Илгээх</button>` : ''}${can ? `<button class="btn primary" data-wh-smart="${esc(s.id)}">📥 Smart</button>` : ''}</td></tr>`; }).join('')
+      <td style="white-space:nowrap"><button class="btn" data-wh-det="${esc(s.id)}">Дэлгэрэнгүй</button><button class="btn" data-wh-list="${esc(s.id)}" title="Хуваарилалтын жагсаалт (Excel)">📄</button>${['recv', 'diff', 'closed'].includes(s.status) ? `<button class="btn" data-wh-rcvx="${esc(s.id)}" title="Тулгалтын тайлан">📋</button>` : ''}${s.status === 'open' && s.store !== whCfg().over.key ? `<button class="btn" data-wh-send="${esc(s.id)}">🚚 Илгээх</button>` : ''}${can ? `<button class="btn primary" data-wh-smart="${esc(s.id)}">📥 Smart</button>` : ''}</td></tr>`; }).join('')
     : '<tr><td colspan="8" class="empty">Илгээмж алга.</td></tr>';
   renderShipDetail();
 }
@@ -4021,13 +4090,13 @@ async function purchaseFile(id){
 function myRcvStores(){ return whCfg().stores.map(s => s.key).filter(k => isOwner || (window.ALLOWX || {})['rcv_' + k]); }
 function renderRcv(){
   const tb = $('#rc-ships'); if (!tb) return; const mine = myRcvStores();
-  const L = WS.ships.filter(s => mine.includes(s.store) && ['sent', 'recv', 'diff', 'closed'].includes(s.status)).sort((a, b) => (a.status === 'sent' ? 0 : 1) - (b.status === 'sent' ? 0 : 1) || String(b.sentAt).localeCompare(String(a.sentAt))).slice(0, 40);
+  const L = WS.ships.filter(s => mine.includes(s.store) && (WS.rcF === 'all' ? ['sent', 'recv', 'diff', 'closed'] : ['sent']).includes(s.status)).sort((a, b) => (a.status === 'sent' ? 0 : 1) - (b.status === 'sent' ? 0 : 1) || String(b.sentAt).localeCompare(String(a.sentAt))).slice(0, 300);
   const n = L.filter(s => s.status === 'sent').length; const tbg = $('#t-rcv'); if (tbg){ tbg.textContent = n || ''; tbg.hidden = !n; }
   tb.innerHTML = L.length ? L.map(s => { const st = SHIP_ST[s.status] || [s.status, ''];
     return `<tr class="${s.status === 'sent' ? 'sev-warn' : ''}"><td class="mono">${esc(s.no)}</td><td><b style="color:${STORE_COLOR[s.store] || '#555'}">${esc(storeName(s.store))}</b></td><td>${esc(s.dname || '')}</td><td class="note">${esc(fmtDT(s.sentAt))}</td>
       <td><span class="chip ${st[1]}">${st[0]}</span>${s.status !== 'sent' && s.cmp ? `<div class="note">${s.cmp.ok ? 'зөрүүгүй' : `дутуу ${fmt(s.cmp.miss)} · илүү ${fmt(s.cmp.extra)}`}</div>` : ''}</td>
-      <td>${s.status === 'sent' ? `<button class="btn primary" data-rc-open="${esc(s.id)}">Тоолох</button>` : `<button class="btn" data-rc-view="${esc(s.id)}">Харах</button>`}</td></tr>`; }).join('')
-    : '<tr><td colspan="6" class="empty">Хүлээгдэж буй илгээмж алга.</td></tr>';
+      <td>${s.status === 'sent' ? `<button class="btn primary" data-rc-open="${esc(s.id)}">Тоолох</button>` : `<button class="btn" data-rc-view="${esc(s.id)}">Харах</button><button class="btn" data-wh-rcvx="${esc(s.id)}">📋 Excel</button>`}</td></tr>`; }).join('')
+    : `<tr><td colspan="6" class="empty">${WS.rcF === 'all' ? 'Илгээмж алга.' : 'Хүлээгдэж буй илгээмж алга — өмнөх тулгалтууд «Архив» хэсэгт.'}</td></tr>`;
   renderRcvCount();
 }
 function rcTotal(s){ return (s.rq || 0) + Object.values(WS.rc.pend).reduce((a, b) => a + b, 0); }
@@ -4075,11 +4144,16 @@ $('#wh-input').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.prev
 $('#rc-input').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); const v = e.target.value; e.target.value = ''; rcScan(v); } });
 // keep the cursor in the scan field (a hardware reader types into whatever is focused)
 setInterval(() => { const a = document.activeElement; const free = !a || a === document.body;
-  const wh = $('#wh-input'), rc = $('#rc-input'); if (free && wh && !wh.closest('[hidden]') && WS.mode === 'scan' && !$('section[data-panel="wh"]').hidden) wh.focus();
+  const wh = $('#wh-input'), rc = $('#rc-input'), pr = $('#wh-price-input'); if (free && wh && !wh.closest('[hidden]') && WS.mode === 'scan' && !$('section[data-panel="wh"]').hidden) wh.focus();
+  else if (free && pr && WS.mode === 'price' && !$('section[data-panel="wh"]').hidden) pr.focus();
   else if (free && rc && !rc.hidden && !$('section[data-panel="rcv"]').hidden && !$('#rc-count').hidden) rc.focus(); }, 700);
 document.addEventListener('click', async e => {
   const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
   if (d.whSend) return sendShip(d.whSend);
+  if (d.whList) return listFile([d.whList]);
+  if (d.whListall) return listFile((WS.session || {}).ids || []);
+  if (d.whSessx){ WS.session = null; return renderSession(); }
+  if (d.whRcvx) return rcvFile(d.whRcvx);
   if (d.whUndo != null) return undoScan(+d.whUndo);
   if (d.whDet){ WS.detail = WS.detail === d.whDet ? '' : d.whDet; return renderShipDetail(); }
   if (d.whSmart) return smartFile(d.whSmart);
@@ -4091,6 +4165,9 @@ document.addEventListener('click', async e => {
   if (d.rcUndo != null){ const x = WS.rc.last[+d.rcUndo]; if (x && !x.undone){ x.undone = true; WS.rc.pend[x.e] = (WS.rc.pend[x.e] || 0) - 1; renderRcvCount(); } return; }
 });
 $('#rc-finish').addEventListener('click', rcFinish);
+$('#wh-end').addEventListener('click', endSession);
+$('#wh-price-input').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); const v = e.target.value; e.target.value = ''; priceCheck(v); } });
+$$('#rc-f button').forEach(b => b.addEventListener('click', () => { WS.rcF = b.dataset.f; $$('#rc-f button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderRcv(); }));
 $('#rc-close').addEventListener('click', async () => { await rcFlush(); WS.rc = {ship: '', pend: {}, last: []}; renderRcvCount(); });
 $('#wd-file').addEventListener('change', async e => {
   const f = e.target.files[0]; if (!f) return; $('#wd-info').textContent = 'Уншиж байна…';
@@ -4106,7 +4183,7 @@ window.addEventListener('online', syncChip); window.addEventListener('offline', 
 
 function renderWh(){
   if (!$('section[data-panel="wh"]')) return;
-  $('#wh-scan-card').hidden = WS.mode !== 'scan'; $('#wh-ship-card').hidden = WS.mode !== 'ship'; $('#wh-deliv-card').hidden = WS.mode !== 'deliv';
+  $('#wh-scan-card').hidden = WS.mode !== 'scan'; $('#wh-price-card').hidden = WS.mode !== 'price'; restoreLast(); renderSession(); $('#wh-ship-card').hidden = WS.mode !== 'ship'; $('#wh-deliv-card').hidden = WS.mode !== 'deliv';
   renderWhActive(); renderWhStores(); renderWhLast(); renderWhShips(); renderWhDelivs(); syncChip();
   { const sig = JSON.stringify(whCfg().stores); if (!WD && WS.pctSig !== sig){ WS.pctSig = sig; wdPctInputs(); } }
   try{ renderRcv(); }catch(err){ console.warn('rcv', err); }
