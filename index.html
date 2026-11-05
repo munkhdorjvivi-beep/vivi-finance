@@ -3785,6 +3785,8 @@ $('#rc-xlsx').addEventListener('click', () => {
 const WS = {cfg: null, delivs: [], active: '', parts: {}, cnt: {}, ships: [], master: null, masterMeta: null, mode: 'scan', shipF: 'act', detail: '',
   pend: {}, pendN: 0, last: [], lastKey: '', lastAt: 0, open: {}, flushing: false, rc: {ship: '', pend: {}, pendN: 0, last: []}, rcF: 'act', priceLast: [], session: null};
 const whCfg = () => WH.cfgOf(WS.cfg);
+// warehouse errors must be visible here (the general message line lives on the requests tab)
+function whErr(err){ console.warn(err); const c = err && err.code || ''; alert((c === 'permission-denied' ? 'Эрх хүрэлцэхгүй байна (Firestore rules). ' : 'Алдаа гарлаа. ') + (c ? '[' + c + '] ' : '') + (err && err.message || err || '')); }
 const fv = () => firebase.firestore.FieldValue;
 // field names inside maps: Firestore dotted paths need simple identifiers
 const ek = s => 'k' + String(s).replace(/[^A-Za-z0-9]/g, c => '_' + c.charCodeAt(0).toString(16) + '_');
@@ -3909,7 +3911,7 @@ async function sendShip(sid){
   await flush(); const s = WS.ships.find(x => x.id === sid); if (!s) return;
   if (!confirm(`${storeName(s.store)} руу ${s.tq || 0} ширхэг илгээх үү? Илгээсний дараа энэ илгээмжид нэмж скан хийхгүй (шинэ илгээмж нээгдэнэ).`)) return;
   try{ await db.doc('ship/' + sid).update({status: 'sent', sentAt: new Date().toISOString(), sentBy: me, notifyStore: false}); delete WS.open[s.deliv + '|' + s.store]; }
-  catch(err){ alertMsg(err); }
+  catch(err){ whErr(err); }
 }
 
 async function endSession(){
@@ -3919,7 +3921,7 @@ async function endSession(){
   if (!confirm('Скан дуусгаж дараах илгээмжийг илгээх үү?\n\n' + L.map(s => `${storeName(s.store)}: ${s.tq} ш`).join('\n') + '\n\nДараагийн скан шинэ илгээмж болж эхэлнэ.')) return;
   const now = new Date().toISOString(), b = db.batch();
   for (const s of L){ b.update(db.doc('ship/' + s.id), {status: 'sent', sentAt: now, sentBy: me, notifyStore: false}); delete WS.open[s.deliv + '|' + s.store]; }
-  try{ await b.commit(); WS.session = {at: now, ids: L.map(s => s.id)}; renderSession(); }catch(err){ alertMsg(err); }
+  try{ await b.commit(); WS.session = {at: now, ids: L.map(s => s.id)}; renderSession(); }catch(err){ whErr(err); }
 }
 function renderSession(){
   const el = $('#wh-session'); if (!el) return; const S = WS.session; if (!S){ el.innerHTML = ''; return; }
@@ -4066,7 +4068,7 @@ async function resolveShip(sid){
       u.status = 'closed'; u.closedAt = new Date().toISOString(); u.closedBy = me;
     }
     await db.doc('ship/' + sid).update(u);
-  }catch(err){ alertMsg(err); }
+  }catch(err){ whErr(err); }
 }
 // Smart draft from what the store really received (one location → InventoryTransfer, mixed → InventoryTransferMany)
 async function smartFile(sid){
@@ -4130,7 +4132,7 @@ async function wdSave(){
     if (isOwner && WS.master){ const add = {}; for (const [e, k] of Object.entries(WD.eans || {})) if (!WS.master[e]){ const it = WD.items[k]; add[e] = [it.m, it.s, it.n, it.b, it.g, it.c, it.p, 0, 0]; }
       if (Object.keys(add).length){ $('#wd-msg').textContent = 'Шинэ баркодуудыг мастер файлд нэмж байна…'; try{ await saveMaster({...WS.master, ...add}, (WS.masterMeta && WS.masterMeta.file) || 'master'); }catch(e){ console.warn('master add', e); } } }
     WD = null; $('#wd-file').value = ''; $('#wd-name').value = ''; $('#wd-msg').textContent = 'Хадгаллаа — «Скан» хэсэгт сканнердаж эхэлнэ үү.'; wdPreview();
-  }catch(err){ alertMsg(err); $('#wd-msg').textContent = 'Хадгалж чадсангүй.'; $('#wd-save').disabled = false; }
+  }catch(err){ whErr(err); $('#wd-msg').textContent = 'Хадгалж чадсангүй.'; $('#wd-save').disabled = false; }
 }
 // ---------- delivery report: list vs really scanned ----------
 function sumSt(o){ return Object.values(o || {}).reduce((a, b) => a + (+b || 0), 0); }
@@ -4213,9 +4215,10 @@ async function deleteDeliv(id){
     for (const s of S2) b.delete(db.doc('ship/' + s.id));
     b.delete(db.doc('delivcnt/' + id)); b.delete(db.doc('deliv/' + id)); await b.commit();
     for (const k of Object.keys(WS.open)) if (k.startsWith(id + '|')) delete WS.open[k];
+    try{ const chk = await db.doc('deliv/' + id).get({source: 'server'}); if (chk.exists){ alert('Устгал серверт хадгалагдсангүй — интернэт холболтоо шалгаад дахин оролдоно уу.'); return; } }catch(e){ console.warn('verify', e); }
     WS.ships = WS.ships.filter(s => s.deliv !== id); delete WS.parts[id]; delete WS.pend[id]; if (WS.repId === id) renderRecon('');
     if (WS.active === id){ WS.active = ''; try{ localStorage.removeItem('vivi-wh-active'); localStorage.removeItem('vivi-wh-last-' + id); }catch(e){} }
-  }catch(err){ alertMsg(err); }
+  }catch(err){ whErr(err); }
 }
 async function purchaseFile(id){
   const D = WS.delivs.find(d => d.id === id); if (!D || typeof XLSX === 'undefined') return; await flush();
@@ -4275,7 +4278,7 @@ async function rcFinish(){
   const fresh = await db.doc('ship/' + s.id).get(), x = fresh.exists ? fresh.data() : s, cmp = WH.compare(decMap(x.l), decMap(x.r));
   try{ await db.doc('ship/' + s.id).update({status: cmp.ok ? 'recv' : 'diff', recvAt: new Date().toISOString(), recvBy: me, cmp: {ok: cmp.ok, sent: cmp.sent, recv: cmp.recv, miss: cmp.miss, extra: cmp.extra}, notifyWh: false});
     $('#rc-msg').textContent = cmp.ok ? 'Зөрүүгүй — баярлалаа.' : 'Зөрүүтэй — агуулахад мэдэгдлээ.'; }
-  catch(err){ alertMsg(err); }
+  catch(err){ whErr(err); }
 }
 
 // ---------- events ----------
@@ -4363,7 +4366,7 @@ async function saveWhSettings(){
   const pairs = t => t.split('\n').map(l => l.split('=')).filter(p => p.length === 2).map(([a, b]) => [a.trim(), b.trim()]);
   const cfg = {stores, over: {...c.over, base: v('#whs-over').trim() || c.over.base}, catLoc, wordLoc: pairs(v('#whs-words')).filter(([a]) => a).map(([w, s]) => ({w, s})),
     srcLoc: Object.fromEntries(pairs(v('#whs-src'))), small: +v('#whs-small') || 5, purchase: {...c.purchase, supplier: v('#whs-p-sup').trim(), loc: v('#whs-p-loc').trim(), account: v('#whs-p-acc').trim()}, at: new Date().toISOString(), by: me};
-  try{ await db.doc('config/wh').set(cfg); $('#whs-msg').textContent = 'Хадгаллаа.'; }catch(err){ alertMsg(err); }
+  try{ await db.doc('config/wh').set(cfg); $('#whs-msg').textContent = 'Хадгаллаа.'; }catch(err){ whErr(err); }
 }
 // master file: our JSON (EAN → [model, size, name МН, brand, gender, category, price, base price, qty]) or the KZ Excel
 async function saveMaster(M, file){
@@ -4426,10 +4429,13 @@ const SECTIONS = [['req','Төлбөрийн хүсэлт'],['daily','Өдрий
 const DEFAULT_PERMS = {daily:false, req:true, bank:true, rev:false, cash:true, bal:true, pay:false, pl:false, wh:false, rcv_fc:false, rcv_dr:false, rcv_ns:false, rcv_ht:false};
 const permsOf = e => ({...DEFAULT_PERMS, ...((ACCESS.perms || {})[e] || {})});
 function renderAccess(){
-  $('#acc-list').innerHTML = ACCESS.emails.length ? ACCESS.emails.map(e => { const p = permsOf(e);
+  const ownRow = `<div class="acc-row" style="background:var(--ok-bg,#eef8f1)"><div class="row" style="justify-content:space-between"><b>${esc(user.email())}</b><span class="chip c-ok">Эзэмшигч — бүх эрх автоматаар</span></div>
+      <div class="row acc-perms">${SECTIONS.concat(SECTIONS_WH).map(([k,l]) => `<label class="row" style="gap:6px;width:auto;opacity:.75"><input type="checkbox" style="width:auto" checked disabled> ${esc(l)}</label>`).join('')}</div>
+      <div class="note">Эзэмшигч бүх хэсгийг (Агуулах, бүх дэлгүүрийн «Хүлээн авалт») харж, ажиллана — тусад нь эрх өгөх шаардлагагүй.</div></div>`;
+  $('#acc-list').innerHTML = ownRow + (ACCESS.emails.length ? ACCESS.emails.map(e => { const p = permsOf(e);
     return `<div class="acc-row"><div class="row" style="justify-content:space-between"><b>${esc(e)}</b><button class="btn bad" data-rm="${esc(e)}">Хасах</button></div>
       <div class="row acc-perms">${SECTIONS.concat(SECTIONS_WH).map(([k,l]) => `<label class="row" style="gap:6px;width:auto"><input type="checkbox" style="width:auto" data-perm="${k}" data-email="${esc(e)}" ${p[k] ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div></div>`; }).join('')
-    : '<div class="note">Нягтлан бүртгээгүй байна.</div>';
+    : '<div class="note">Нягтлан бүртгээгүй байна.</div>');
 }
 $('#acc-form').addEventListener('submit', async e => {
   e.preventDefault(); const em = $('#acc-email').value.trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { $('#acc-msg').textContent = 'Имэйл буруу байна.'; return; }
