@@ -204,9 +204,12 @@ body{margin:0;background:var(--bg)}
         <h2 style="margin:0">Давтамжит гүйлгээ</h2>
         <div class="row"><input type="month" id="rc-per" style="width:auto"><button class="btn" id="rc-xlsx">📥 Excel</button><label class="btn" style="cursor:pointer">📄 Excel-ээс оруулах<input id="rc-file" type="file" accept=".xlsx,.xls" hidden></label></div>
       </div>
-      <p class="note" style="margin:0 0 8px">Сар бүр давтагддаг тогтмол шилжүүлэг (бараа, түрээс, зээл, НӨАТ…). Нягтлан нэмж, засаж, устгана; шинэ гүйлгээ болон өөрчлөлтийг эзэмшигч батална. Батлагдсан гүйлгээтэй ижил данс, ижил дүнтэй банкны шилжүүлэг «Хүсэлтгүй» гэж тооцогдохгүй. «Шилжсэн дүн» = тухайн сард энэ данс руу (нэг удаагийн хүсэлтээр тайлбарлагдаагүй) шилжсэн нийт дүн.</p>
+      <p class="note" style="margin:0 0 8px">Сар бүр давтагддаг тогтмол шилжүүлэг (бараа, түрээс, зээл, НӨАТ…). Нягтлан нэмж, засаж, устгана; шинэ гүйлгээ болон өөрчлөлтийг эзэмшигч батална. Батлагдсан гүйлгээтэй ижил данс, ижил дүнтэй банкны шилжүүлэг «Хүсэлтгүй» гэж тооцогдохгүй. «Энэ сарын шилжилт» — тогтмол гүйлгээ бодитоор гарсан эсэх (банкны гүйлгээгээр шалгана).</p>
       <div class="daysum" id="rc-sum"></div>
-      <div class="tbl"><table><thead><tr><th class="n">№</th><th>Харилцагч</th><th>Данс</th><th>Хүлээн авагчийн нэр</th><th>Гүйлгээний утга</th><th class="n">Тогтмол дүн</th><th class="n">Шилжсэн дүн</th><th>Төлөв</th><th></th></tr></thead><tbody id="rc-body"><tr><td colspan="9" class="empty">–</td></tr></tbody></table></div>
+      <div class="row" style="gap:10px;flex-wrap:wrap"><div class="filter chips" id="rc-view" style="margin:6px 0"><button data-v="list" aria-pressed="true">☰ Жагсаалт</button><button data-v="grid" aria-pressed="false">📅 Өдрөөр</button></div><div class="filter chips" id="rc-f" style="margin:6px 0"><button data-f="all" aria-pressed="true">Бүгд</button><button data-f="ok" aria-pressed="false">✓ Шилжсэн</button><button data-f="no" aria-pressed="false">✗ Шилжээгүй / хоцорсон</button><button data-f="diff" aria-pressed="false">⚠ Зөрүүтэй</button></div></div>
+      <div id="rc-grid" hidden></div>
+      <p class="note" style="margin:0 0 6px">Мөр дээр дарж тухайн сард тэр данс руу гарсан бүх банкны гүйлгээг харна. «Шилжилт» = тогтмол дүнтэй тэнцүү гүйлгээ (огноо, данс); «Бусад» = тэр данс руу хүсэлтгүй гарсан өөр дүнтэй гүйлгээ.</p>
+      <div class="tbl" id="rc-listwrap"><table><thead><tr><th class="n">№</th><th>Харилцагч</th><th>Данс</th><th>Хүлээн авагчийн нэр</th><th>Гүйлгээний утга</th><th class="n">Тогтмол дүн</th><th>Энэ сарын шилжилт</th><th class="n">Бусад (хүсэлтгүй)</th><th>Төлөв</th><th></th></tr></thead><tbody id="rc-body"><tr><td colspan="10" class="empty">–</td></tr></tbody></table></div>
       <h3 id="rc-form-title" style="margin:16px 0 8px;font-size:14px">Шинэ давтамжит гүйлгээ</h3>
       <form class="grid" id="rc-form" autocomplete="off">
         <label class="f">Харилцагч *<input id="rc-name" required placeholder="Жишээ: Хадаа"></label>
@@ -214,6 +217,9 @@ body{margin:0;background:var(--bg)}
         <label class="f">Хүлээн авагчийн нэр<input id="rc-holder" placeholder="Б.ЧИЛГЭР"></label>
         <label class="f">Тогтмол дүн (₮) *<input id="rc-amt" required inputmode="decimal" placeholder="200 000"></label>
         <label class="f">Аль данснаас<select id="rc-from"></select></label>
+        <label class="f">Давтамж<select id="rc-freq"><option value="d">Өдөр бүр</option><option value="w">Ажлын өдөр бүр (Да–Ба)</option><option value="m">Сар бүр</option></select></label>
+        <label class="f">Сард хэдэн удаа (сар бүр бол)<input id="rc-times" inputmode="numeric" data-nofmt placeholder="1"></label>
+        <label class="f">Төлөх өдөр (сарын)<input id="rc-day" inputmode="numeric" data-nofmt placeholder="жишээ 10 — хоцорвол анхааруулна"></label>
         <label class="f">Гүйлгээний утга<input id="rc-desc" placeholder="Барааны төлбөр - Хадаа"></label>
         <div class="f full row"><button class="btn primary" type="submit">Хадгалах</button><button class="btn" id="rc-cancel" type="button" hidden>Болих</button><span class="note" id="rc-msg"></span></div>
       </form>
@@ -3676,6 +3682,46 @@ function rcAlloc(per){
   return out;
 }
 function rcPaid(r, per){ if (!RC.alloc || RC.allocPer !== per){ RC.alloc = rcAlloc(per); RC.allocPer = per; } return RC.alloc[r.id] || []; }
+// did each recurring transfer really go out this month? match = bank transfer with the fixed amount (±1₮) to the item's account;
+// other = transfers to that account with another amount that no request explains
+const dimOf = per => new Date(+per.slice(0, 4), +per.slice(5, 7), 0).getDate();
+const freqOf = r => r.freq || 'm';
+// the days of the month on which an automatic transfer must go out (daily / workdays); monthly items have none
+function rcDays(r, per){ const f = freqOf(r); if (f === 'm') return []; const n = dimOf(per), out = [];
+  for (let d = 1; d <= n; d++){ const wd = new Date(+per.slice(0, 4), +per.slice(5, 7) - 1, d).getDay(); if (f === 'd' || (wd >= 1 && wd <= 5)) out.push(d); } return out; }
+const FREQ_L = {d: 'өдөр бүр', w: 'ажлын өдөр', m: 'сар бүр'};
+function rcCheck(per){
+  const mb = matchBank(), items = (S.recurring || []).filter(r => r.status !== 'rejected' && !r.off), out = {}, byAcc = {};
+  for (const r of items){ const a = (r.appr || {}).accN || rcAcc(r.acc); (byAcc[a] = byAcc[a] || []).push(r); out[r.id] = {match: [], other: []}; }
+  const txs = S.banktx.filter(t => String(t.dt).slice(0, 7) === per && byAcc[PAY.accShort(t.toAcc)] && !(mb[t.id] && mb[t.id].req && mb[t.id].st === 'ok')).sort((a, b) => String(a.dt).localeCompare(String(b.dt)));
+  const left = [];
+  for (const t of txs){ const g = byAcc[PAY.accShort(t.toAcc)], amt = +t.amount || 0;
+    const eq = g.filter(r => Math.abs((+r.amount || 0) - amt) <= 1);
+    const need = r => freqOf(r) !== 'm' ? !out[r.id].match.some(x => String(x.dt).slice(0, 10) === String(t.dt).slice(0, 10)) : out[r.id].match.length < (+r.times || 1);
+    const pick = eq.find(r => need(r) && rcKey(r).some(k => String(t.desc || '').includes(k))) || eq.find(need) || eq.find(r => rcKey(r).some(k => String(t.desc || '').includes(k))) || eq[0];
+    if (pick) out[pick.id].match.push(t); else left.push(t); }
+  for (const t of left){ const g = byAcc[PAY.accShort(t.toAcc)]; const r = g.find(x => rcKey(x).some(k => String(t.desc || '').includes(k))) || g[0]; out[r.id].other.push(t); }
+  const now = today(), cur = now.slice(0, 7), dnow = +now.slice(8, 10);
+  for (const r of items){ const o = out[r.id], day = +r.day || 0;
+    o.sum = o.match.reduce((a, t) => a + (+t.amount || 0), 0); o.osum = o.other.reduce((a, t) => a + (+t.amount || 0), 0);
+    o.byDay = {}; for (const t of o.match){ const d = +String(t.dt).slice(8, 10); (o.byDay[d] = o.byDay[d] || []).push(t); }
+    o.oDay = {}; for (const t of o.other){ const d = +String(t.dt).slice(8, 10); (o.oDay[d] = o.oDay[d] || []).push(t); }
+    if (freqOf(r) !== 'm'){   // daily: every expected day up to yesterday must have its transfer (today may still come)
+      const exp = rcDays(r, per), last = per < cur ? 99 : per > cur ? 0 : dnow - 1, due = exp.filter(d => d <= last);
+      o.exp = exp.length; o.due = due.length; o.miss = due.filter(d => !o.byDay[d]); o.done = exp.filter(d => o.byDay[d]).length; o.dup = Object.values(o.byDay).filter(a => a.length > 1).length;
+      o.st = o.miss.length ? 'no' : o.dup ? 'dup' : (per < cur ? 'ok' : (o.done ? 'prog' : 'wait')); if (per < cur && !o.miss.length && !o.dup) o.st = 'ok';
+      continue; }
+    const n = +r.times || 1;
+    if (o.match.length === n) o.st = 'ok';
+    else if (o.match.length > n) o.st = 'dup';
+    else if (o.match.length) o.st = per >= cur && !(day && dnow > day + 2) ? 'prog' : 'part';
+    else if (o.other.length) o.st = 'diff';
+    else o.st = per > cur ? 'wait' : per < cur ? 'no' : (day && dnow > day + 2 ? 'late' : 'wait'); }
+  return out;
+}
+const RC_ST = {ok: ['✓ Шилжсэн', 'c-ok'], dup: ['⚠ Давхар', 'c-warn'], part: ['⚠ Дутуу', 'c-warn'], prog: ['… Явцад', 'c-grey'], diff: ['⚠ Дүн зөрүүтэй', 'c-warn'], no: ['✗ Шилжээгүй', 'c-bad'], late: ['✗ Хоцорсон', 'c-bad'], wait: ['… Хүлээгдэж буй', 'c-grey']};
+const rcGroup = st => st === 'ok' ? 'ok' : (st === 'no' || st === 'late') ? 'no' : (st === 'dup' || st === 'part' || st === 'diff') ? 'diff' : 'wait';   // wait, prog
+const dtS = t => String(t.dt).slice(5, 16).replace('T', ' ');
 function setRcMode(m){
   RC.mode = m; const sec = document.querySelector('section[data-panel="req"]'); if (sec) sec.dataset.mode = m;
   $$('#req-mode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === m)));
@@ -3688,27 +3734,64 @@ function renderRecur(){
   const list = (S.recurring || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.createdAt).localeCompare(String(b.createdAt)));
   const pend = list.filter(r => r.status === 'pending').length;
   const tb = $('#req-mode button[data-m="rec"] .badge'); if (tb){ tb.textContent = pend || ''; tb.hidden = !pend; }
-  let tFix = 0, tPaid = 0;
-  el.innerHTML = list.length ? list.map((r, i) => {
-    const paid = rcPaid(r, per), sum = paid.reduce((s, t) => s + (+t.amount || 0), 0), st = rcStatus(r), fix = +r.amount || 0;
-    if (!r.off && r.status !== 'rejected'){ tFix += fix; tPaid += sum; }
-    const pc = !sum ? '' : Math.abs(sum - fix) <= 1 ? 'c-ok' : sum > fix ? 'c-grey' : 'c-warn';
+  let tFix = 0, tPaid = 0, tOther = 0; const CK = rcCheck(per), cnt = {ok: 0, no: 0, diff: 0, wait: 0}, F = RC.f || 'all';
+  const rows = list.map((r, i) => {
+    const o = CK[r.id], st = rcStatus(r), fix = (+r.amount || 0) * (freqOf(r) !== 'm' ? (o ? o.exp : 0) : (+r.times || 1));
+    if (o){ tFix += fix; tPaid += o.sum; tOther += o.osum; cnt[rcGroup(o.st)]++; }
+    if (F !== 'all' && (!o || rcGroup(o.st) !== F)) return '';
+    const cs = o ? RC_ST[o.st] : null, open = RC.open === r.id;
+    const det = o && open ? `<tr class="rc-det"><td></td><td colspan="9"><div class="tbl"><table><thead><tr><th>Огноо</th><th>Аль данснаас</th><th class="n">Дүн</th><th>Гүйлгээний утга</th><th></th></tr></thead><tbody>${[...o.match.map(t => [t, 1]), ...o.other.map(t => [t, 0])].sort((a, b) => String(a[0].dt).localeCompare(String(b[0].dt))).map(([t, m]) => `<tr><td class="mono">${esc(String(t.dt).slice(0, 16).replace('T', ' '))}</td><td>${esc(ACC_LABEL[t.fromAcc] || t.fromAcc || '')}</td><td class="n">${fmt(t.amount)}</td><td>${esc(t.desc || '')}</td><td>${m ? '<span class="chip c-ok">тогтмол</span>' : '<span class="chip c-grey">бусад</span>'}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Энэ сард энэ данс руу гүйлгээ гараагүй.</td></tr>'}</tbody></table></div></td></tr>` : '';
+    const daily = freqOf(r) !== 'm';
+    const mcell = !o ? '–' : daily ? `<span class="chip ${cs[1]}">${o.st === 'no' ? '✗ ' + o.miss.length + ' өдөр гараагүй' : cs[0]}</span><div class="note">${FREQ_L[freqOf(r)]} · ${o.done}/${o.exp} өдөр шилжсэн${o.miss.length ? ' · гараагүй: ' + o.miss.join(', ') : ''}</div>`
+      : `<span class="chip ${cs[1]}">${cs[0]}${(+r.times || 1) > 1 ? ` ${o.match.length}/${r.times}` : ''}</span>${o.match.length ? `<div class="note">${o.match.map(t => dtS(t) + ' · ' + fmt(t.amount)).join('<br>')}</div>` : r.day ? `<div class="note">төлөх өдөр ${r.day}</div>` : ''}`;
     const ch = r.appr && r.status === 'pending' ? [r.appr.amount !== r.amount ? `дүн ${fmt(r.appr.amount)} → ${fmt(r.amount)}` : '', r.appr.accN !== rcAcc(r.acc) ? `данс ${r.appr.accN} → ${rcAcc(r.acc)}` : '', r.appr.name !== r.name ? `нэр ${r.appr.name} → ${r.name}` : ''].filter(Boolean).join(' · ') : '';
     let acts = '';
     if (isOwner && r.status === 'pending') acts += `<button class="btn ok" data-rc="approve" data-id="${esc(r.id)}">Батлах</button><button class="btn bad" data-rc="reject" data-id="${esc(r.id)}">Татгалзах</button>`;
     if (canWrite) acts += `<button class="btn" data-rc="edit" data-id="${esc(r.id)}">✎</button><button class="btn" data-rc="del" data-id="${esc(r.id)}" title="Устгах">🗑</button>`;
-    return `<tr class="${r.status === 'pending' ? 'sev-warn' : ''}"><td class="n">${i + 1}</td><td><b>${esc(r.name)}</b>${r.fromAcc ? `<div class="note">${esc(ACC_LABEL[r.fromAcc] || r.fromAcc)}</div>` : ''}</td><td class="mono">${esc(r.acc)}</td><td>${esc(r.holder || '')}</td><td>${esc(r.desc || '')}${ch ? `<div class="note" style="color:var(--warn)">${esc(ch)}</div>` : ''}</td>
-      <td class="n">${fmt(fix)}</td><td class="n">${sum ? `<span class="chip ${pc}" title="${esc(paid.map(t => String(t.dt).slice(0, 16).replace('T', ' ') + ' · ' + fmt(t.amount)).join('\n'))}">${fmt(sum)}</span>` : '–'}</td>
-      <td><span class="chip ${st[1]}">${st[0]}</span></td><td class="acts" style="white-space:nowrap">${acts}</td></tr>`; }).join('')
-    + `<tr><td></td><td colspan="4"><b>Нийт</b></td><td class="n"><b>${fmt(tFix)}</b></td><td class="n"><b>${fmt(tPaid)}</b></td><td colspan="2" class="note">${tFix ? Math.round(tPaid / tFix * 100) + '% шилжсэн' : ''}</td></tr>`
-    : '<tr><td colspan="9" class="empty">Давтамжит гүйлгээ бүртгэгдээгүй. Доорх маягтаар нэмэх эсвэл Excel-ээс оруулна уу.</td></tr>';
-  $('#rc-sum').textContent = `${per} · ${list.filter(r => !r.off && r.status !== 'rejected').length} гүйлгээ · тогтмол ${fmt(tFix)} ₮ · шилжсэн ${fmt(tPaid)} ₮${pend ? ` · батлуулах ${pend}` : ''}`;
+    return `<tr class="${r.status === 'pending' ? 'sev-warn' : ''} rc-row" data-rcrow="${esc(r.id)}" style="cursor:pointer"><td class="n">${i + 1}</td><td><b>${esc(r.name)}</b>${r.fromAcc ? `<div class="note">${esc(ACC_LABEL[r.fromAcc] || r.fromAcc)}</div>` : ''}</td><td class="mono">${esc(r.acc)}</td><td>${esc(r.holder || '')}</td><td>${esc(r.desc || '')}${ch ? `<div class="note" style="color:var(--warn)">${esc(ch)}</div>` : ''}</td>
+      <td class="n">${fmt(r.amount)}${freqOf(r) !== 'm' ? `<div class="note">× ${o ? o.exp : 0} өдөр = ${fmt(fix)}</div>` : (+r.times || 1) > 1 ? `<div class="note">× ${r.times} = ${fmt(fix)}</div>` : ''}</td><td>${mcell}</td><td class="n">${o && o.osum ? `<span class="chip c-grey" title="${esc(o.other.map(t => dtS(t) + ' · ' + fmt(t.amount)).join('\n'))}">${fmt(o.osum)}</span>` : '–'}</td>
+      <td><span class="chip ${st[1]}">${st[0]}</span></td><td class="acts" style="white-space:nowrap">${acts}</td></tr>${det}`; }).join('');
+  el.innerHTML = list.length ? (rows || '<tr><td colspan="10" class="empty">Энэ шүүлтүүрт гүйлгээ алга.</td></tr>')
+    + `<tr><td></td><td colspan="4"><b>Нийт</b></td><td class="n"><b>${fmt(tFix)}</b></td><td><b>${fmt(tPaid)}</b> <span class="note">${tFix ? Math.round(tPaid / tFix * 100) + '%' : ''}</span></td><td class="n"><b>${tOther ? fmt(tOther) : '–'}</b></td><td colspan="2"></td></tr>`
+    : '<tr><td colspan="10" class="empty">Давтамжит гүйлгээ бүртгэгдээгүй. Доорх маягтаар нэмэх эсвэл Excel-ээс оруулна уу.</td></tr>';
+  $('#rc-sum').innerHTML = `${per} · ${list.filter(r => !r.off && r.status !== 'rejected').length} гүйлгээ · тогтмол ${fmt(tFix)} ₮ · тогтмол дүнгээр шилжсэн ${fmt(tPaid)} ₮ — <b style="color:var(--ok)">✓ ${cnt.ok}</b> · <b style="color:var(--bad)">✗ ${cnt.no}</b> · <b style="color:var(--warn)">⚠ ${cnt.diff}</b> · хүлээгдэж буй ${cnt.wait}${pend ? ` · батлуулах ${pend}` : ''}`;
+  $$('#rc-f button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === F)));
+  const V = RC.view || 'list'; $$('#rc-view button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === V)));
+  $('#rc-grid').hidden = V !== 'grid'; $('#rc-listwrap').hidden = V === 'grid'; if (V === 'grid') renderRcGrid(per, list.filter(r => !r.off && r.status !== 'rejected' && (F === 'all' || (CK[r.id] && rcGroup(CK[r.id].st) === F))), CK);
 }
+// day grid: one row per transfer, one column per day — ✓ went out that day, ✗ expected and missing, ⚠ other amount
+function rcCell(r, o, d, per){
+  const cur = today().slice(0, 7), dnow = +today().slice(8, 10), exp = rcDays(r, per).includes(d), m = (o.byDay || {})[d], x = (o.oDay || {})[d];
+  const future = per > cur || (per === cur && d >= dnow);
+  if (m) return {k: m.length > 1 ? 'dup' : 'ok', t: m.concat(x || [])};
+  if (x) return {k: 'diff', t: x};
+  if (exp) return {k: future ? (per === cur && d === dnow ? 'today' : 'fut') : 'miss', t: []};
+  return {k: '', t: []};
+}
+const CELL = {ok: ['✓', '#1f9d6b', 'rgba(31,157,107,.14)'], dup: ['✓✓', '#b7791f', 'rgba(183,121,31,.16)'], diff: ['≠', '#b7791f', 'rgba(183,121,31,.16)'], miss: ['✗', '#c0392b', 'rgba(192,57,43,.14)'], today: ['…', '#888', ''], fut: ['·', '#bbb', ''], '': ['', '', '']};
+function renderRcGrid(per, list, CK){
+  const n = dimOf(per), days = Array.from({length: n}, (_, i) => i + 1), wd = d => new Date(+per.slice(0, 4), +per.slice(5, 7) - 1, d).getDay();
+  const dayTot = days.map(() => 0); let mTot = 0, mExp = 0;
+  const rows = list.map(r => { const o = CK[r.id] || {}; let okN = 0, missN = 0;
+    const cells = days.map((d, i) => { const c = rcCell(r, o, d, per), C = CELL[c.k]; if (c.k === 'ok' || c.k === 'dup') okN++; if (c.k === 'miss') missN++; for (const t of c.t) if ((o.match || []).includes(t)) dayTot[i] += +t.amount || 0;
+      const tip = c.t.map(t => String(t.dt).slice(0, 16).replace('T', ' ') + ' · ' + fmt(t.amount) + ' · ' + (t.desc || '')).join('\n') || (c.k === 'miss' ? 'гараагүй' : '');
+      return `<td title="${esc(tip)}" style="text-align:center;padding:2px 0;min-width:22px;color:${C[1]};background:${C[2]};font-weight:700">${C[0]}</td>`; }).join('');
+    const exp = freqOf(r) !== 'm' ? (o.exp || 0) : (+r.times || 1); mExp += exp * (+r.amount || 0); mTot += o.sum || 0;
+    return `<tr><td style="position:sticky;left:0;background:var(--card,#fff);white-space:nowrap"><b>${esc(r.name)}</b><div class="note">${fmt(r.amount)} · ${FREQ_L[freqOf(r)]}</div></td>${cells}<td class="n"><b>${okN}</b>/${freqOf(r) !== 'm' ? o.exp || 0 : exp}</td><td class="n" style="color:${missN ? 'var(--bad)' : 'inherit'}"><b>${missN || '–'}</b></td><td class="n">${fmt(o.sum || 0)}</td><td class="n">${o.osum ? fmt(o.osum) : '–'}</td></tr>`; }).join('');
+  $('#rc-grid').innerHTML = `<div class="note" style="margin:4px 0">✓ тэр өдөр тогтмол дүнгээр гарсан · ✗ гарах ёстой байсан, гараагүй · ≠ өөр дүнтэй гүйлгээ · ✓✓ давхар · … өнөөдөр (хараахан) · нүдэн дээр хулганаа барьвал гүйлгээний огноо, дүн харагдана.</div>
+    <div class="tbl" style="overflow-x:auto"><table style="font-size:12px"><thead><tr><th style="position:sticky;left:0;background:var(--card,#fff)">Гүйлгээ</th>${days.map(d => `<th style="text-align:center;padding:2px 0;${[0, 6].includes(wd(d)) ? 'color:var(--bad)' : ''}">${d}</th>`).join('')}<th class="n">Шилжсэн өдөр</th><th class="n">Гараагүй</th><th class="n">Шилжсэн дүн</th><th class="n">Бусад</th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="${n + 5}" class="empty">–</td></tr>`}</tbody>
+    <tfoot><tr><td style="position:sticky;left:0;background:var(--card,#fff)"><b>Өдрийн нийт</b><div class="note">к = мянга, с = сая</div></td>${dayTot.map(v => `<td title="${v ? fmt(v) + ' ₮' : ''}" style="font-size:9px;text-align:center;padding:2px 0;white-space:nowrap">${v ? (v >= 1e6 ? (v / 1e6).toFixed(1).replace('.0', '') + 'с' : Math.round(v / 1000) + 'к') : ''}</td>`).join('')}<td></td><td></td><td class="n"><b>${fmt(mTot)}</b></td><td></td></tr></tfoot></table></div>
+    <div class="banner" style="margin-top:8px">Сарын дүн (${esc(per)}): шилжих ёстой <b>${fmt(mExp)}</b> ₮ · тогтмол дүнгээр шилжсэн <b>${fmt(mTot)}</b> ₮ (${mExp ? Math.round(mTot / mExp * 100) : 0}%)</div>`;
+}
+$$('#rc-view button').forEach(b => b.addEventListener('click', () => { RC.view = b.dataset.v; renderRecur(); }));
 $('#rc-per').addEventListener('change', e => { RC.per = e.target.value; renderRecur(); });
+$$('#rc-f button').forEach(b => b.addEventListener('click', () => { RC.f = b.dataset.f; renderRecur(); }));
+$('#rc-body').addEventListener('click', e => { if (e.target.closest('button, a, input, select')) return; const tr = e.target.closest('tr[data-rcrow]'); if (!tr) return; RC.open = RC.open === tr.dataset.rcrow ? '' : tr.dataset.rcrow; renderRecur(); });
 function rcFill(r){
   RC.edit = r ? r.id : null; $('#rc-form-title').textContent = r ? 'Засах: ' + r.name : 'Шинэ давтамжит гүйлгээ';
   $('#rc-name').value = r ? r.name : ''; $('#rc-acc').value = r ? r.acc : ''; $('#rc-holder').value = r ? (r.holder || '') : ''; $('#rc-desc').value = r ? (r.desc || '') : '';
-  $('#rc-amt').value = r ? numFmt(r.amount) : ''; $('#rc-from').value = r ? (r.fromAcc || '') : ''; $('#rc-cancel').hidden = !r; $('#rc-msg').textContent = '';
+  $('#rc-amt').value = r ? numFmt(r.amount) : ''; $('#rc-from').value = r ? (r.fromAcc || '') : ''; $('#rc-times').value = r && r.times > 1 ? r.times : ''; $('#rc-freq').value = r ? freqOf(r) : 'd'; $('#rc-day').value = r && r.day ? r.day : ''; $('#rc-cancel').hidden = !r; $('#rc-msg').textContent = '';
   if (r) $('#rc-form').scrollIntoView({behavior: 'smooth', block: 'center'});
 }
 $('#rc-cancel').addEventListener('click', () => rcFill(null));
@@ -3729,7 +3812,8 @@ async function rcSave(v, id){
 $('#rc-form').addEventListener('submit', async e => {
   e.preventDefault(); if (!db) return;
   const v = {name: $('#rc-name').value.trim(), acc: $('#rc-acc').value.trim().replace(/\s/g, ''), holder: $('#rc-holder').value.trim(), desc: $('#rc-desc').value.trim(),
-    amount: parseFloat(String($('#rc-amt').value).replace(/[\s,]/g, '')) || 0, fromAcc: $('#rc-from').value};
+    amount: parseFloat(String($('#rc-amt').value).replace(/[\s,]/g, '')) || 0, fromAcc: $('#rc-from').value,
+    times: Math.max(1, Math.min(31, parseInt($('#rc-times').value, 10) || 1)), freq: $('#rc-freq').value || 'm', day: Math.max(0, Math.min(31, parseInt($('#rc-day').value, 10) || 0))};
   if (!v.name || !v.acc || !(v.amount > 0)){ $('#rc-msg').textContent = 'Харилцагч, данс, тогтмол дүнг бөглөнө үү.'; return; }
   try{ await rcSave(v, RC.edit); rcFill(null); $('#rc-msg').textContent = isOwner ? 'Хадгаллаа.' : 'Хадгаллаа — эзэмшигч батласны дараа хүчинтэй болно.'; }
   catch(err){ console.warn(err); $('#rc-msg').textContent = 'Хадгалж чадсангүй.'; }
@@ -3772,12 +3856,21 @@ $('#rc-file').addEventListener('change', async e => {
 $('#rc-xlsx').addEventListener('click', () => {
   const XS = window.XLSX; if (!XS) return; const per = rcPer(); RC.alloc = null;
   const list = (S.recurring || []).filter(r => !r.off && r.status !== 'rejected').sort((a, b) => (a.order || 0) - (b.order || 0));
-  const aoa = [['Давтамжит гүйлгээний мэдээ'], [per], ['№', 'Харилцагч', 'Данс', 'Хүлээн авагчийн нэр', 'Гүйлгээний утга', 'Тогтмол дүн', 'Шилжсэн дүн', 'Төлөв']];
-  let a = 0, b = 0; list.forEach((r, i) => { const s = rcPaid(r, per).reduce((x, t) => x + (+t.amount || 0), 0); a += +r.amount || 0; b += s; aoa.push([i + 1, r.name, r.acc, r.holder || '', r.desc || '', +r.amount || 0, s, rcStatus(r)[0]]); });
-  aoa.push(['', 'НИЙТ', '', '', '', a, b, '']);
-  const ws = XS.utils.aoa_to_sheet(aoa); ws['!cols'] = [{wch: 4}, {wch: 24}, {wch: 24}, {wch: 24}, {wch: 34}, {wch: 14}, {wch: 14}, {wch: 18}];
-  for (let R = 3; R < aoa.length; R++) for (const C of [5, 6]){ const ref = XS.utils.encode_cell({r: R, c: C}); if (ws[ref]) ws[ref].z = '#,##0'; }
-  const wb = XS.utils.book_new(); XS.utils.book_append_sheet(wb, ws, 'Давтамжит'); XS.writeFile(wb, `VIVI_davtamjit_${per}.xlsx`);
+  const CK = rcCheck(per);
+  const aoa = [['Давтамжит гүйлгээний мэдээ — шилжилтийн шалгалт'], [per], ['№', 'Харилцагч', 'Данс', 'Хүлээн авагчийн нэр', 'Гүйлгээний утга', 'Тогтмол дүн', 'Удаа (сард)', 'Шилжих ёстой', 'Шилжсэн (тогтмол дүнгээр)', 'Шилжсэн огноо', 'Шилжилт', 'Бусад (хүсэлтгүй)', 'Төлөв']];
+  let a = 0, b = 0, c2 = 0; list.forEach((r, i) => { const o = CK[r.id] || {match: [], other: [], sum: 0, osum: 0, st: 'wait'}, n = freqOf(r) !== 'm' ? (o.exp || 0) : (+r.times || 1), need = (+r.amount || 0) * n; a += need; b += o.sum; c2 += o.osum;
+    aoa.push([i + 1, r.name, r.acc, r.holder || '', r.desc || '', +r.amount || 0, n, need, o.sum, (freqOf(r) !== 'm' ? o.match.map(t => String(t.dt).slice(8, 10)).join(',') : o.match.map(t => String(t.dt).slice(0, 16).replace('T', ' ')).join(', ')), RC_ST[o.st][0] + (o.miss && o.miss.length ? ` (${o.miss.length} өдөр: ${o.miss.join(', ')})` : ''), o.osum, rcStatus(r)[0]]); });
+  aoa.push(['', 'НИЙТ', '', '', '', '', '', a, b, '', '', c2, '']);
+  const ws = XS.utils.aoa_to_sheet(aoa); ws['!cols'] = [{wch: 4}, {wch: 24}, {wch: 24}, {wch: 22}, {wch: 30}, {wch: 13}, {wch: 8}, {wch: 13}, {wch: 14}, {wch: 22}, {wch: 16}, {wch: 14}, {wch: 14}];
+  for (let R = 3; R < aoa.length; R++) for (const C of [5, 7, 8, 11]){ const ref = XS.utils.encode_cell({r: R, c: C}); if (ws[ref]) ws[ref].z = '#,##0'; }
+  const det = [['Харилцагч', 'Данс', 'Огноо', 'Аль данснаас', 'Дүн', 'Гүйлгээний утга', 'Төрөл']];
+  for (const r of list){ const o = CK[r.id]; if (!o) continue; for (const [t, m] of [...o.match.map(t => [t, 'тогтмол']), ...o.other.map(t => [t, 'бусад'])]) det.push([r.name, r.acc, String(t.dt).slice(0, 16).replace('T', ' '), ACC_LABEL[t.fromAcc] || t.fromAcc || '', +t.amount || 0, t.desc || '', m]); }
+  const n = dimOf(per), G = [['Давтамжит гүйлгээ — өдрөөр', per], ['Гүйлгээ', 'Дүн', 'Давтамж', ...Array.from({length: n}, (_, i) => i + 1), 'Шилжсэн өдөр', 'Гараагүй өдөр', 'Гараагүй өдрүүд', 'Шилжсэн дүн', 'Бусад']];
+  const SYM = {ok: '✓', dup: '✓✓', diff: '≠', miss: '✗', today: '…', fut: '', '': ''};
+  for (const r of list){ const o = CK[r.id] || {}; const cells = Array.from({length: n}, (_, i) => rcCell(r, o, i + 1, per)); const miss = cells.map((c, i) => c.k === 'miss' ? i + 1 : 0).filter(Boolean);
+    G.push([r.name, +r.amount || 0, FREQ_L[freqOf(r)], ...cells.map(c => SYM[c.k]), cells.filter(c => c.k === 'ok' || c.k === 'dup').length, miss.length, miss.join(', '), o.sum || 0, o.osum || 0]); }
+  const wsG = XS.utils.aoa_to_sheet(G); wsG['!cols'] = [{wch: 22}, {wch: 11}, {wch: 11}, ...Array.from({length: n}, () => ({wch: 3.5})), {wch: 8}, {wch: 8}, {wch: 20}, {wch: 12}, {wch: 12}];
+  const wb = XS.utils.book_new(); XS.utils.book_append_sheet(wb, ws, 'Шалгалт'); XS.utils.book_append_sheet(wb, wsG, 'Өдрөөр'); XS.utils.book_append_sheet(wb, XS.utils.aoa_to_sheet(det), 'Гүйлгээнүүд'); XS.writeFile(wb, `VIVI_davtamjit_${per}.xlsx`);
 });
 // ===================== LPP warehouse: deliveries, scanner, shipments, store receiving =====================
 // Firestore: config/wh (settings) · deliv/{id} · delivpart/{id}_{i} (items + plan) · delivcnt/{id} (scanned per model|size per store)
