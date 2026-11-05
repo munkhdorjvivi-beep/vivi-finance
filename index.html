@@ -5482,17 +5482,21 @@ async function chFiles(files){
 async function chMic(){
   if (CH.rec){ CH.rec.stop(); return; }
   if (!navigator.mediaDevices || !window.MediaRecorder){ alert('Энэ төхөөрөмж дуу бичихийг дэмжихгүй байна.'); return; }
-  let stream; try{ stream = await navigator.mediaDevices.getUserMedia({audio: true}); }catch(e){ alert('Микрофоны зөвшөөрөл өгнө үү.'); return; }
+  let stream; try{ stream = await navigator.mediaDevices.getUserMedia({audio: true}); }catch(e){ alert('Микрофон ашиглах зөвшөөрөл алга. Хөтчийн хаягийн мөрний 🔒 дээр дарж «Микрофон — Зөвшөөрөх» болгоод дахин оролдоно уу.'); return; }
   const type = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
-  const rec = new MediaRecorder(stream, type ? {mimeType: type, audioBitsPerSecond: 24000} : {}), chunks = [], t0 = Date.now(); CH.rec = rec; CH.recCancel = false;
+  let rec; try{ rec = new MediaRecorder(stream, type ? {mimeType: type, audioBitsPerSecond: 24000} : {}); }catch(e){ rec = new MediaRecorder(stream); }
+  const chunks = [], t0 = Date.now(); CH.rec = rec; CH.recCancel = false;
   rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-  const tick = setInterval(() => { const s = Math.round((Date.now() - t0) / 1000); $('#ch-rec').innerHTML = `🔴 Бичиж байна ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} — 🎤 дахин дарж илгээнэ · <a href="#" id="ch-rec-x">✕ болих</a>`; if (s >= 300) rec.stop(); }, 300);
+  const tick = setInterval(() => { const s = Math.round((Date.now() - t0) / 1000); $('#ch-rec').innerHTML = `<span class="row" style="gap:8px;align-items:center;flex-wrap:wrap"><b style="color:var(--bad)">🔴 Бичиж байна ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}</b><button class="btn primary" id="ch-rec-send">➤ Илгээх</button><button class="btn" id="ch-rec-x">✕ Болих</button></span>`; if (s >= 300) rec.stop(); }, 300);
   $('#ch-rec').hidden = false; $('#ch-mic').textContent = '⏹';
   rec.onstop = async () => { clearInterval(tick); stream.getTracks().forEach(t => t.stop()); CH.rec = null; $('#ch-mic').textContent = '🎤'; $('#ch-rec').hidden = true;
-    if (CH.recCancel || !chunks.length) return; const blob = new Blob(chunks, {type: (rec.mimeType || type || 'audio/webm').split(';')[0]}), dur = (Date.now() - t0) / 1000;
-    if (dur < 0.7) return; const f = new File([blob], 'voice.' + (/mp4|aac/.test(blob.type) ? 'm4a' : 'webm'), {type: blob.type});
+    if (CH.recCancel) return; if (!chunks.length){ alert('Дуу бичигдсэнгүй — микрофоноо шалгаад дахин оролдоно уу.'); return; }
+    const mt = ((rec.mimeType || type || (chunks[0] && chunks[0].type) || '').split(';')[0]) || (/iPhone|iPad|Safari/.test(navigator.userAgent) && !/Chrome|Android/.test(navigator.userAgent) ? 'audio/mp4' : 'audio/webm');
+    const blob = new Blob(chunks, {type: mt}), dur = (Date.now() - t0) / 1000;
+    if (dur < 0.5) return; const f = new File([blob], 'voice.' + (/mp4|aac/.test(blob.type) ? 'm4a' : 'webm'), {type: blob.type});
     $('#ch-rec').hidden = false; $('#ch-rec').textContent = 'Илгээж байна…';
-    try{ const up = await assets.upload(f); await chSend({au: {id: up.id, type: blob.type, dur: Math.round(dur)}}); }catch(e){ console.warn(e); alert('Дуут мессеж илгээгдсэнгүй.'); } finally { $('#ch-rec').hidden = true; } };
+    try{ const up = await assets.upload(f); await chSend({au: {id: up.id, type: blob.type, dur: Math.max(1, Math.round(dur))}}); }
+    catch(e){ console.warn(e); alert('Дуут мессеж илгээгдсэнгүй' + (e && e.code ? ' (' + e.code + ')' : '') + '. Интернэт холболтоо шалгаад дахин оролдоно уу.'); } finally { $('#ch-rec').hidden = true; } };
   rec.start(1000);
 }
 
@@ -5502,7 +5506,8 @@ document.addEventListener('click', async e => {
   const p = e.target.closest('[data-ch-play]'); if (p){ const id = p.dataset.chPlay; p.disabled = true; try{ const u = await VIVIFB.fileURL(id); const a = document.createElement('audio'); a.controls = true; a.src = u; a.style.maxWidth = '240px'; p.replaceWith(a); a.play().catch(() => {}); }catch(err){ p.disabled = false; alert('Тоглуулж чадсангүй.'); } return; }
   const rq = e.target.closest('[data-chat-req]'); if (rq){ e.preventDefault(); return chForReq(rq.dataset.chatReq); }
   const hv = e.target.closest('[data-ch-req]'); if (hv){ showTab('req'); setTimeout(() => { const el = document.querySelector(`[data-req="${CSS.escape(hv.dataset.chReq)}"]`); if (el) el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 300); return; }
-  if (e.target.id === 'ch-rec-x'){ e.preventDefault(); CH.recCancel = true; if (CH.rec) CH.rec.stop(); return; }
+  if (e.target.closest('#ch-rec-x')){ e.preventDefault(); CH.recCancel = true; if (CH.rec) CH.rec.stop(); return; }
+  if (e.target.closest('#ch-rec-send')){ e.preventDefault(); if (CH.rec) CH.rec.stop(); return; }
   if (e.target.id === 'ch-new'){ const b = $('#ch-newbox'); b.hidden = !b.hidden; CH.newSel = new Set(); if (!b.hidden){ await chLoadUsers(); renderChNew(); } return; }
   if (e.target.id === 'ch-newx'){ $('#ch-newbox').hidden = true; return; }
   if (e.target.id === 'ch-create'){ const sel = [...CH.newSel]; $('#ch-newbox').hidden = true;
@@ -5510,12 +5515,13 @@ document.addEventListener('click', async e => {
     const name = ($('#ch-gname') || {}).value || sel.map(chName).join(', '); const cid = db.collection('chats').doc().id;
     try{ await db.doc('chats/' + cid).set({type: 'group', name: name.trim(), members: [me, ...sel], createdBy: me, createdAt: new Date().toISOString(), n: 0, read: {}}); chOpen(cid); }catch(err){ alert('Бүлэг үүсгэж чадсангүй.'); } return; }
   if (e.target.id === 'ch-back'){ CH.mobileList = true; renderChat(); return; }
-  if (e.target.id === 'ch-send') return chSend();
-  if (e.target.id === 'ch-mic') return chMic();
+  if (e.target.closest('#ch-send')){ if (CH.rec){ CH.rec.stop(); return; } return chSend(); }
+  if (e.target.closest('#ch-mic')) return chMic();
 });
 document.addEventListener('change', e => { const u = e.target.closest('input[data-ch-u]'); if (!u) return; if (u.checked) CH.newSel.add(u.dataset.chU); else CH.newSel.delete(u.dataset.chU); renderChNew(); });
 $('#ch-file').addEventListener('change', e => { const f = [...e.target.files]; e.target.value = ''; if (f.length) chFiles(f); });
-$('#ch-text').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); chSend(); } });
+$('#ch-text').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); if (CH.rec){ CH.rec.stop(); return; } chSend(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && CH.rec && !$('section[data-panel="chat"]').hidden){ e.preventDefault(); CH.rec.stop(); } });
 $('#ch-text').addEventListener('input', e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(140, e.target.scrollHeight) + 'px'; });
 $('#ch-q').addEventListener('input', e => { CH.q = e.target.value; renderChat(); renderChatMsgs(); });
 document.addEventListener('visibilitychange', chMarkRead);
