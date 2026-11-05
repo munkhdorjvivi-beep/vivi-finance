@@ -96,6 +96,9 @@ section[data-panel="req"][data-mode="rec"] > .card:not(#recur-card){display:none
 section[data-panel="req"]:not([data-mode="rec"]) #recur-card{display:none}
 #req-mode{margin-bottom:12px}
 #recur-card td.acts .btn{padding:4px 8px}
+.wh-result{margin-top:12px;border:3px solid var(--line,#ddd);border-radius:12px;padding:18px;text-align:center;min-height:110px}
+.wh-big{font-size:40px;font-weight:700;line-height:1.15;margin-bottom:6px}
+@media (max-width:640px){.wh-big{font-size:30px}}
 body{margin:0;background:var(--bg)}
 #gate{max-width:420px;margin:12vh auto 0;text-align:center}
 #gate .btn{margin-top:14px}
@@ -142,6 +145,8 @@ body{margin:0;background:var(--bg)}
     <button role="tab" data-tab="bal" aria-selected="false">Дансны үлдэгдэл</button>
     <button role="tab" data-tab="pay" aria-selected="false">Цалин<span class="n" id="t-pay" hidden></span></button>
     <button role="tab" data-tab="pl" aria-selected="false">Дотоод тайлан</button>
+    <button role="tab" data-tab="wh" aria-selected="false">Агуулах (LPP)</button>
+    <button role="tab" data-tab="rcv" aria-selected="false">Хүлээн авалт<span class="n" id="t-rcv" hidden></span></button>
     <button role="tab" data-tab="set" aria-selected="false" id="tab-set" hidden>Тохиргоо</button>
   </nav>
 
@@ -321,6 +326,14 @@ body{margin:0;background:var(--bg)}
       <h2>Зардлын ангиллыг дотоод тайланд хэрхэн тооцох</h2>
       <p class="note" style="margin:0 0 8px">Зээлийн төлбөр, эзэмшигчийн хувийн шилжүүлгийг ашгаас хасахгүй тусад нь харуулна; бараа, дотоод шилжүүлэг зардал биш. Нэг удаа тохируулна.</p>
       <div class="tbl"><table><thead><tr><th>Ангилал</th><th class="n">Дотоод тайлангийн хугацаанд</th><th>Тайланд</th></tr></thead><tbody id="pl-cats"></tbody></table></div>
+    </div>
+    <div class="card">
+      <h2>Агуулах (LPP) — тохиргоо</h2>
+      <p class="note" style="margin:0 0 8px">Дэлгүүрийн Smart код, анхдагч хувь, ангилал тус бүрийн дэд байршил. Шинэ хүргэлт үүсгэхэд хувийг тухайн тракаар өөрчилж болно.</p>
+      <div id="whs-body"></div>
+      <h3 style="margin:14px 0 6px;font-size:14px">LPP мастер файл (Казахстаны нөөц)</h3>
+      <p class="note" style="margin:0 0 6px">Жагсаалтад байхгүй баркод уншигдвал мэдээллийг эндээс авна. vivi-master-kz.json эсвэл KZ_ALL Excel.</p>
+      <div class="row"><input id="whm-file" type="file" accept=".json,.xlsx,.xls" style="max-width:320px"><span class="note" id="whm-msg"></span></div>
     </div>
     <div class="card">
       <h2>Харилцагчийн сан</h2>
@@ -504,6 +517,63 @@ body{margin:0;background:var(--bg)}
     </div>
   </section>
 
+  <!-- WAREHOUSE (LPP): deliveries, scanner, shipments -->
+  <section class="panel" data-panel="wh" hidden>
+    <div class="filter chips" id="wh-mode" style="margin-bottom:12px"><button data-m="scan" aria-pressed="true">📦 Скан</button><button data-m="ship" aria-pressed="false">🚚 Илгээмж<span class="n badge" id="wh-ship-n" hidden></span></button><button data-m="deliv" aria-pressed="false">🗂 Хүргэлт (трак)</button></div>
+
+    <div class="card" id="wh-scan-card">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <div class="row"><b>Хүргэлт:</b><select id="wh-active" style="width:auto;min-width:260px"></select></div>
+        <div class="row"><span class="chip" id="wh-sync">✓ Синк хийгдсэн</span><label class="row note" style="gap:6px;width:auto"><input type="checkbox" id="wh-sound" checked style="width:auto"> Дуу</label></div>
+      </div>
+      <div id="wh-prog" class="note" style="margin-bottom:8px"></div>
+      <input id="wh-input" autocomplete="off" inputmode="none" placeholder="Баркод уншуулна уу… (скан хийх бүрт Enter)" style="font-size:22px;padding:14px;text-align:center;letter-spacing:1px">
+      <div id="wh-result" class="wh-result"><div class="wh-big">Сканнердахад бэлэн</div><div class="note">Баркод уншигчаа энэ талбарт чиглүүлнэ үү.</div></div>
+      <div class="tbl" style="margin-top:12px"><table><thead><tr><th>Дэлгүүр</th><th class="n">Төлөвлөгөө</th><th class="n">Скан</th><th class="n">Үлдсэн</th><th class="n">Нээлттэй илгээмж</th><th></th></tr></thead><tbody id="wh-stores"></tbody></table></div>
+      <h3 style="margin:14px 0 6px;font-size:14px">Сүүлийн скан</h3>
+      <div class="tbl"><table><thead><tr><th>Цаг</th><th>Баркод</th><th>Бараа</th><th>Хэмжээ</th><th>Хаашаа</th><th></th></tr></thead><tbody id="wh-last"></tbody></table></div>
+      <div id="wh-unk" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card" id="wh-ship-card" hidden>
+      <div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Илгээмж</h2>
+        <div class="filter chips" id="wh-ship-f"><button data-f="act" aria-pressed="true">Идэвхтэй</button><button data-f="diff" aria-pressed="false">Зөрүүтэй</button><button data-f="all" aria-pressed="false">Бүгд</button></div></div>
+      <p class="note" style="margin:0 0 8px">Нээлттэй → «Илгээх» → дэлгүүр скан хийж тулгана → зөрүүгүй бол «Хүлээн авсан», зөрүүтэй бол агуулах мөр бүрийг шийдвэрлэнэ. Smart-ын файл дэлгүүр хүлээн авсны дараа, бодит хүлээн авсан тоогоор гарна.</p>
+      <div class="tbl"><table><thead><tr><th>№</th><th>Дэлгүүр</th><th>Хүргэлт</th><th class="n">Илгээсэн</th><th class="n">Хүлээн авсан</th><th>Төлөв</th><th>Огноо</th><th></th></tr></thead><tbody id="wh-ships"></tbody></table></div>
+      <div id="wh-ship-detail" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card" id="wh-deliv-card" hidden>
+      <h2>Шинэ хүргэлт (трак)</h2>
+      <p class="note" style="margin:0 0 8px">LPP-ийн жагсаалтыг (MODEL, SIZE, EAN, ITEM_DESC, CATEGORY, QTY баганатай Excel) оруулж, энэ тракын хувийг тохируулна. Том хэмжээ хувиар хуваагдана (дэлгүүр бүр бүрэн хэмжээний цуглуулга авна), 1–2 ширхэгтэй хэмжээ тухайн загвар хамгийн ихээр очсон дэлгүүрт, жижиг загвар бүтнээрээ нэг дэлгүүрт очно — нийт тракын хувь яг хадгалагдана.</p>
+      <div class="grid">
+        <label class="f">Нэр (TIR / трак)<input id="wd-name" placeholder="TIR 6 — 2026-11"></label>
+        <label class="f">LPP жагсаалт (Excel)<input id="wd-file" type="file" accept=".xlsx,.xls"></label>
+      </div>
+      <div class="row" id="wd-pct" style="margin-top:8px;gap:10px"></div>
+      <div id="wd-info" class="note" style="margin-top:8px"></div>
+      <div class="row" style="margin-top:10px"><button class="btn primary" id="wd-save" disabled>Хадгалж скан эхлүүлэх</button><span class="note" id="wd-msg"></span></div>
+      <h2 style="margin-top:18px">Хүргэлтүүд</h2>
+      <div class="tbl"><table><thead><tr><th>Нэр</th><th>Огноо</th><th class="n">Ширхэг</th><th>Хувь</th><th class="n">Скан</th><th>Төлөв</th><th></th></tr></thead><tbody id="wd-list"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- STORE RECEIVING (тулгалт) -->
+  <section class="panel" data-panel="rcv" hidden>
+    <div class="card">
+      <h2>Хүлээн авах илгээмж</h2>
+      <p class="note" style="margin:0 0 8px">Агуулахаас ирсэн бараа бүрийг сканнердана. Тоолж дуустал илгээсэн тоо харагдахгүй — «Тулгалт дуусгах» дарсны дараа зөрүү гарна.</p>
+      <div class="tbl"><table><thead><tr><th>№</th><th>Дэлгүүр</th><th>Хүргэлт</th><th>Илгээсэн огноо</th><th>Төлөв</th><th></th></tr></thead><tbody id="rc-ships"></tbody></table></div>
+    </div>
+    <div class="card" id="rc-count" hidden>
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0" id="rc-title">Тулгалт</h2><span class="chip" id="rc-sync">✓ Синк хийгдсэн</span></div>
+      <input id="rc-input" autocomplete="off" inputmode="none" placeholder="Баркод уншуулна уу…" style="font-size:22px;padding:14px;text-align:center;margin-top:10px">
+      <div class="wh-result" id="rc-result"><div class="wh-big" id="rc-total">0 ш</div><div class="note" id="rc-lastname">Тоолж эхлээрэй</div></div>
+      <div class="tbl" style="margin-top:10px"><table><thead><tr><th>Цаг</th><th>Баркод</th><th>Бараа</th><th></th></tr></thead><tbody id="rc-last"></tbody></table></div>
+      <div class="row" style="margin-top:12px"><button class="btn primary" id="rc-finish">Тулгалт дуусгах</button><button class="btn" id="rc-close">Хаах (дараа үргэлжлүүлэх)</button><span class="note" id="rc-msg"></span></div>
+      <div id="rc-cmp" style="margin-top:12px"></div>
+    </div>
+  </section>
   <!-- BALANCES -->
   <section class="panel" data-panel="bal" hidden>
     <div class="card">
@@ -537,6 +607,8 @@ window.VIVIFB = (() => {
   firebase.initializeApp(cfg);
   const auth = firebase.auth();
   const db = firebase.firestore();
+  // keep writes made offline (warehouse scans) in the browser until they reach the server; also saves reads on reload
+  try { db.enablePersistence({ synchronizeTabs: true }).catch(e => console.warn('persistence', e && e.code)); } catch (e) {}
   let current = null, staff = false;
 
   const user = {
@@ -1702,6 +1774,187 @@ const DAILY = (() => {
   return R;
 })();
 
+// LPP item names (Kazakh / Russian) → Mongolian: audience + item nouns (generated from kzt/tr.py)
+const WHTR = (() => {
+  const AUD = [["СӘБИ|МЛАДЕН|НОВОРОЖ|НЯРАЙ", "Нярайн"], ["ҚЫЗ БАЛА|ҚЫЗДАР|ҚЫЗҒА|ҚЫЗДЫҢ|ДЕВОЧ|ҚЫЗ ", "Охины"], ["ҰЛ БАЛА|ҰЛДАР|ҰЛҒА|МАЛЬЧ|ҰЛ ", "Хүүгийн"], ["БАЛАЛАР|БАЛАҒА|ДЕТСК|ДЕТЕЙ|ДЛЯ ДЕТ", "Хүүхдийн"], ["ӘЙЕЛ|ХАНЫМ|ЖЕНСК|ЖЕНЩ|ДАМСК", "Эмэгтэй"], ["ЕРЛЕР|ЕРКЕК|МУЖСК|МУЖЧ|ЕР АДАМ", "Эрэгтэй"]].map(([p, m]) => [new RegExp(p, 'u'), m]);
+  const NOUN = [["КӨКІРЕКШ", "хантааз"], ["ТЕЛПЕ|ҚАЛПАҒ|БЕРЕТ|КЕПИ|КЕПІЛ", "малгай"], ["КАПЮШОН", "малгайвч"], ["ҚҰЛАҚҚАБ|НАУШНИК", "чихэвч"], ["КАЛЬСОН", "дотуур урт өмд"], ["КОРСЕТ", "корсет"], ["ПОНЧО", "пончо"], ["ПИЖДАГ", "пиджак"], ["БРАСЫ|БРА(?![\\p{L}\\p{N}])", "хөхөвч"], ["САШЕ", "жижиг цүнх"], ["СІЛЕКЕЙҚАҒАР|АЛЖАПҚЫШ|ФАРТУК", "хормогч"], ["ЖАЯЛЫ|ПЕЛЕНК", "өлгийн даавуу"], ["КОНВЕРТ ДЛЯ СНА", "нярайн унтлагын уут"], ["ЧЕМОДАН", "чемодан"], ["ГАЛСТУ", "зангиа"], ["КҮНҚАҒАР|КҮННЕН ҚОРҒ[\\p{L}\\p{N}_]* КӨЗІЛДІР", "нарны шил"], ["БУМАЖНИК|ВИЗИТНИЦ|ӘМИЯН", "түрийвч"], ["БРЕЛОК|КІЛТТЕР", "түлхүүрийн оосор"], ["ШЫНЖЫР|АЛҚА|БІЛЕГІЗ|БІЛЕЗІГ", "гоёл чимэглэл"], ["ҰЯЛЫ ТЕЛЕФОН|МОБИЛЬН|ЧЕХОЛ", "утасны гэр"], ["КОСМЕТИЧК|КОСМЕТИКА САЛҒЫШ|МАКИЯЖ ЩЕТКАСЫНА АРНАЛҒАН ҚАП", "гоо сайхны цүнх"], ["МАКИЯЖ ҚЫЛШАҒ|КІРПІК ЩЕТК|ЕРІНГЕ АРНАЛҒАН ЩЕТК|ЩЕТКА ДЛЯ ЛИЦА|БЕТТІҢ ҚЫЛШАҒ", "гоо сайхны бийр"], ["СПОНЖ", "будгийн хөвөн"], ["ЕРІН ЖЫЛТЫР|ЕРІН БАЛЬЗАМ|ЛАК ДЛЯ НОГТ|КРЕМ ДЛЯ РУК|ПАРФЮМ|БАЛАЛАР КОСМЕТИК|МАСКА", "гоо сайхны бүтээгдэхүүн"], ["КОСМЕТИЧЕСК[\\p{L}\\p{N}_]* ДИСК|КОСМЕТИКАЛЫҚ ДИСК", "гоо сайхны дэвсгэр"], ["РАСЧЕСК|ТАРАҚ", "сам"], ["ТІС ТАЗАЛАҒЫШ|ТІС ЩЕТК|ТІС ҚЫЛШАҚ", "шүдний сойз"], ["ДӘРЕТХАНА", "ариун цэврийн хэрэгсэл"], ["ТАЗАЛАУ ЩЕТК|ҚЫЛШАҚТЫ ТАЗАРТҚЫШ|ШАҢ ТАЗАЛАУШЫ|ШЫНЫ ТАЗАЛАҒЫШ|ЩЕТК", "сойз"], ["ТАЗАЛАУ ШҮБЕР|МОЧАЛК|ҰҚАЛАҒЫШ", "цэвэрлэгээний алчуур"], ["ДАСТАРҚАН|ҮСТЕЛ ЖОЛЫ|КЛЕЕНК", "ширээний бүтээлэг"], ["ТӨСЕК-ОРЫН|ПОСТЕЛЬН|ЖАЙМА|ПРОСТЫН|ТӨСЕК ЖАПҚЫШ|ПОКРЫВАЛ|ДИВАН ҚАБ", "орны даавуу"], ["ПЕРДЕ", "хөшиг"], ["КІЛЕМ|ТӨСЕМШЕ|ТӨСЕНІШ", "хивс, дэвсгэр"], ["ШАЙ ҚАСЫҒ|ӨЛШЕУІШ ҚАСЫҚ|ҚАСЫҚ", "халбага"], ["ШАНЫШҚЫ", "сэрээ"], ["ПЫШАҚ|ҚАЙШЫ|НОЖН", "хутга, хайч"], ["ШУМОВК|ДУРШЛАГ|ҚАЛАҚША|ШПАТЕЛ|ҚЫСҚЫШ|СЫҚҚЫШ|ҮККІШ|ТАЗАРТҚЫШ|ТЫҒЫЗДАҒЫШ|ТАҚТАЙ|АС ҮЙ ҚҰРАЛ|АСХАНА АСПАП|АС ҚҰРАЛ", "гал тогооны хэрэгсэл"], ["ФОРМА|ПІШІН|ҚАЛЫП|МӨР|ПЕЧАТИ", "жигнэх хэв"], ["ТОСТАҒАН|ЧАША|ТАБАҚ|ПОДНОС|НАУА|ХЛЕБНИЦ|МАСЛЕНК|САУЫТ|ШАЙҚАУЫШ|БӨТЕЛКЕ|ШӨЛМЕК|ТАМАҚ ҚАПШЫ", "аяга таваг"], ["АЙШАНАҚ|ПОДСТАВК|ТҰҒЫР|ТІРЕГ|ҰСТАҒЫШ|ҰСТАУШЫ|СТЕНД|ПОЛКА|СӨРЕ", "тавиур"], ["САҚТАУ|САҚТАЙТЫН|КӘРЗІҢКЕ|ОРГАНАЙЗЕР|ҰЙЫМДАСТЫРУШЫ|STORAGE", "хадгалах сав"], ["ІЛМЕК|ТҮЙРЕУІШ|ЗАЖИМ", "өлгүүр, хавчаар"], ["ВЕНОК|ГҮЛДЕСТЕ|ГИРЛЯНД|РОЖДЕСТВ|ШАР(?![\\p{L}\\p{N}])|ШАРЫ|ШАРЛАР|КОНФЕТТИ|ПАСХА|ӘШЕКЕЙ|ДЕКОР|БЕЗЕНДІР|УКРАШЕН", "чимэглэл"], ["ӘУЕ ШАР|ҮРЛЕ", "бөмбөлөг"], ["ФОТОРАМК|ФОТОАЛЬБОМ|ФОТОСУРЕТ", "зургийн жааз"], ["ЖАПСЫРМА|НАКЛЕЙК", "наалт"], ["ТАСПА|ҮНТАСПА", "тууз"], ["ҚАҒАЗ|ПАКЕТ|ОРАЙТЫН|СЫЙЛЫҚ", "бэлгийн боодол"], ["ГАНТЕЛ|ЙОГ|СЕКІРТПЕ|ВЕЛОСИПЕД", "спортын хэрэгсэл"], ["ЖАНУАР|ЖИВОТН|ТЫРНАУ", "тэжээвэр амьтны хэрэгсэл"], ["ЛАМПА|ЖАРЫҚ", "гэрэл"], ["КАБЕЛ|USB|ҚУАТ", "кабель"], ["ҚАЛАМ|РУЧК|КАРАНДАШ|ПЕНАЛ|ӨШІРГІШ|ЖУРНАЛ|ЕСКЕРТУ", "бичиг хэрэг"], ["ОЙЫН|ОЙЫНШЫҚ|МҮЙІЗ", "тоглоом"], ["ЖИҺАЗ|ПУФ|ҮСТЕЛ", "тавилга"], ["ҚОҚЫС|МУСОР", "хогийн сав"], ["ТҰЗ|БҰРЫШ", "амтлагчийн сав"], ["ЗЕРКАЛ|ӘЙНЕК|ШЫНЫ|СТЕКЛ", "толь, шил"], ["ҚОЛШАТЫР|ЖАҢБЫР", "бороо хамгаалах"], ["АҚША ЖИНАҒЫШ", "хадгаламжийн сав"], ["АУА СЕРГІТУ|СПРИНКЛЕР|СУ СЕПКІШ|БАҚША", "цэцэрлэгийн хэрэгсэл"], ["ВАННА|САБЫН", "угаалгын өрөөний хэрэгсэл"], ["ТӨСЕГ|БАМПЕР", "орны хэрэгсэл"], ["ТҮНГІ ЖЕЙДЕ|НОЧН(АЯ|ЫЕ) СОРОЧ", "унтлагын даашинз"], ["СУҒА ТҮСЕТІН КИІМІНІҢ ЖОҒАРҒЫ|БЮСТ[\\p{L}\\p{N}_]* КУПАЛ|ВЕРХ КУПАЛ", "усны хувцасны дээд хэсэг"], ["СУҒА ТҮСЕТІН КИІМІНІҢ АСТЫҢҒЫ|ТРУСЫ КУПАЛ|НИЗ КУПАЛ", "усны хувцасны доод хэсэг"], ["СУҒА ТҮСЕТІН|КУПАЛЬН|ЖҮЗУ|ПЛАВ", "усны хувцас"], ["БОКСЕР", "боксер дотуур өмд"], ["ҚЫСҚА ШАЛБАР|ШОЛАҚ ШАЛБАР|ШОРТ", "богино өмд"], ["ДЖИНС|ДЖИНСЫ|ЖИНС", "жинсэн өмд"], ["ЛЕГГИНС|ЛОСИН|ЛЕГИНС", "леггинс"], ["ШАЛБАР|БРЮК|ШТАН|ДЖОГГЕР", "өмд"], ["КОЛГОТ|КОЛГОТКИ", "трико"], ["НӘСКИ|НОСК|ГОЛЬФ|ШҰЛЫҚ", "оймс"], ["ІШКИІМ|ТРУС|СЛИП|СТРИНГ|ТРУСИК", "дотуур өмд"], ["БЮСТГАЛТ|БЮСТ|ТОП-БРА|БРАЛЕТ", "хөхөвч"], ["ПИЖАМ", "унтлагын хувцас"], ["КОМБИНЕЗОН|КОМБЕЗ", "комбинезон"], ["БОДИ", "боди"], ["ПОЛО|POLO", "поло цамц"], ["МАЙЛЫҚ", "салфетка"], ["ФУТБОЛК|ФУТБОЛ", "футболк"], ["МАЙК", "майк"], ["ЛОНГСЛИВ", "урт ханцуйт цамц"], ["ТОЛСТОВК|ХУДИ|КЕҢЖЕЙДЕ|СВИТШОТ|КОФТ", "кофт"], ["СВИТЕР|ДЖЕМПЕР|ПУЛОВЕР|ПУЛЛОВЕР|ВОДОЛАЗК", "свитер"], ["КАРДИГАН", "кардиган"], ["ЖИЛЕТ|ЖИЛЕТКА", "хантааз"], ["БЛЕЙЗЕР|ПИДЖАК|ЖАКЕТ", "пиджак"], ["ПАЛЬТО|ПЛАЩ|ТРЕНЧ", "пальто"], ["КҮРТЕШЕ|КУРТК|ПУХОВИК|ПАРК|БОМБЕР|ВЕТРОВК", "хүрэм"], ["БЛУЗК|БЛУЗ|ТУНИК", "блуз"], ["ЖЕЙДЕ|РУБАШК|СОРОЧК", "цамц"], ["ТОП", "топ"], ["ПЛАТЬ|КӨЙЛЕ|САРАФАН", "даашинз"], ["БЕЛДЕМШЕ|ЮБК", "юбка"], ["КОСТЮМ|ЖИНАҚ|КОМПЛЕКТ|ТОПТАМ|ЖИЫНТЫҚ", "хослол"], ["ТӘПІШКЕ|ТАПОЧ|ТАПКИ|ШЛЁП|ШЛЕП|СЛАНЦ|ШЛЕПАН", "шаахай"], ["КРОССОВК|КРОСОВК", "пүүз"], ["КЕДЫ|КЕД", "кед"], ["САНДАЛ|БОСОНОЖ", "сандаал"], ["ТУФЛ|ТУФЕЛ|БАЛЕТК|ЛОФЕР|МОКАСИН", "туфль"], ["БӘТІҢКЕ|БӘТЕҢКЕ|БОТИН|БЕТІК|ЕТІГ|ЕТІК|САПОГ|ЧЕЛСИ|УГГ", "гутал"], ["ҚАЛПАҚ|ШАПК|ШЛЯП|КЕПК|БЕЙСБОЛК|ПАНАМ|БАЛАКЛАВ|БӨРІК", "малгай"], ["ҚОЛҒАП|ПЕРЧАТ|ВАРЕЖ|ҚОЛҒАБ", "бээлий"], ["ШАРФ|ОРАМАЛ|ПЛАТОК|ПАЛАНТИН|СНУД|ГЛУШИТЕЛ|МОЙЫНОРАҒЫШ", "ороолт"], ["БАС БАЙЛАМ|ПОВЯЗК|ОБОД|ЗАКОЛК|РЕЗИНК|ШАШ", "үсний чимэглэл"], ["БЕЛДІК|БЕЛДІГ|РЕМЕН|РЕМНИ|ПОЯС", "бүс"], ["РЮКЗАК|РЮКЗАГ", "үүргэвч"], ["СӨМКЕ|СУМК|ШОППЕР|КЛАТЧ", "цүнх"], ["ӘМИЯН|КОШЕЛ|ҚАПШЫҚ", "түрийвч"], ["КӨЗІЛДІРІК|(?<![\\p{L}\\p{N}])ОЧК", "нүдний шил"], ["ЗЕРГЕР|БИЖУТЕР|СЫРҒА|СЕРЬГ|МОНШАҚ|КОЛЬЕ|БІЛЕЗІК|БРАСЛЕТ|САҚИНА|КОЛЬЦ|ОЖЕРЕЛ|ЦЕПОЧ", "гоёл чимэглэл"], ["ЖАСТЫҚТЫС|НАВОЛОЧ", "дэрний уут"], ["ЖАСТЫҚ|ПОДУШ", "дэр"], ["КӨРПЕ|ПЛЕД|ОДЕЯЛ", "хөнжил"], ["КІЛЕМШЕ|КОВРИК|САЛФЕТ", "дэвсгэр"], ["СҮЛГІ|ПОЛОТЕН|ОРАМАЛ", "алчуур"], ["ШЫРШАЛЫҚ|ЁЛОЧ|ЕЛОЧ", "гацуурын чимэглэл"], ["ОЙЫНШЫҚ|ИГРУШ", "тоглоом"], ["ӨСІМДІК|РАСТЕН|ЦВЕТ", "чимэглэлийн ургамал"], ["ШАМ|СВЕЧ", "лаа"], ["ВАЗА|ҚҰМЫРА", "ваар"], ["КЕСЕ|КРУЖК|СТАКАН|ТАРЕЛ|ТӘРЕЛКЕ|ЫДЫС|ПОСУД", "аяга таваг"], ["ЖӘШІК|КОРЗИН|СЕБЕТ|ҚОРАП|КОРОБ|КОНТЕЙНЕР", "хадгалах сав"], ["ХАЛАТ", "халат"], ["КИІМ|ОДЕЖ", "хувцас"]].map(([p, m]) => [new RegExp(p, 'u'), m]);
+  const GEN_DEF = {"WOMEN": "Эмэгтэй", "MEN": "Эрэгтэй", "KIDS": "Хүүхдийн", "HOME": ""}, CAT_MN = {"KNITTWEAR": "сүлжмэл", "OUTERWEAR": "гадуур хувцас", "PANTS": "өмд", "DRESS": "даашинз", "SHIRTS": "цамц", "T-SHIRTS": "футболк", "SKIRTS": "юбка", "UNDERWEAR": "дотуур хувцас", "SHORTS": "богино өмд", "SWIMWEAR": "усны хувцас", "PYJAMA": "унтлагын хувцас", "SHOES": "гутал", "BAGS": "цүнх", "ACCESSORIES": "дагалдах хэрэгсэл", "SETS": "хослол", "HOME ACCESSORIES": "гэр ахуйн бараа", "MIX": "холимог"};
+  function tr(desc, gender, cat){
+    const d = ' ' + String(desc == null ? '' : desc).toUpperCase().replace(/Ё/g, 'Е') + ' ';
+    let aud = null; for (const [p, m] of AUD) if (p.test(d)){ aud = m; break; }
+    if (aud == null && /ЖІГІТ/u.test(d)) aud = gender === 'KIDS' ? 'Хүүгийн' : 'Эрэгтэй';
+    if (aud == null) aud = GEN_DEF[gender] || '';
+    let found = [], rest = d;
+    for (;;){
+      let best = null;
+      for (const [p, m] of NOUN){ const mm = p.exec(rest); if (mm && (!best || mm.index < best[0])) best = [mm.index, mm.index + mm[0].length, m]; }
+      if (!best) break;
+      if (!found.includes(best[2])) found.push(best[2]);
+      rest = rest.slice(0, best[0]) + ' '.repeat(best[1] - best[0]) + rest.slice(best[1]);
+    }
+    found = found.filter(f => !found.some(g => g !== f && g.includes(f)));
+    const belt = /БЕЛДІГІ БАР|С РЕМН|С ПОЯС/u.test(d);
+    if (belt && found.includes('бүс') && found.length > 1) found = found.filter(f => f !== 'бүс');
+    const ok = found.length > 0; if (!ok) found = [CAT_MN[cat] || 'бараа'];
+    let noun = found.slice(0, 3).join(' ба '); if (belt) noun = 'бүстэй ' + noun;
+    const s = (aud + ' ' + noun).trim(); return [s.charAt(0).toUpperCase() + s.slice(1), ok];
+  }
+  return {tr, CAT_MN};
+})();
+
+
+// WH — LPP deliveries: plan per store, scan allocation, shipments, receiving (тулгалт) and Smart drafts.
+// Pure functions (no DOM, no Firestore) so they can be tested in node.
+const WH = (() => {
+  const TR = typeof WHTR !== 'undefined' ? WHTR : (typeof require !== 'undefined' ? require('./whtr.js') : null);
+  // default settings (the owner edits them in «Тохиргоо» → config/wh)
+  const DEFAULT_CFG = {
+    stores: [
+      {key: 'fc', name: 'Food City', base: '220', pct: 40, on: true},
+      {key: 'dr', name: 'Драгон', base: '222', pct: 30, on: true},
+      {key: 'ns', name: 'Нийслэл', base: '226', pct: 30, on: true},
+      {key: 'ht', name: 'Бөөн', base: '999', pct: 0, on: true},
+    ],
+    over: {key: 'ag', name: 'Агуулах', base: '160'},       // overflow (more pieces than the plan) stays in the warehouse
+    // LPP category → sub-location suffix of the store (220 + '-2' = 220-2 Food city - Хувцас)
+    catLoc: {KNITTWEAR: '-2', OUTERWEAR: '-2', PANTS: '-2', DRESS: '-2', SHIRTS: '-2', 'T-SHIRTS': '-2', SKIRTS: '-2', UNDERWEAR: '-2', SHORTS: '-2', SWIMWEAR: '-2',
+      PYJAMA: '-2', SETS: '-2', MIX: '-2', SHOES: '-1', BAGS: '-5', ACCESSORIES: '-5', 'HOME ACCESSORIES': '-4'},
+    // words in the item name that override the category (e.g. Christmas decoration → -7 Шинэ жил)
+    wordLoc: [{w: 'ШЫРШАЛЫҚ', s: '-7'}, {w: 'РОЖДЕСТВ', s: '-7'}, {w: 'ЁЛОЧ', s: '-7'}],
+    // warehouse location the goods leave from, per suffix ('' = any other)
+    srcLoc: {'': '160'},
+    small: 5,                                                // a model with ≤ this many pieces goes to one store as a whole
+    purchase: {supplier: '130000', loc: '160', account: '310104', desc: 'Татан авалт'},
+  };
+  const cfgOf = c => {
+    const x = {...DEFAULT_CFG, ...(c || {})};
+    x.stores = (x.stores && x.stores.length ? x.stores : DEFAULT_CFG.stores).map(s => ({...s, pct: +s.pct || 0}));
+    x.catLoc = {...DEFAULT_CFG.catLoc, ...((c || {}).catLoc || {})};
+    x.srcLoc = {...DEFAULT_CFG.srcLoc, ...((c || {}).srcLoc || {})};
+    x.purchase = {...DEFAULT_CFG.purchase, ...((c || {}).purchase || {})};
+    return x;
+  };
+  const num = v => { const n = typeof v === 'number' ? v : parseFloat(String(v == null ? '' : v).replace(/[\s,]/g, '')); return isFinite(n) ? n : 0; };
+  const keyOf = (model, size) => String(model) + '|' + String(size);
+  const eanOf = v => { if (v == null) return ''; const s = typeof v === 'number' ? v.toFixed(0) : String(v).trim(); return s.replace(/\.0+$/, ''); };
+
+  // --- LPP list (same columns as KZ_ALL_ENRICHED: MODEL, SIZE, EAN, ITEM_DESC, GENDER, CATEGORY, QTY, BRAND, RRP MN2027 …) ---
+  function parseList(rows){
+    const hi = rows.findIndex(r => r && r.some(c => /^EAN$/i.test(String(c || '').trim())) && r.some(c => /^MODEL$/i.test(String(c || '').trim())));
+    if (hi < 0) return {error: '«MODEL», «EAN» багана олдсонгүй (LPP-ийн жагсаалт уу?)'};
+    const H = rows[hi].map(c => String(c == null ? '' : c).trim()), ix = (...n) => { for (const x of n){ const i = H.findIndex(h => h.toLowerCase() === x.toLowerCase()); if (i >= 0) return i; } return -1; };
+    const c = {model: ix('MODEL'), size: ix('SIZE'), ean: ix('EAN'), desc: ix('ITEM_DESC', 'Барааны нэр (МН)'), mn: ix('Барааны нэр (МН)'), gender: ix('GENDER'), cat: ix('CATEGORY'),
+      qty: ix('QTY'), brand: ix('BRAND'), price: ix('RRP MN2027'), base: ix('Undsen une'), carton: ix('CARTON')};
+    const items = {}, eans = {}; let pcs = 0, bad = 0;
+    for (const r of rows.slice(hi + 1)){
+      if (!r) continue; const ean = eanOf(r[c.ean]), model = String(r[c.model] == null ? '' : r[c.model]).trim(), size = String(r[c.size] == null ? '' : r[c.size]).trim(), q = c.qty >= 0 ? num(r[c.qty]) : 1;
+      if (!ean || !model){ if (r.some(v => v != null && v !== '')) bad++; continue; }
+      const k = keyOf(model, size), g = String(r[c.gender] || ''), cat = String(r[c.cat] || '');
+      const it = items[k] = items[k] || {k, m: model, s: size, e: ean, q: 0, n: c.mn >= 0 && r[c.mn] ? String(r[c.mn]) : (TR ? TR.tr(r[c.desc], g, cat)[0] : String(r[c.desc] || '')),
+        raw: c.desc >= 0 ? String(r[c.desc] || '') : '', g, c: cat, b: String(r[c.brand] || ''), p: c.price >= 0 ? num(r[c.price]) : 0};
+      it.q += q; pcs += q; eans[ean] = k;
+    }
+    return {items, eans, pcs, lines: Object.keys(items).length, bad};
+  }
+
+  // --- plan: how many pieces of every model|size go to which store ---
+  // big sizes are split by the store percentages (every store gets the size run = a collection),
+  // sizes with fewer pieces than stores go to the stores that already hold most of the model,
+  // small models go whole to the store furthest below its percentage — so the truck as a whole keeps the percentages
+  function plan(items, cfgIn){
+    const cfg = cfgOf(cfgIn), S = cfg.stores.filter(s => s.on && s.pct > 0), out = {};
+    if (!S.length) return {error: 'Идэвхтэй дэлгүүрийн хувь 0 байна'};
+    const P = S.reduce((a, s) => a + s.pct, 0), share = Object.fromEntries(S.map(s => [s.key, s.pct / P]));
+    const models = {}; for (const it of Object.values(items)) (models[it.m] = models[it.m] || []).push(it);
+    const total = Object.values(items).reduce((a, it) => a + it.q, 0), target = Object.fromEntries(S.map(s => [s.key, total * share[s.key]])), got = Object.fromEntries(S.map(s => [s.key, 0]));
+    const deficit = k => (target[k] - got[k]) / (target[k] || 1);
+    const byDeficit = () => S.map(s => s.key).sort((a, b) => deficit(b) - deficit(a) || share[b] - share[a]);
+    const order = Object.entries(models).map(([m, L]) => [m, L, L.reduce((a, it) => a + it.q, 0)]).sort((a, b) => b[2] - a[2] || a[0].localeCompare(b[0]));
+    for (const [m, L, mq] of order){
+      const give = (it, k, n) => { if (!n) return; out[it.k] = out[it.k] || {}; out[it.k][k] = (out[it.k][k] || 0) + n; got[k] += n; mget[k] = (mget[k] || 0) + n; };
+      const mget = {};
+      if (mq <= cfg.small){ const k = byDeficit()[0]; for (const it of L) give(it, k, it.q); continue; }
+      const sizes = L.slice().sort((a, b) => b.q - a.q);
+      for (const it of sizes.filter(x => x.q >= S.length)){
+        // largest remainder by share; ties → the store furthest below its target
+        const base = S.map(s => [s.key, Math.floor(it.q * share[s.key]), it.q * share[s.key] % 1]);
+        let left = it.q - base.reduce((a, b) => a + b[1], 0);
+        const rank = base.slice().sort((a, b) => b[2] - a[2] || deficit(b[0]) - deficit(a[0]));
+        for (const r of rank){ if (left <= 0) break; r[1]++; left--; }
+        for (const [k, n] of base) give(it, k, n);
+      }
+      for (const it of sizes.filter(x => x.q < S.length)){
+        const rank = S.map(s => s.key).sort((a, b) => (mget[b] || 0) - (mget[a] || 0) || deficit(b) - deficit(a));
+        for (let i = 0; i < it.q; i++) give(it, rank[i % rank.length], 1);
+      }
+    }
+    return {plan: out, target, got, total};
+  }
+
+  // --- scan: the next piece of model|size goes to the store with the most of its plan still open (overflow → warehouse) ---
+  function pick(k, planK, cnt, cfgIn){
+    const cfg = cfgOf(cfgIn); const p = planK || {}, c = cnt || {};
+    let best = null, bestR = -1;
+    for (const s of cfg.stores){ const want = p[s.key] || 0; if (!want) continue; const open = want - (c[s.key] || 0); if (open <= 0) continue; const r = open / want; if (r > bestR){ bestR = r; best = s.key; } }
+    return best || cfg.over.key;
+  }
+  // an extra piece (not on the truck list, found in the master file): the store furthest below its percentage overall
+  function pickExtra(tot, cfgIn){
+    const cfg = cfgOf(cfgIn), S = cfg.stores.filter(s => s.on && s.pct > 0); if (!S.length) return cfg.over.key;
+    const all = S.reduce((a, s) => a + (tot[s.key] || 0), 0) + 1, P = S.reduce((a, s) => a + s.pct, 0);
+    return S.map(s => [s.key, s.pct / P - (tot[s.key] || 0) / all]).sort((a, b) => b[1] - a[1])[0][0];
+  }
+
+  // --- locations ---
+  const storeOf = (key, cfgIn) => { const cfg = cfgOf(cfgIn); return key === cfg.over.key ? cfg.over : cfg.stores.find(s => s.key === key); };
+  function suffixOf(it, cfgIn){
+    const cfg = cfgOf(cfgIn), txt = String((it && (it.raw || it.n)) || '').toUpperCase();
+    for (const w of cfg.wordLoc || []) if (w && w.w && txt.includes(String(w.w).toUpperCase())) return w.s;
+    return cfg.catLoc[it && it.c] != null ? cfg.catLoc[it.c] : '-2';
+  }
+  function locs(it, storeKey, cfgIn){
+    const cfg = cfgOf(cfgIn), st = storeOf(storeKey, cfg), suf = suffixOf(it, cfg);
+    const from = cfg.srcLoc[suf] != null && cfg.srcLoc[suf] !== '' ? cfg.srcLoc[suf] : cfg.srcLoc[''] || '160';
+    const to = !st ? '' : storeKey === cfg.over.key ? st.base : st.base + (suf || '');
+    return {from, to, suf};
+  }
+
+  // --- receiving: compare what the warehouse sent with what the store counted ---
+  function compare(sent, recv){
+    const keys = new Set([...Object.keys(sent || {}), ...Object.keys(recv || {})]), lines = [];
+    let s = 0, r = 0, miss = 0, extra = 0;
+    for (const e of keys){ const a = num((sent || {})[e]), b = num((recv || {})[e]); s += a; r += b; if (a !== b){ lines.push({e, sent: a, recv: b, d: b - a}); if (b < a) miss += a - b; else extra += b - a; } }
+    lines.sort((x, y) => x.d - y.d || x.e.localeCompare(y.e));
+    return {ok: !lines.length, sent: s, recv: r, miss, extra, lines};
+  }
+
+  // --- Smart drafts (array of rows for XLSX.utils.aoa_to_sheet) ---
+  // one location pair for every line → «InventoryTransfer_v2»; mixed → «InventoryTransferMany»
+  function transferAoa(lines, meta){
+    // lines: [{e, n, q, from, to}]
+    const pairs = new Set(lines.map(l => l.from + '>' + l.to));
+    if (pairs.size === 1){
+      const [from, to] = [...pairs][0].split('>');
+      return {kind: 'one', aoa: [['ItemId', 'ItemName', 'Qty'], ['Баримтын мэдээлэл', null, null], ['Баримтын огноо', meta.date.replace(/-/g, '/'), null], ['Баримтын №', meta.no, null],
+        ['Гүйлгээний утга', meta.desc, null], ['Зарлагын байршлын код', from, null], ['Орлогын байршлын код', to, null], ['Барааны код', 'Барааны нэр', 'Тоо хэмжээ'],
+        ...lines.map(l => [l.e, l.n, l.q])]};
+    }
+    return {kind: 'many', aoa: [['DocumentId', 'DocumentNumber', 'DocumentDate', 'DocumentDesc', 'WarehouseId', 'ToWarehouseId', 'ItemId', 'ItemName', 'Qty', 'IsConvert'],
+      ['Гүйлгээ', 'Баримтын №', 'Огноо', 'Гүйлгээний утга', 'Зарлагын байршил', 'Орлогын байршил', 'Барааны код', 'Барааны нэр', 'Тоо хэмжээ', 'хөрвүүлэлт'],
+      ...lines.map(l => ['1', meta.no, meta.date.replace(/-/g, '/'), meta.desc, l.from, l.to, l.e, l.n, l.q, 'Үгүй'])]};
+  }
+  function purchaseAoa(lines, meta, cfgIn){
+    const p = cfgOf(cfgIn).purchase;
+    return [['ItemId', 'ItemName', 'Qty', 'UnitPrice', 'Amount', 'VatAmount', 'Weight', 'ExpireDate'], ['Баримтын мэдээлэл'], ['Баримтын огноо', meta.date.replace(/-/g, '/')], ['Баримтын №', meta.no || '0'],
+      ['Гүйлгээний утга', meta.desc || p.desc], ['Бэлтгэн нийлүүлэгчийн код', p.supplier], ['Байршлын код', p.loc], ['Харьцсан данс', p.account],
+      ['Барааны код', 'Барааны нэр', 'Тоо хэмжээ', 'Нэгж үнэ', 'Дүн', 'НӨАТ-ын дүн', 'Жин', 'Дуусах огноо'],
+      ...lines.map(l => [l.e, l.n, l.q, 1, l.q, 0, 0, null])];
+  }
+  const R = {DEFAULT_CFG, cfgOf, keyOf, eanOf, parseList, plan, pick, pickExtra, storeOf, suffixOf, locs, compare, transferAoa, purchaseAoa};
+  if (typeof module !== 'undefined') module.exports = R;
+  return R;
+})();
+
 // ===== Counterparty base (Харилцагчийн сан): known receiving accounts → category, store, name =====
 const PAYEES = (() => {
   const accShort = a => { let s = String(a == null ? '' : a).toUpperCase().replace(/\s/g, ''); const m = s.match(/^(?:MN)?(\d{2})(\d{4})(\d{12,13})$/); if (m) return m[3].replace(/^0+/, ''); s = s.replace(/\D/g, ''); if (s.length >= 18) return s.slice(-10).replace(/^0+/, ''); return s.replace(/^0+/, ''); };
@@ -1964,6 +2217,7 @@ function renderInner(){
   renderBal();
   try{ renderPay(); }catch(e){ console.warn('pay', e); }
   try{ renderPL(); }catch(e){ console.warn('pl', e); }
+  try{ renderWh(); renderWhSettings(); }catch(e){ console.warn('wh', e); }
   try{ renderDaily(); }catch(e){ console.warn('daily', e); }
 }
 function reqCard(r, matches){
@@ -3457,6 +3711,391 @@ $('#rc-xlsx').addEventListener('click', () => {
   for (let R = 3; R < aoa.length; R++) for (const C of [5, 6]){ const ref = XS.utils.encode_cell({r: R, c: C}); if (ws[ref]) ws[ref].z = '#,##0'; }
   const wb = XS.utils.book_new(); XS.utils.book_append_sheet(wb, ws, 'Давтамжит'); XS.writeFile(wb, `VIVI_davtamjit_${per}.xlsx`);
 });
+// ===================== LPP warehouse: deliveries, scanner, shipments, store receiving =====================
+// Firestore: config/wh (settings) · deliv/{id} · delivpart/{id}_{i} (items + plan) · delivcnt/{id} (scanned per model|size per store)
+//            ship/{id} (one shipment to a store: l = sent per EAN, r = received per EAN) · whmaster/{p_i} (KZ master file, chunks)
+const WS = {cfg: null, delivs: [], active: '', parts: {}, cnt: {}, ships: [], master: null, masterMeta: null, mode: 'scan', shipF: 'act', detail: '',
+  pend: {}, pendN: 0, last: [], lastKey: '', lastAt: 0, open: {}, flushing: false, rc: {ship: '', pend: {}, pendN: 0, last: []}};
+const whCfg = () => WH.cfgOf(WS.cfg);
+const fv = () => firebase.firestore.FieldValue;
+// field names inside maps: Firestore dotted paths need simple identifiers
+const ek = s => 'k' + String(s).replace(/[^A-Za-z0-9]/g, c => '_' + c.charCodeAt(0).toString(16) + '_');
+const dk = s => String(s).slice(1).replace(/_([0-9a-f]+)_/g, (m, h) => String.fromCharCode(parseInt(h, 16)));
+const STORE_COLOR = {fc: '#2a78d6', dr: '#eb6834', ns: '#1f9d6b', ht: '#8a5cd6', ag: '#7a7a7a'};
+const storeName = k => (WH.storeOf(k, whCfg()) || {}).name || k;
+
+// ---------- sound ----------
+let AC = null;
+function beep(kind){
+  if (!$('#wh-sound') || !$('#wh-sound').checked) return;
+  try{ AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const o = AC.createOscillator(), g = AC.createGain(); o.connect(g); g.connect(AC.destination);
+    const f = {ok: 880, over: 440, extra: 660, bad: 220}[kind] || 600; o.frequency.value = f; g.gain.value = 0.08; o.start(); o.stop(AC.currentTime + (kind === 'bad' ? 0.45 : 0.12)); }catch(e){}
+}
+
+// ---------- data of the active delivery ----------
+function delivItems(id){ const P = WS.parts[id]; return P ? P.items : null; }
+async function loadParts(id){
+  if (WS.parts[id] || !db) return WS.parts[id];
+  const D = WS.delivs.find(d => d.id === id); if (!D) return null;
+  const items = {}, plan = {}, eans = {};
+  for (let i = 0; i < (D.parts || 0); i++){ const s = await db.doc('delivpart/' + id + '_' + i).get(); if (!s.exists) continue; const x = s.data();
+    Object.assign(items, x.items || {}); Object.assign(plan, x.plan || {}); }
+  for (const it of Object.values(items)) eans[it.e] = it.k;
+  WS.parts[id] = {items, plan, eans}; return WS.parts[id];
+}
+async function loadMaster(){
+  if (WS.master || !db) return WS.master;
+  try{ const m = await db.doc('whmaster/meta').get(); if (!m.exists) return null; WS.masterMeta = m.data(); let str = '';
+    for (let i = 0; i < WS.masterMeta.n; i++){ const d = await db.doc('whmaster/p_' + i).get(); str += d.exists ? d.data().part : ''; }
+    WS.master = JSON.parse(str); }catch(e){ console.warn('master', e); WS.master = null; }
+  return WS.master;
+}
+// scanned counts = what the server knows + what is still waiting in this browser
+function cntOf(id){ const C = WS.cnt[id] || {}; return C; }
+function cntK(id, k){ const c = {...(((cntOf(id).c) || {})[ek(k)] || {})}; for (const [st, n] of Object.entries((WS.pend[id] || {})['c|' + k] || {})) c[st] = (c[st] || 0) + n; return c; }
+function totOf(id){ const t = {...((cntOf(id).tot) || {})}; for (const [key, o] of Object.entries(WS.pend[id] || {})) if (key.startsWith('c|') || key.startsWith('x|')) for (const [st, n] of Object.entries(o)) t[st] = (t[st] || 0) + n; return t; }
+function openShip(id, st){ return WS.ships.find(s => s.deliv === id && s.store === st && s.status === 'open'); }
+
+// ---------- scanning ----------
+function addPend(id, key, st, n){ const P = WS.pend[id] = WS.pend[id] || {}; const o = P[key] = P[key] || {}; o[st] = (o[st] || 0) + n; WS.pendN += Math.abs(n); syncChip(); }
+const shipPend = {};      // shipId → {ean: n, info}
+function addShipPend(shipId, base, e, n, info){ const S2 = shipPend[shipId] = shipPend[shipId] || {base, l: {}, i: {}}; S2.l[e] = (S2.l[e] || 0) + n; if (info) S2.i[e] = info; WS.pendN += Math.abs(n); syncChip(); }
+function syncChip(){ const el = $('#wh-sync'); if (!el) return; const n = WS.pendN; el.textContent = n ? `⏳ Илгээгдээгүй ${n}` : (navigator.onLine === false ? '⚠ Интернэтгүй — хадгалсан' : '✓ Синк хийгдсэн'); el.className = 'chip ' + (n ? 'c-warn' : 'c-ok'); }
+async function flush(){
+  if (WS.flushing || !db || (!WS.pendN && !Object.keys(shipPend).length)) return; WS.flushing = true;
+  const P = WS.pend, SP = {...shipPend}; WS.pend = {}; for (const k in shipPend) delete shipPend[k]; const was = WS.pendN; WS.pendN = 0;
+  try{
+    const b = db.batch(), inc = n => fv().increment(n);
+    for (const [id, map] of Object.entries(P)){ const u = {}, tot = {};
+      for (const [key, o] of Object.entries(map)){ const [kind, ...rest] = key.split('|'), k = rest.join('|');
+        for (const [st, n] of Object.entries(o)){ if (!n) continue; if (kind === 'c') u['c.' + ek(k) + '.' + st] = inc(n); if (kind === 'x') u['x.' + ek(k) + '.' + st] = inc(n); if (kind === 'u') u['u.' + ek(k)] = inc(n); if (kind !== 'u') tot[st] = (tot[st] || 0) + n; } }
+      for (const [st, n] of Object.entries(tot)) if (n) u['tot.' + st] = inc(n);
+      if (Object.keys(u).length) b.update(db.doc('delivcnt/' + id), u); }
+    for (const [sid, x] of Object.entries(SP)){ const ref = db.doc('ship/' + sid); if (x.base) b.set(ref, x.base, {merge: true}); const u = {}; let tq = 0;
+      for (const [e, n] of Object.entries(x.l)){ if (!n) continue; u['l.' + ek(e)] = inc(n); tq += n; }
+      for (const [e, info] of Object.entries(x.i)) u['i.' + ek(e)] = info;
+      if (tq) u.tq = inc(tq); if (Object.keys(u).length) b.update(ref, u); }
+    await b.commit();
+  }catch(err){ console.warn('flush', err);   // keep the counts: merge them back and retry next time
+    for (const [id, map] of Object.entries(P)) for (const [key, o] of Object.entries(map)) for (const [st, n] of Object.entries(o)) addPend(id, key, st, n);
+    for (const [sid, x] of Object.entries(SP)){ for (const [e, n] of Object.entries(x.l)) addShipPend(sid, x.base, e, n, x.i[e]); }
+    WS.pendN = Math.max(WS.pendN, was);
+  } finally { WS.flushing = false; syncChip(); }
+}
+setInterval(flush, 1500);
+window.addEventListener('beforeunload', e => { if (WS.pendN){ flush(); e.preventDefault(); e.returnValue = ''; } });
+function newShipBase(id, st){
+  const D = WS.delivs.find(d => d.id === id) || {}, seq = WS.ships.filter(s => s.deliv === id && s.store === st).length + 1, now = new Date().toISOString();
+  return {deliv: id, dname: D.name || '', store: st, no: `${(D.name || 'LPP').replace(/\s+/g, '').slice(0, 10)}-${st.toUpperCase()}-${seq}`, status: 'open', createdAt: now, by: me, tq: 0, l: {}, i: {}, r: {}, rq: 0};
+}
+async function onScan(raw){
+  const e = WH.eanOf(raw); if (!e) return; const id = WS.active; const now = Date.now();
+  if (e === WS.lastKey && now - WS.lastAt < 250) return; WS.lastKey = e; WS.lastAt = now;       // the reader sometimes sends one code twice
+  if (!id){ showResult('bad', 'Хүргэлт сонгоогүй', 'Дээрээс идэвхтэй хүргэлтээ сонгоно уу.'); return; }
+  const P = await loadParts(id); if (!P){ showResult('bad', 'Хүргэлт ачаалж чадсангүй', ''); return; }
+  let k = P.eans[e], it = k ? P.items[k] : null, st, kind = 'ok';
+  if (it){ st = WH.pick(k, P.plan[k], cntK(id, k), whCfg()); if (st === whCfg().over.key) kind = 'over'; addPend(id, 'c|' + k, st, 1); }
+  else {
+    const M = await loadMaster(), m = M && M[e];
+    if (!m){ addPend(id, 'u|' + e, '_', 1); showResult('bad', 'ТӨЛӨВЛӨГӨӨНД БАЙХГҮЙ', `${e} — мастер файлд ч байхгүй. Тусад нь тавиад, дараа шалгана.`); beep('bad'); pushLast({e, n: '—', s: '', st: '', kind: 'bad'}); return; }
+    k = WH.keyOf(m[0], m[1]); it = {k, m: m[0], s: m[1], e, n: m[2], c: m[5], b: m[3]}; st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1);
+  }
+  let sh = openShip(id, st), sid = sh ? sh.id : WS.open[id + '|' + st], base = null;
+  if (!sid){ sid = db.collection('ship').doc().id; WS.open[id + '|' + st] = sid; base = newShipBase(id, st); WS.ships.push({id: sid, ...base, _local: true}); }
+  const loc = WH.locs(it, st, whCfg());
+  addShipPend(sid, base, e, 1, {n: it.n || '', k, l: loc.suf, x: kind === 'extra' ? 1 : 0});
+  const c = cntK(id, k), planned = (P.plan[k] || {})[st] || 0;
+  showResult(kind, storeName(st), `${it.n || ''} · ${it.m} · ${it.s} — байршил ${loc.to}${kind === 'over' ? ' · төлөвлөгөөнөөс илүү → агуулахад үлдэнэ' : kind === 'extra' ? ' · жагсаалтад байгаагүй (мастер файлаас)' : ` · энэ хэмжээ ${c[st] || 0}/${planned}`}`, st);
+  beep(kind); pushLast({e, n: it.n, s: it.m + ' ' + it.s, st, kind, k, sid});
+  renderWhStores();
+}
+function pushLast(x){ WS.last.unshift({...x, t: new Date().toTimeString().slice(0, 8)}); WS.last = WS.last.slice(0, 25); renderWhLast(); }
+function showResult(kind, big, small, st){
+  const el = $('#wh-result'); if (!el) return; const col = st ? STORE_COLOR[st] || '#555' : kind === 'bad' ? '#c0392b' : '#555';
+  el.style.borderColor = col; el.style.background = kind === 'bad' ? 'rgba(192,57,43,.10)' : st ? col + '1a' : '';
+  el.innerHTML = `<div class="wh-big" style="color:${col}">${esc(big)}</div><div>${esc(small)}</div>`;
+}
+async function undoScan(i){
+  const x = WS.last[i]; if (!x || x.undone || x.kind === 'bad') return; const id = WS.active;
+  addPend(id, (x.kind === 'extra' ? 'x|' : 'c|') + x.k, x.st, -1); addShipPend(x.sid, null, x.e, -1); x.undone = true; renderWhLast(); renderWhStores();
+}
+async function sendShip(sid){
+  await flush(); const s = WS.ships.find(x => x.id === sid); if (!s) return;
+  if (!confirm(`${storeName(s.store)} руу ${s.tq || 0} ширхэг илгээх үү? Илгээсний дараа энэ илгээмжид нэмж скан хийхгүй (шинэ илгээмж нээгдэнэ).`)) return;
+  try{ await db.doc('ship/' + sid).update({status: 'sent', sentAt: new Date().toISOString(), sentBy: me, notifyStore: false}); delete WS.open[s.deliv + '|' + s.store]; }
+  catch(err){ alertMsg(err); }
+}
+
+// ---------- render: scanner ----------
+function renderWhStores(){
+  const tb = $('#wh-stores'); if (!tb) return; const id = WS.active, cfg = whCfg(), D = WS.delivs.find(d => d.id === id);
+  if (!D){ tb.innerHTML = '<tr><td colspan="6" class="empty">Хүргэлт алга — «Хүргэлт (трак)» хэсэгт шинээр үүсгэнэ үү.</td></tr>'; $('#wh-prog').textContent = ''; return; }
+  const tot = totOf(id), plan = D.planTot || {}, keys = [...cfg.stores.filter(s => s.on).map(s => s.key), cfg.over.key];
+  const sc = Object.values(tot).reduce((a, b) => a + b, 0), all = D.total || 0;
+  $('#wh-prog').innerHTML = `<b>${esc(D.name)}</b> · ${fmt(sc)} / ${fmt(all)} ш скан (${all ? Math.round(sc / all * 100) : 0}%) · ${keys.filter(k => plan[k]).map(k => `${esc(storeName(k))} ${sc ? Math.round((tot[k] || 0) / sc * 100) : 0}%`).join(' · ')}`;
+  tb.innerHTML = keys.map(k => { const sh = openShip(id, k); const p = plan[k] || 0, s = tot[k] || 0;
+    if (!p && !s && !sh) return '';
+    return `<tr><td><span class="chip" style="background:${STORE_COLOR[k] || '#777'}22;color:${STORE_COLOR[k] || '#777'};font-weight:600">${esc(storeName(k))}</span></td><td class="n">${p ? fmt(p) : '–'}</td><td class="n">${fmt(s)}</td><td class="n">${p ? fmt(Math.max(0, p - s)) : '–'}</td>
+      <td class="n">${sh ? fmt((sh.tq || 0) + Object.values((shipPend[sh.id] || {}).l || {}).reduce((a, b) => a + b, 0)) + ' ш' : '–'}</td><td>${sh && k !== cfg.over.key ? `<button class="btn" data-wh-send="${esc(sh.id)}">🚚 Илгээх</button>` : ''}</td></tr>`; }).join('');
+  const C = cntOf(id), unk = Object.entries(C.u || {}).filter(([, n]) => n > 0);
+  $('#wh-unk').innerHTML = unk.length ? `<div class="banner bad"><b>Төлөвлөгөө, мастер файлд байхгүй баркод (${unk.reduce((a, [, n]) => a + n, 0)} ш):</b> ${unk.map(([e, n]) => `${esc(dk(e))}${n > 1 ? ' ×' + n : ''}`).join(', ')} — тусад нь хадгалаад шалгана уу.</div>` : '';
+}
+function renderWhLast(){
+  const tb = $('#wh-last'); if (!tb) return;
+  tb.innerHTML = WS.last.length ? WS.last.map((x, i) => `<tr style="${x.undone ? 'opacity:.45;text-decoration:line-through' : ''}"><td class="mono">${x.t}</td><td class="mono">${esc(x.e)}</td><td>${esc(x.n || '')}</td><td>${esc(x.s || '')}</td>
+    <td>${x.st ? `<b style="color:${STORE_COLOR[x.st] || '#555'}">${esc(storeName(x.st))}</b>` : '<span class="chip c-bad">байхгүй</span>'}${x.kind === 'extra' ? ' <span class="chip c-warn">жагсаалтгүй</span>' : x.kind === 'over' ? ' <span class="chip">илүү</span>' : ''}</td>
+    <td>${!x.undone && x.kind !== 'bad' ? `<button class="btn" data-wh-undo="${i}" title="Буцаах">↶</button>` : ''}</td></tr>`).join('') : '<tr><td colspan="6" class="empty">–</td></tr>';
+}
+function renderWhActive(){
+  const el = $('#wh-active'); if (!el) return; const L = WS.delivs.filter(d => d.status !== 'closed').sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  if (!WS.active || !L.some(d => d.id === WS.active)){ try{ WS.active = localStorage.getItem('vivi-wh-active') || ''; }catch(e){} if (!L.some(d => d.id === WS.active)) WS.active = L[0] ? L[0].id : ''; }
+  const html = L.length ? L.map(d => `<option value="${esc(d.id)}" ${d.id === WS.active ? 'selected' : ''}>${esc(d.name)} · ${fmt(d.total)} ш</option>`).join('') : '<option value="">— хүргэлт алга —</option>';
+  if (el.innerHTML !== html) el.innerHTML = html;
+}
+
+// ---------- render: shipments ----------
+const SHIP_ST = {open: ['Нээлттэй', 'c-grey'], sent: ['Замд', 'c-warn'], recv: ['Хүлээн авсан', 'c-ok'], diff: ['Зөрүүтэй', 'c-bad'], closed: ['Шийдвэрлэсэн', 'c-ok']};
+const decMap = m => Object.fromEntries(Object.entries(m || {}).map(([k, v]) => [dk(k), v]));
+function renderWhShips(){
+  const tb = $('#wh-ships'); if (!tb) return;
+  const L = WS.ships.filter(s => !s._local || true).filter(s => WS.shipF === 'all' ? true : WS.shipF === 'diff' ? s.status === 'diff' : s.status !== 'closed' && s.status !== 'recv').sort((a, b) => String(b.sentAt || b.createdAt).localeCompare(String(a.sentAt || a.createdAt)));
+  const nd = WS.ships.filter(s => s.status === 'diff').length; const bd = $('#wh-ship-n'); if (bd){ bd.textContent = nd || ''; bd.hidden = !nd; }
+  tb.innerHTML = L.length ? L.map(s => { const st = SHIP_ST[s.status] || [s.status, '']; const can = ['recv', 'diff', 'closed'].includes(s.status);
+    return `<tr class="${s.status === 'diff' ? 'sev-bad' : ''}"><td class="mono">${esc(s.no || s.id)}</td><td><b style="color:${STORE_COLOR[s.store] || '#555'}">${esc(storeName(s.store))}</b></td><td>${esc(s.dname || '')}</td>
+      <td class="n">${fmt(s.tq || 0)}</td><td class="n">${s.status === 'open' || s.status === 'sent' ? '–' : fmt(s.rq || 0)}</td><td><span class="chip ${st[1]}">${st[0]}</span>${s.cmp && !s.cmp.ok ? `<div class="note">дутуу ${fmt(s.cmp.miss)} · илүү ${fmt(s.cmp.extra)}</div>` : ''}</td>
+      <td class="note">${esc(fmtDT(s.sentAt || s.createdAt))}${s.recvAt ? '<br>хүлээн авсан ' + esc(fmtDT(s.recvAt)) : ''}</td>
+      <td style="white-space:nowrap"><button class="btn" data-wh-det="${esc(s.id)}">Дэлгэрэнгүй</button>${s.status === 'open' && s.store !== whCfg().over.key ? `<button class="btn" data-wh-send="${esc(s.id)}">🚚 Илгээх</button>` : ''}${can ? `<button class="btn primary" data-wh-smart="${esc(s.id)}">📥 Smart</button>` : ''}</td></tr>`; }).join('')
+    : '<tr><td colspan="8" class="empty">Илгээмж алга.</td></tr>';
+  renderShipDetail();
+}
+const RES = [['resend', 'Олдсон — дахин илгээнэ'], ['lost', 'Олдсонгүй (акт)'], ['keep', 'Илүү — дэлгүүрт үлдээнэ'], ['back', 'Илүү — агуулах руу буцаана'], ['other', 'Бусад (тайлбартай)']];
+function renderShipDetail(){
+  const el = $('#wh-ship-detail'); if (!el) return; const s = WS.ships.find(x => x.id === WS.detail); if (!s){ el.innerHTML = ''; return; }
+  const L = decMap(s.l), R = decMap(s.r), I = decMap(s.i);
+  if (s.status === 'diff' || s.status === 'closed'){
+    const cmp = WH.compare(L, R), res = decMap(s.res);
+    el.innerHTML = `<div class="banner ${s.status === 'diff' ? 'bad' : ''}"><b>${esc(s.no)} · ${esc(storeName(s.store))}:</b> илгээсэн ${fmt(cmp.sent)}, хүлээн авсан ${fmt(cmp.recv)} — дутуу ${fmt(cmp.miss)}, илүү ${fmt(cmp.extra)}.</div>
+      <div class="tbl"><table><thead><tr><th>Баркод</th><th>Бараа</th><th class="n">Илгээсэн</th><th class="n">Хүлээн авсан</th><th class="n">Зөрүү</th><th>Шийдвэр</th></tr></thead><tbody>${cmp.lines.map(x => { const r = res[x.e] || {};
+        return `<tr><td class="mono">${esc(x.e)}</td><td>${esc((I[x.e] || {}).n || '')}</td><td class="n">${fmt(x.sent)}</td><td class="n">${fmt(x.recv)}</td><td class="n"><b>${x.d > 0 ? '+' : ''}${fmt(x.d)}</b></td>
+        <td>${s.status === 'diff' && canWrite ? `<select data-wh-res="${esc(x.e)}" style="width:auto"><option value="">— сонгох —</option>${RES.filter(([v]) => x.d < 0 ? !['keep', 'back'].includes(v) : !['resend', 'lost'].includes(v)).map(([v, t]) => `<option value="${v}" ${r.how === v ? 'selected' : ''}>${t}</option>`).join('')}</select> <input data-wh-note="${esc(x.e)}" value="${esc(r.note || '')}" placeholder="тайлбар" style="width:160px">` : esc((RES.find(([v]) => v === r.how) || [, ''])[1] + (r.note ? ' · ' + r.note : ''))}</td></tr>`; }).join('')}</tbody></table></div>
+      ${s.status === 'diff' && canWrite ? `<div class="row" style="margin-top:8px"><button class="btn primary" data-wh-resolve="${esc(s.id)}">Шийдвэрийг хадгалах</button><span class="note">Бүх мөр шийдвэртэй болбол илгээмж хаагдана. «Дахин илгээнэ» мөрөөр шинэ илгээмж үүснэ.</span></div>` : ''}`;
+    return;
+  }
+  const rows = Object.entries(L).filter(([, n]) => n > 0).sort((a, b) => String((I[a[0]] || {}).k).localeCompare(String((I[b[0]] || {}).k)));
+  el.innerHTML = `<div class="banner"><b>${esc(s.no)} · ${esc(storeName(s.store))}</b> · ${fmt(s.tq || 0)} ш · ${rows.length} баркод</div>
+    <div class="tbl" style="max-height:360px;overflow:auto"><table><thead><tr><th>Баркод</th><th>Бараа</th><th>Загвар|хэмжээ</th><th>Байршил</th><th class="n">Тоо</th></tr></thead><tbody>${rows.map(([e, n]) => { const i = I[e] || {};
+      return `<tr><td class="mono">${esc(e)}</td><td>${esc(i.n || '')}${i.x ? ' <span class="chip c-warn">жагсаалтгүй</span>' : ''}</td><td class="mono">${esc(i.k || '')}</td><td>${esc((WH.storeOf(s.store, whCfg()) || {}).base + (s.store === whCfg().over.key ? '' : (i.l || '')))}</td><td class="n">${fmt(n)}</td></tr>`; }).join('')}</tbody></table></div>`;
+}
+async function resolveShip(sid){
+  const s = WS.ships.find(x => x.id === sid); if (!s) return; const L = decMap(s.l), R = decMap(s.r), I = decMap(s.i), cmp = WH.compare(L, R);
+  const res = {...decMap(s.res)}; for (const x of cmp.lines){ const how = ($(`select[data-wh-res="${CSS.escape(x.e)}"]`) || {}).value || '', note = ($(`input[data-wh-note="${CSS.escape(x.e)}"]`) || {}).value || ''; if (how) res[x.e] = {how, note, at: new Date().toISOString(), by: me}; }
+  const done = cmp.lines.every(x => res[x.e] && res[x.e].how), u = {res: Object.fromEntries(Object.entries(res).map(([e, v]) => [ek(e), v]))};
+  try{
+    if (done){
+      const again = cmp.lines.filter(x => res[x.e].how === 'resend' && x.d < 0);
+      if (again.length){ const ref = db.collection('ship').doc(), base = newShipBase(s.deliv, s.store), now = new Date().toISOString();
+        base.no = s.no + '-R'; base.status = 'sent'; base.sentAt = now; base.sentBy = me; base.notifyStore = false; base.resendOf = s.id;
+        for (const x of again){ base.l[ek(x.e)] = -x.d; base.i[ek(x.e)] = I[x.e] || {}; base.tq += -x.d; }
+        await ref.set(base); }
+      u.status = 'closed'; u.closedAt = new Date().toISOString(); u.closedBy = me;
+    }
+    await db.doc('ship/' + sid).update(u);
+  }catch(err){ alertMsg(err); }
+}
+// Smart draft from what the store really received (one location → InventoryTransfer, mixed → InventoryTransferMany)
+async function smartFile(sid){
+  const s = WS.ships.find(x => x.id === sid); if (!s || typeof XLSX === 'undefined') return;
+  const R = decMap(s.r), I = decMap(s.i), cfg = whCfg(); const P = await loadParts(s.deliv), M = Object.keys(R).some(e => !I[e]) ? await loadMaster() : null;
+  const lines = Object.entries(R).filter(([, q]) => q > 0).map(([e, q]) => { let i = I[e]; if (!i || !i.n){ const k = P && P.eans[e]; const it = k ? P.items[k] : null, m = M && M[e];
+      i = it ? {n: it.n, l: WH.suffixOf(it, cfg)} : m ? {n: m[2], l: WH.suffixOf({c: m[5], n: m[2]}, cfg)} : {n: '', l: cfg.catLoc.MIX || '-2'}; }
+    const st = WH.storeOf(s.store, cfg) || {base: ''}, from = cfg.srcLoc[i.l] || cfg.srcLoc[''] || '160';
+    return {e, n: i.n || '', q, from, to: s.store === cfg.over.key ? st.base : st.base + (i.l || '')}; }).sort((a, b) => a.to.localeCompare(b.to) || a.e.localeCompare(b.e));
+  if (!lines.length){ alert('Хүлээн авсан бараа алга.'); return; }
+  const date = localDay(s.recvAt || s.sentAt || s.createdAt), t = WH.transferAoa(lines, {date, no: s.no, desc: `${storeName(s.store)} хөдөлгөөн · ${s.dname || ''}`.trim()});
+  const ws = XLSX.utils.aoa_to_sheet(t.aoa), wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, t.kind === 'many' ? 'InventoryTransferMany' : 'InventoryTransfer');
+  XLSX.writeFile(wb, `${t.kind === 'many' ? 'InventoryTransferMany' : 'InventoryTransfer'}_${s.no}.xlsx`);
+}
+
+// ---------- deliveries ----------
+let WD = null;   // parsed list waiting to be saved
+function wdPctInputs(){
+  const cfg = whCfg(); $('#wd-pct').innerHTML = cfg.stores.map(s => `<label class="note" style="display:inline-flex;flex-direction:column">${esc(s.name)} (${esc(s.base)})<span class="row" style="gap:4px"><input data-wd-pct="${s.key}" inputmode="numeric" value="${s.on ? s.pct : 0}" style="width:70px;text-align:right">%</span></label>`).join('')
+    + `<span class="note" id="wd-pct-sum"></span>`;
+}
+function wdCfg(){ const cfg = whCfg(); return {...cfg, stores: cfg.stores.map(s => { const el = $(`input[data-wd-pct="${s.key}"]`); const p = el ? (+String(el.value).replace(/[^\d.]/g, '') || 0) : s.pct; return {...s, pct: p, on: p > 0}; })}; }
+function wdPreview(){
+  if (!WD){ $('#wd-info').textContent = ''; $('#wd-save').disabled = true; return; }
+  const c = wdCfg(), sum = c.stores.reduce((a, s) => a + s.pct, 0); $('#wd-pct-sum').innerHTML = `нийт <b style="color:${sum === 100 ? 'inherit' : 'var(--bad)'}">${sum}%</b>`;
+  const r = WH.plan(WD.items, c); if (r.error){ $('#wd-info').textContent = r.error; $('#wd-save').disabled = true; return; }
+  WD.plan = r; const models = new Set(Object.values(WD.items).map(i => i.m)).size;
+  $('#wd-info').innerHTML = `${fmt(WD.pcs)} ш · ${fmt(models)} загвар · ${fmt(WD.lines)} хэмжээ${WD.bad ? ` · ${WD.bad} мөр алгассан` : ''}<br>Төлөвлөгөө: ${c.stores.filter(s => s.pct).map(s => `<b style="color:${STORE_COLOR[s.key]}">${esc(s.name)}</b> ${fmt(r.got[s.key] || 0)} ш (${WD.pcs ? (r.got[s.key] / WD.pcs * 100).toFixed(1) : 0}%)`).join(' · ')}`;
+  $('#wd-save').disabled = sum !== 100;
+}
+async function wdSave(){
+  if (!WD || !WD.plan || !db) return; const name = $('#wd-name').value.trim() || ('LPP ' + today()); $('#wd-save').disabled = true; $('#wd-msg').textContent = 'Хадгалж байна…';
+  try{
+    const c = wdCfg(), ref = db.collection('deliv').doc(), id = ref.id, keys = Object.keys(WD.items), CH = 800, parts = Math.ceil(keys.length / CH);
+    for (let i = 0; i < parts; i++){ const ks = keys.slice(i * CH, (i + 1) * CH); const items = {}, plan = {};
+      for (const k of ks){ const it = WD.items[k]; items[k] = {k, m: it.m, s: it.s, e: it.e, q: it.q, n: it.n, c: it.c, g: it.g, b: it.b, p: it.p, l: WH.suffixOf(it, c)}; if (WD.plan.plan[k]) plan[k] = WD.plan.plan[k]; }
+      await db.doc('delivpart/' + id + '_' + i).set({deliv: id, i, items, plan}); }
+    await db.doc('delivcnt/' + id).set({deliv: id, c: {}, x: {}, u: {}, tot: {}});
+    await ref.set({name, createdAt: new Date().toISOString(), by: me, status: 'active', total: WD.pcs, lines: WD.lines, parts, pct: Object.fromEntries(c.stores.map(s => [s.key, s.pct])), planTot: WD.plan.got, file: WD.file || ''});
+    WS.active = id; try{ localStorage.setItem('vivi-wh-active', id); }catch(e){}
+    WD = null; $('#wd-file').value = ''; $('#wd-name').value = ''; wdPreview(); $('#wd-msg').textContent = 'Хадгаллаа — «Скан» хэсэгт сканнердаж эхэлнэ үү.';
+  }catch(err){ alertMsg(err); $('#wd-msg').textContent = 'Хадгалж чадсангүй.'; $('#wd-save').disabled = false; }
+}
+function renderWhDelivs(){
+  const tb = $('#wd-list'); if (!tb) return; const L = WS.delivs.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  tb.innerHTML = L.length ? L.map(d => { const t = totOf(d.id), sc = Object.values(t).reduce((a, b) => a + b, 0);
+    return `<tr><td><b>${esc(d.name)}</b></td><td class="note">${esc(fmtDT(d.createdAt))}</td><td class="n">${fmt(d.total)}</td><td class="note">${Object.entries(d.pct || {}).filter(([, p]) => p).map(([k, p]) => `${esc(storeName(k))} ${p}%`).join(' · ')}</td>
+      <td class="n">${WS.cnt[d.id] ? fmt(sc) : '…'}</td><td>${d.status === 'closed' ? '<span class="chip c-grey">Хаасан</span>' : '<span class="chip c-ok">Идэвхтэй</span>'}</td>
+      <td style="white-space:nowrap"><button class="btn" data-wd-purchase="${esc(d.id)}">📥 Purchase (Smart)</button>${d.status === 'closed' ? `<button class="btn" data-wd-open="${esc(d.id)}">Нээх</button>` : `<button class="btn" data-wd-close="${esc(d.id)}">Хаах</button>`}</td></tr>`; }).join('')
+    : '<tr><td colspan="7" class="empty">Хүргэлт алга.</td></tr>';
+}
+async function purchaseFile(id){
+  const D = WS.delivs.find(d => d.id === id), P = await loadParts(id); if (!D || !P || typeof XLSX === 'undefined') return;
+  const lines = Object.values(P.items).map(it => ({e: it.e, n: it.n, q: it.q})).sort((a, b) => a.e.localeCompare(b.e));
+  const aoa = WH.purchaseAoa(lines, {date: localDay(D.createdAt), no: '0', desc: (whCfg().purchase.desc || 'Татан авалт') + ' · ' + D.name}, whCfg());
+  for (let r = 9; r < aoa.length; r++) aoa[r][4] = {f: `C${r + 1}*D${r + 1}`, v: aoa[r][2]};
+  const ws = XLSX.utils.aoa_to_sheet(aoa), wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Purchase'); XLSX.writeFile(wb, `Purchase_${D.name.replace(/[^\wА-Яа-яӨөҮү-]+/g, '_')}.xlsx`);
+}
+
+// ---------- store receiving (blind count) ----------
+function myRcvStores(){ return whCfg().stores.map(s => s.key).filter(k => isOwner || (window.ALLOWX || {})['rcv_' + k]); }
+function renderRcv(){
+  const tb = $('#rc-ships'); if (!tb) return; const mine = myRcvStores();
+  const L = WS.ships.filter(s => mine.includes(s.store) && ['sent', 'recv', 'diff', 'closed'].includes(s.status)).sort((a, b) => (a.status === 'sent' ? 0 : 1) - (b.status === 'sent' ? 0 : 1) || String(b.sentAt).localeCompare(String(a.sentAt))).slice(0, 40);
+  const n = L.filter(s => s.status === 'sent').length; const tbg = $('#t-rcv'); if (tbg){ tbg.textContent = n || ''; tbg.hidden = !n; }
+  tb.innerHTML = L.length ? L.map(s => { const st = SHIP_ST[s.status] || [s.status, ''];
+    return `<tr class="${s.status === 'sent' ? 'sev-warn' : ''}"><td class="mono">${esc(s.no)}</td><td><b style="color:${STORE_COLOR[s.store] || '#555'}">${esc(storeName(s.store))}</b></td><td>${esc(s.dname || '')}</td><td class="note">${esc(fmtDT(s.sentAt))}</td>
+      <td><span class="chip ${st[1]}">${st[0]}</span>${s.status !== 'sent' && s.cmp ? `<div class="note">${s.cmp.ok ? 'зөрүүгүй' : `дутуу ${fmt(s.cmp.miss)} · илүү ${fmt(s.cmp.extra)}`}</div>` : ''}</td>
+      <td>${s.status === 'sent' ? `<button class="btn primary" data-rc-open="${esc(s.id)}">Тоолох</button>` : `<button class="btn" data-rc-view="${esc(s.id)}">Харах</button>`}</td></tr>`; }).join('')
+    : '<tr><td colspan="6" class="empty">Хүлээгдэж буй илгээмж алга.</td></tr>';
+  renderRcvCount();
+}
+function rcTotal(s){ return (s.rq || 0) + Object.values(WS.rc.pend).reduce((a, b) => a + b, 0); }
+function renderRcvCount(){
+  const card = $('#rc-count'); if (!card) return; const s = WS.ships.find(x => x.id === WS.rc.ship); card.hidden = !s; if (!s) return;
+  $('#rc-title').textContent = `Тулгалт: ${s.no} · ${storeName(s.store)}`; const live = s.status === 'sent';
+  $('#rc-input').hidden = !live; $('#rc-finish').hidden = !live;
+  $('#rc-total').textContent = fmt(rcTotal(s)) + ' ш тоолсон';
+  $('#rc-last').innerHTML = WS.rc.last.map((x, i) => `<tr style="${x.undone ? 'opacity:.45;text-decoration:line-through' : ''}"><td class="mono">${x.t}</td><td class="mono">${esc(x.e)}</td><td>${esc(x.n || '')}</td><td>${live && !x.undone ? `<button class="btn" data-rc-undo="${i}">↶</button>` : ''}</td></tr>`).join('');
+  const sc = $('#rc-sync'); const n = Object.values(WS.rc.pend).reduce((a, b) => a + Math.abs(b), 0); sc.textContent = n ? `⏳ Илгээгдээгүй ${n}` : '✓ Синк хийгдсэн'; sc.className = 'chip ' + (n ? 'c-warn' : 'c-ok');
+  if (!live && s.cmp){ const cmp = WH.compare(decMap(s.l), decMap(s.r)), I = decMap(s.i);
+    $('#rc-cmp').innerHTML = cmp.ok ? `<div class="banner">✓ Зөрүүгүй: ${fmt(cmp.recv)} ш хүлээн авсан.</div>` : `<div class="banner bad">Зөрүүтэй: дутуу ${fmt(cmp.miss)}, илүү ${fmt(cmp.extra)} — агуулах шийдвэрлэнэ.</div>
+      <div class="tbl"><table><thead><tr><th>Баркод</th><th>Бараа</th><th class="n">Илгээсэн</th><th class="n">Тоолсон</th></tr></thead><tbody>${cmp.lines.map(x => `<tr><td class="mono">${esc(x.e)}</td><td>${esc((I[x.e] || {}).n || '')}</td><td class="n">${fmt(x.sent)}</td><td class="n">${fmt(x.recv)}</td></tr>`).join('')}</tbody></table></div>`; }
+  else $('#rc-cmp').innerHTML = '';
+}
+async function rcFlush(){
+  const sid = WS.rc.ship, P = WS.rc.pend; if (!sid || !Object.keys(P).length || !db) return; WS.rc.pend = {};
+  const u = {}; let n = 0; for (const [e, q] of Object.entries(P)){ if (!q) continue; u['r.' + ek(e)] = fv().increment(q); n += q; }
+  if (n) u.rq = fv().increment(n); if (!Object.keys(u).length) return;
+  try{ await db.doc('ship/' + sid).update(u); }catch(err){ console.warn('rc flush', err); for (const [e, q] of Object.entries(P)) WS.rc.pend[e] = (WS.rc.pend[e] || 0) + q; }
+  renderRcvCount();
+}
+setInterval(rcFlush, 1500);
+function rcScan(raw){
+  const e = WH.eanOf(raw), s = WS.ships.find(x => x.id === WS.rc.ship); if (!e || !s || s.status !== 'sent') return; const now = Date.now();
+  if (e === WS.rc.lastE && now - WS.rc.lastAt < 250) return; WS.rc.lastE = e; WS.rc.lastAt = now;
+  WS.rc.pend[e] = (WS.rc.pend[e] || 0) + 1; const i = decMap(s.i)[e] || {};
+  WS.rc.last.unshift({e, n: i.n || '—', t: new Date().toTimeString().slice(0, 8)}); WS.rc.last = WS.rc.last.slice(0, 20);
+  $('#rc-lastname').textContent = i.n ? i.n : 'Энэ илгээмжийн жагсаалтад байхгүй баркод (илүү гэж тооцогдоно)'; beep(i.n ? 'ok' : 'extra'); renderRcvCount();
+}
+async function rcFinish(){
+  await rcFlush(); const s = WS.ships.find(x => x.id === WS.rc.ship); if (!s) return;
+  if (!confirm(`${fmt(rcTotal(s))} ширхэг тоолсон. Тулгалтыг дуусгах уу? Дараа нь нэмж тоолох боломжгүй.`)) return;
+  const fresh = await db.doc('ship/' + s.id).get(), x = fresh.exists ? fresh.data() : s, cmp = WH.compare(decMap(x.l), decMap(x.r));
+  try{ await db.doc('ship/' + s.id).update({status: cmp.ok ? 'recv' : 'diff', recvAt: new Date().toISOString(), recvBy: me, cmp: {ok: cmp.ok, sent: cmp.sent, recv: cmp.recv, miss: cmp.miss, extra: cmp.extra}, notifyWh: false});
+    $('#rc-msg').textContent = cmp.ok ? 'Зөрүүгүй — баярлалаа.' : 'Зөрүүтэй — агуулахад мэдэгдлээ.'; }
+  catch(err){ alertMsg(err); }
+}
+
+// ---------- events ----------
+$$('#wh-mode button').forEach(b => b.addEventListener('click', () => { WS.mode = b.dataset.m; $$('#wh-mode button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderWh(); }));
+$$('#wh-ship-f button').forEach(b => b.addEventListener('click', () => { WS.shipF = b.dataset.f; $$('#wh-ship-f button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderWhShips(); }));
+$('#wh-active').addEventListener('change', e => { WS.active = e.target.value; try{ localStorage.setItem('vivi-wh-active', WS.active); }catch(x){} loadParts(WS.active).then(renderWh); $('#wh-input').focus(); });
+$('#wh-input').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); const v = e.target.value; e.target.value = ''; onScan(v); } });
+$('#rc-input').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); const v = e.target.value; e.target.value = ''; rcScan(v); } });
+// keep the cursor in the scan field (a hardware reader types into whatever is focused)
+setInterval(() => { const a = document.activeElement; const free = !a || a === document.body;
+  const wh = $('#wh-input'), rc = $('#rc-input'); if (free && wh && !wh.closest('[hidden]') && WS.mode === 'scan' && !$('section[data-panel="wh"]').hidden) wh.focus();
+  else if (free && rc && !rc.hidden && !$('section[data-panel="rcv"]').hidden && !$('#rc-count').hidden) rc.focus(); }, 700);
+document.addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
+  if (d.whSend) return sendShip(d.whSend);
+  if (d.whUndo != null) return undoScan(+d.whUndo);
+  if (d.whDet){ WS.detail = WS.detail === d.whDet ? '' : d.whDet; return renderShipDetail(); }
+  if (d.whSmart) return smartFile(d.whSmart);
+  if (d.whResolve) return resolveShip(d.whResolve);
+  if (d.wdPurchase) return purchaseFile(d.wdPurchase);
+  if (d.wdClose){ if (confirm('Энэ хүргэлтийг хаах уу? (Скан хийхээ больсон үед)')) await db.doc('deliv/' + d.wdClose).update({status: 'closed', closedAt: new Date().toISOString()}); return; }
+  if (d.wdOpen){ await db.doc('deliv/' + d.wdOpen).update({status: 'active'}); return; }
+  if (d.rcOpen || d.rcView){ await rcFlush(); WS.rc = {ship: d.rcOpen || d.rcView, pend: {}, last: []}; $('#rc-msg').textContent = ''; renderRcvCount(); if (d.rcOpen) $('#rc-input').focus(); return; }
+  if (d.rcUndo != null){ const x = WS.rc.last[+d.rcUndo]; if (x && !x.undone){ x.undone = true; WS.rc.pend[x.e] = (WS.rc.pend[x.e] || 0) - 1; renderRcvCount(); } return; }
+});
+$('#rc-finish').addEventListener('click', rcFinish);
+$('#rc-close').addEventListener('click', async () => { await rcFlush(); WS.rc = {ship: '', pend: {}, last: []}; renderRcvCount(); });
+$('#wd-file').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return; $('#wd-info').textContent = 'Уншиж байна…';
+  try{ const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let best = null;
+    for (const n of wb.SheetNames){ const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null}); const r = WH.parseList(rows); if (!r.error && (!best || r.pcs > best.pcs)) best = r; }
+    if (!best){ $('#wd-info').textContent = 'LPP жагсаалт олдсонгүй (MODEL, SIZE, EAN, QTY баганатай байх ёстой).'; WD = null; return; }
+    WD = {...best, file: f.name}; if (!$('#wd-name').value) $('#wd-name').value = f.name.replace(/\.[^.]+$/, ''); wdPreview();
+  }catch(err){ console.warn(err); $('#wd-info').textContent = 'Уншиж чадсангүй.'; }
+});
+document.addEventListener('input', e => { if (e.target.closest('#wd-pct')) wdPreview(); });
+$('#wd-save').addEventListener('click', wdSave);
+window.addEventListener('online', syncChip); window.addEventListener('offline', syncChip);
+
+function renderWh(){
+  if (!$('section[data-panel="wh"]')) return;
+  $('#wh-scan-card').hidden = WS.mode !== 'scan'; $('#wh-ship-card').hidden = WS.mode !== 'ship'; $('#wh-deliv-card').hidden = WS.mode !== 'deliv';
+  renderWhActive(); renderWhStores(); renderWhLast(); renderWhShips(); renderWhDelivs(); syncChip();
+  { const sig = JSON.stringify(whCfg().stores); if (!WD && WS.pctSig !== sig){ WS.pctSig = sig; wdPctInputs(); } }
+  try{ renderRcv(); }catch(err){ console.warn('rcv', err); }
+}
+
+// ---------- settings (owner): stores, locations, master file ----------
+function renderWhSettings(){
+  const el = $('#whs-body'); if (!el) return; const c = whCfg();
+  if (el.dataset.drawn === JSON.stringify(WS.cfg || {})) return; el.dataset.drawn = JSON.stringify(WS.cfg || {});
+  el.innerHTML = `<div class="tbl"><table><thead><tr><th>Дэлгүүр</th><th>Нэр</th><th>Smart байршлын код (үндсэн)</th><th class="n">Анхдагч хувь</th><th>Идэвхтэй</th></tr></thead><tbody>${c.stores.map(s => `<tr><td class="mono">${s.key}</td><td><input data-whs-name="${s.key}" value="${esc(s.name)}"></td><td><input data-whs-base="${s.key}" value="${esc(s.base)}" style="width:90px"></td><td class="n"><input data-whs-pct="${s.key}" value="${s.pct}" inputmode="numeric" style="width:70px;text-align:right"></td><td><input type="checkbox" data-whs-on="${s.key}" ${s.on ? 'checked' : ''} style="width:auto"></td></tr>`).join('')}
+      <tr><td class="mono">${c.over.key}</td><td>${esc(c.over.name)} (илүү бараа үлдэнэ)</td><td><input id="whs-over" value="${esc(c.over.base)}" style="width:90px"></td><td></td><td></td></tr></tbody></table></div>
+    <h3 style="margin:12px 0 6px;font-size:14px">Ангилал → дэлгүүрийн дэд байршил</h3>
+    <div class="row" style="gap:8px;flex-wrap:wrap">${Object.entries(c.catLoc).map(([k, v]) => `<label class="note" style="display:inline-flex;flex-direction:column">${esc((WHTR.CAT_MN[k] || k))}<input data-whs-cat="${esc(k)}" value="${esc(v)}" style="width:80px"></label>`).join('')}</div>
+    <p class="note" style="margin:4px 0">Жишээ: Food City (220) + «-2» = 220-2 «Food city - Хувцас». Гутал -1, Гэр ахуй -4, Аксессуар -5, Шинэ жил -7.</p>
+    <div class="grid" style="margin-top:6px">
+      <label class="f">Нэрэнд орсон үгээр солих (мөр бүрт «үг=дэд байршил»)<textarea id="whs-words" rows="3">${esc((c.wordLoc || []).map(w => w.w + '=' + w.s).join('\n'))}</textarea></label>
+      <label class="f">Зарлагын байршил (мөр бүрт «дэд байршил=код», «=160» бусад бүх)<textarea id="whs-src" rows="3">${esc(Object.entries(c.srcLoc).map(([k, v]) => k + '=' + v).join('\n'))}</textarea></label>
+      <label class="f">Жижиг загвар (≤ ширхэг бол бүтнээрээ нэг дэлгүүрт)<input id="whs-small" inputmode="numeric" value="${c.small}"></label>
+      <label class="f">Purchase: нийлүүлэгчийн код / байршил / данс<span class="row" style="gap:4px"><input id="whs-p-sup" value="${esc(c.purchase.supplier)}" style="width:100px"><input id="whs-p-loc" value="${esc(c.purchase.loc)}" style="width:80px"><input id="whs-p-acc" value="${esc(c.purchase.account)}" style="width:100px"></span></label>
+    </div>
+    <div class="row" style="margin-top:8px"><button class="btn primary" id="whs-save">Тохиргоо хадгалах</button><span class="note" id="whs-msg"></span></div>`;
+  $('#whs-save').addEventListener('click', saveWhSettings);
+}
+async function saveWhSettings(){
+  const c = whCfg(), v = s => ($(s) || {}).value || '';
+  const stores = c.stores.map(s => ({key: s.key, name: v(`input[data-whs-name="${s.key}"]`) || s.name, base: v(`input[data-whs-base="${s.key}"]`).trim() || s.base, pct: +v(`input[data-whs-pct="${s.key}"]`) || 0, on: !!($(`input[data-whs-on="${s.key}"]`) || {}).checked}));
+  const catLoc = {}; $$('input[data-whs-cat]').forEach(el => catLoc[el.dataset.whsCat] = el.value.trim());
+  const pairs = t => t.split('\n').map(l => l.split('=')).filter(p => p.length === 2).map(([a, b]) => [a.trim(), b.trim()]);
+  const cfg = {stores, over: {...c.over, base: v('#whs-over').trim() || c.over.base}, catLoc, wordLoc: pairs(v('#whs-words')).filter(([a]) => a).map(([w, s]) => ({w, s})),
+    srcLoc: Object.fromEntries(pairs(v('#whs-src'))), small: +v('#whs-small') || 5, purchase: {...c.purchase, supplier: v('#whs-p-sup').trim(), loc: v('#whs-p-loc').trim(), account: v('#whs-p-acc').trim()}, at: new Date().toISOString(), by: me};
+  try{ await db.doc('config/wh').set(cfg); $('#whs-msg').textContent = 'Хадгаллаа.'; }catch(err){ alertMsg(err); }
+}
+// master file: our JSON (EAN → [model, size, name МН, brand, gender, category, price, base price, qty]) or the KZ Excel
+async function uploadMaster(f){
+  const msg = t => $('#whm-msg').textContent = t; msg('Уншиж байна…');
+  try{ let M = null;
+    if (/\.json$/i.test(f.name)){ const j = JSON.parse(await f.text()); M = j.rows || j; }
+    else { const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); const sh = wb.Sheets[wb.SheetNames.find(n => /final|бүх/i.test(n)) || wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sh, {header: 1, raw: true, defval: null}); const r = WH.parseList(rows); if (r.error) throw new Error(r.error);
+      M = {}; for (const it of Object.values(r.items)) M[it.e] = [it.m, it.s, it.n, it.b, it.g, it.c, it.p, 0, it.q]; }
+    const str = JSON.stringify(M), CH = 400000, n = Math.ceil(str.length / CH);
+    for (let i = 0; i < n; i++){ msg(`Хадгалж байна… ${i + 1}/${n}`); await db.doc('whmaster/p_' + i).set({part: str.slice(i * CH, (i + 1) * CH), i}); }
+    await db.doc('whmaster/meta').set({n, count: Object.keys(M).length, at: new Date().toISOString(), by: me, file: f.name});
+    WS.master = M; msg(`✓ ${fmt(Object.keys(M).length)} баркод хадгаллаа.`);
+  }catch(err){ console.warn(err); msg('Алдаа: ' + (err.message || err)); }
+}
 
 function payUsedLabel(t){                     // bank tab: salary transfers explained by an approved payroll list
   if (!PS.lists.length && !Object.keys(payExempt()).length) return null;
@@ -3473,6 +4112,7 @@ function renderPayees(){
   $('#pb-sum').textContent = `${all.length} харилцагч · ${PBINFO.emps.length} ажилтан · эх: ${PBINFO.file}`;
   $('#pb-list').innerHTML = all.map(p => `<tr><td>${esc(p.group || '')}</td><td>${esc(p.name)}<div class="note">${esc(p.holder || '')}</div></td><td class="mono">${esc(p.acc)} <span class="note">${esc(p.bank || '')}</span></td><td>${esc(VIVI_CAT_LABEL(p.cat))}</td><td>${esc(p.store || '')}</td></tr>`).join('');
 }
+$('#whm-file').addEventListener('change', e => { const f = e.target.files[0]; if (f) uploadMaster(f); e.target.value = ''; });
 $('#pb-file').addEventListener('change', async e => { const f = e.target.files[0]; if (!f) return; $('#pb-msg').textContent = 'Уншиж байна…';
   try{ const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let list = null, emps = [];
     for (const n of wb.SheetNames){ const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null});
@@ -3490,13 +4130,14 @@ $('#rq-acc').addEventListener('change', () => { const b = PAYEES.get($('#rq-acc'
   if (n) n.textContent = `Сангаас: ${b.name}${b.group ? ' · ' + b.group : ''}${b.holder ? ' · эзэмшигч ' + b.holder : ''}`; });
 // ---------- settings (owner) ----------
 let ACCESS = {emails: [], perms: {}};
+const SECTIONS_WH = [['wh','Агуулах (LPP скан)'],['rcv_fc','Хүлээн авалт – Food City'],['rcv_dr','Хүлээн авалт – Драгон'],['rcv_ns','Хүлээн авалт – Нийслэл'],['rcv_ht','Хүлээн авалт – Бөөн']];
 const SECTIONS = [['req','Төлбөрийн хүсэлт'],['daily','Өдрийн тайлан'],['bank','Банкны гүйлгээ'],['rev','Орлого тулгалт'],['cash','Бэлэн мөнгө'],['bal','Дансны үлдэгдэл'],['pay','Цалин'],['pl','Дотоод тайлан']];
-const DEFAULT_PERMS = {daily:false, req:true, bank:true, rev:false, cash:true, bal:true, pay:false, pl:false};
+const DEFAULT_PERMS = {daily:false, req:true, bank:true, rev:false, cash:true, bal:true, pay:false, pl:false, wh:false, rcv_fc:false, rcv_dr:false, rcv_ns:false, rcv_ht:false};
 const permsOf = e => ({...DEFAULT_PERMS, ...((ACCESS.perms || {})[e] || {})});
 function renderAccess(){
   $('#acc-list').innerHTML = ACCESS.emails.length ? ACCESS.emails.map(e => { const p = permsOf(e);
     return `<div class="acc-row"><div class="row" style="justify-content:space-between"><b>${esc(e)}</b><button class="btn bad" data-rm="${esc(e)}">Хасах</button></div>
-      <div class="row acc-perms">${SECTIONS.map(([k,l]) => `<label class="row" style="gap:6px;width:auto"><input type="checkbox" style="width:auto" data-perm="${k}" data-email="${esc(e)}" ${p[k] ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div></div>`; }).join('')
+      <div class="row acc-perms">${SECTIONS.concat(SECTIONS_WH).map(([k,l]) => `<label class="row" style="gap:6px;width:auto"><input type="checkbox" style="width:auto" data-perm="${k}" data-email="${esc(e)}" ${p[k] ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div></div>`; }).join('')
     : '<div class="note">Нягтлан бүртгээгүй байна.</div>';
 }
 $('#acc-form').addEventListener('submit', async e => {
@@ -3544,15 +4185,25 @@ else VIVIFB.start(async () => {
   $('#req-form-card').hidden = !canWrite;
   $('#tab-set').hidden = !isOwner;
   const onErr = e => console.warn('db', e);
-  let ALLOW = {daily:true, req:true, bank:true, rev:true, cash:true, bal:true, pay:true, pl:true};
+  let ALLOW = {daily:true, req:true, bank:true, rev:true, cash:true, bal:true, pay:true, pl:true, wh:true, rcv_fc:true, rcv_dr:true, rcv_ns:true, rcv_ht:true};
   if (!isOwner){
     try{ const a = await db.doc('config/access').get(); const x = a.exists ? a.data() : {}; ALLOW = {...DEFAULT_PERMS, ...((x.perms || {})[String(user.email()).toLowerCase()] || {})}; }catch(e){ console.warn(e); }
   }
-  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
+  ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); window.ALLOWX = ALLOW;
+  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
   for (const k in TABS){ const b = document.querySelector(`nav.tabs button[data-tab="${TABS[k]}"]`); if (b) b.hidden = !ALLOW[k]; if (KPI[k]) $(KPI[k]).closest('.kpi').hidden = !ALLOW[k]; }
   { const cur = document.querySelector('nav.tabs button[aria-selected="true"]'); if (!cur || cur.hidden){ const first = [...document.querySelectorAll('nav.tabs button')].find(b => !b.hidden); if (first) showTab(first.dataset.tab); } }
   if (!Object.values(ALLOW).some(Boolean)) gate('Танд харах хэсэг сонгогдоогүй байна. Эзэмшигчид хандана уу.', true);
   if (ALLOW.req) db.collection('requests').onSnapshot(s => { S.requests = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.requests.map(r => r.createdBy)); render(); }, onErr);
+  if (ALLOW.wh || ALLOW.rcv) db.doc('config/wh').onSnapshot(d => { WS.cfg = d.exists ? d.data() : null; render(); }, onErr);
+  if (ALLOW.wh){
+    db.collection('deliv').onSnapshot(s => { WS.delivs = s.docs.map(d => ({id: d.id, ...d.data()}));
+      for (const D of WS.delivs) if (!WS.cntSub || !WS.cntSub[D.id]){ (WS.cntSub = WS.cntSub || {})[D.id] = true; db.doc('delivcnt/' + D.id).onSnapshot(x => { WS.cnt[D.id] = x.exists ? x.data() : {}; render(); }, onErr); }
+      render(); }, onErr);
+    db.collection('ship').onSnapshot(s => { WS.ships = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+  } else if (ALLOW.rcv){
+    const got = {}; for (const k of ['fc','dr','ns','ht']) if (ALLOW['rcv_' + k]) db.collection('ship').where('store', '==', k).onSnapshot(s => { got[k] = s.docs.map(d => ({id: d.id, ...d.data()})); WS.ships = [].concat(...Object.values(got)); render(); }, onErr);
+  }
   if (ALLOW.req) db.collection('recurring').onSnapshot(s => { S.recurring = s.docs.map(d => ({id:d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.req) db.collection('approvals').onSnapshot(s => { S.approvals = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
   const since = new Date(Date.now() - 45*86400e3).toISOString().slice(0,10);  // last 45 days keeps reads inside the free plan
