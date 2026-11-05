@@ -149,6 +149,8 @@ body{margin:0;background:var(--bg)}
     <button role="tab" data-tab="wh" aria-selected="false">Агуулах (LPP)</button>
     <button role="tab" data-tab="rcv" aria-selected="false">Хүлээн авалт<span class="n" id="t-rcv" hidden></span></button>
     <button role="tab" data-tab="inv" aria-selected="false">Тооллого</button>
+    <button role="tab" data-tab="rqs" aria-selected="false">Хүсэлт гаргах</button>
+    <button role="tab" data-tab="contr" aria-selected="false">Гэрээ<span class="n" id="t-ct" hidden></span></button>
     <button role="tab" data-tab="set" aria-selected="false" id="tab-set" hidden>Тохиргоо</button>
   </nav>
 
@@ -161,7 +163,7 @@ body{margin:0;background:var(--bg)}
         <label class="f">Хүлээн авагчийн нэр *<input id="rq-payee" required placeholder="Жишээ: Эрдэнэтулга"></label>
         <label class="f">Дансны дугаар / IBAN *<input id="rq-acc" required inputmode="numeric" data-nofmt placeholder="5005781234"><span class="note" id="rq-pb" style="color:var(--accent)"></span></label>
         <label class="f">Банк<select id="rq-bank"><option>Хаан банк</option><option>Голомт банк</option><option>Худалдаа хөгжлийн банк</option><option>Хас банк</option><option>Төрийн банк</option><option>Капитрон банк</option><option>Ариг банк</option><option>М банк</option><option>Бусад</option></select></label>
-        <label class="f">Дүн (₮) *<input id="rq-amt" required inputmode="decimal" placeholder="150 000"></label>
+        <label class="f">Дүн (₮) *<input id="rq-amt" required inputmode="decimal" placeholder="150 000 эсвэл 100 500,50"></label>
         <label class="f">Аль данснаас<select id="rq-from"></select></label>
         <label class="f">Ангилал<select id="rq-cat"><option>Барааны төлбөр</option><option>Түрээс</option><option>Цалин</option><option>Зээл, хүү</option><option>Тээвэр, карго</option><option>Шатахуун</option><option>Татвар, НДШ</option><option>Цахилгаан, ашиглалт</option><option>Засвар, үйлчилгээ</option><option>Буцаалт</option><option>Бусад</option></select></label>
         <div class="f full"><span>Салбар (дотоод тайланд) — нэг эсвэл хэд хэдэн</span><input type="hidden" id="rq-store"><div class="filter chips" id="rq-stores" style="margin-top:4px"></div><label class="row" id="rq-alloc-row" hidden style="gap:6px;margin-top:6px">Хуваарилах арга<select id="rq-alloc" style="width:auto"><option value="sales">Борлуулалтын хувиар</option><option value="area">Талбайн м²-аар</option><option value="equal">Тэнцүү</option></select></label></div>
@@ -650,6 +652,62 @@ body{margin:0;background:var(--bg)}
     </div>
   </section>
 
+  <!-- PAYMENT REQUEST FROM AN EMPLOYEE (buyer, online, marketing…) → the accountant completes it -->
+  <section class="panel" data-panel="rqs" hidden>
+    <div class="card">
+      <h2 id="rs-title">Төлбөрийн хүсэлт гаргах</h2>
+      <p class="note" style="margin:0 0 8px">Хэдэн төгрөг, юуны төлөө хэрэгтэйгээ бичээд нэхэмжлэх / баримтын зургаа хавсаргана. Нягтлан шалгаад, аль данснаас, ямар зардлаар гэдгийг бөглөж эзэмшигчид илгээнэ. Хүлээн авагчийн данс мэдэгдэж байвал бичнэ үү (заавал биш).</p>
+      <form class="grid" id="rs-form" autocomplete="off">
+        <label class="f">Дүн (₮) *<input id="rs-amt" required inputmode="decimal" placeholder="150 000 эсвэл 100 500,50"></label>
+        <label class="f">Салбар<select id="rs-store"></select></label>
+        <label class="f full">Юуны төлөө * (юу авах, хэнд, яагаад)<textarea id="rs-what" rows="2" required placeholder="Жишээ: Онлайн дэлгүүрийн хүргэлтийн уут 500 ш, Хадаа ХХК"></textarea></label>
+        <label class="f">Хүлээн авагч<input id="rs-payee" placeholder="Байгууллага / хүний нэр"></label>
+        <label class="f">Данс / IBAN<input id="rs-acc" inputmode="numeric" data-nofmt placeholder="мэдэхгүй бол хоосон"></label>
+        <label class="f">Банк<select id="rs-bank"></select></label>
+        <label class="f">Баримт (нэхэмжлэх, зураг) — хэд хэдэн файл<input id="rs-file" type="file" multiple accept="image/*,application/pdf"></label>
+        <div class="f full row"><button class="btn primary" type="submit" id="rs-submit">Нягтланд илгээх</button><button class="btn" type="button" id="rs-cancel" hidden>Засварыг болих</button><span class="note" id="rs-msg"></span></div>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Миний хүсэлтүүд</h2>
+      <div id="rs-list"><div class="empty">Хүсэлт алга.</div></div>
+    </div>
+  </section>
+
+  <!-- CONTRACTS: loans, credit lines, leasing — payment day, instalment, PDF, reminder 3 days before -->
+  <section class="panel" data-panel="contr" hidden>
+    <div id="ct-alert"></div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">Гэрээ (зээл, лизинг, бусад төлбөр)</h2>
+        <div class="filter chips" id="ct-f"><button data-f="act" aria-pressed="true">Идэвхтэй</button><button data-f="all" aria-pressed="false">Бүгд (дууссан)</button></div></div>
+      <p class="note" style="margin:0 0 8px">Гэрээ бүрийн төлөх өдөр, төлбөрийн дүнг бүртгэнэ. Төлөх өдрөөс <b>3 хоногийн өмнө</b> болон тэр өдөр утсанд сануулга ирнэ; сануулга дээр дарахад гэрээ нээгдэнэ. Банкны гүйлгээгээр төлсөн эсэхийг автоматаар шалгана.</p>
+      <div class="tbl"><table><thead><tr><th>Гэрээ</th><th>Зээлдүүлэгч / тал</th><th class="n">Төлбөр</th><th>Дараагийн төлөх өдөр</th><th>Энэ удаагийн төлөв</th><th class="n">Үлдэгдэл төлбөр</th><th></th></tr></thead><tbody id="ct-list"><tr><td colspan="7" class="empty">–</td></tr></tbody></table></div>
+      <div id="ct-detail" style="margin-top:12px"></div>
+    </div>
+    <div class="card" id="ct-form-card">
+      <h2 id="ct-form-title">Шинэ гэрээ</h2>
+      <form class="grid" id="ct-form" autocomplete="off">
+        <label class="f">Гэрээний нэр *<input id="ct-name" required placeholder="Хаан банк — эргэлтийн зээл"></label>
+        <label class="f">Төрөл<select id="ct-kind"><option>Зээл</option><option>Зээлийн шугам</option><option>Лизинг</option><option>Хувь хүний зээл</option><option>Түрээс</option><option>Бусад</option></select></label>
+        <label class="f">Зээлдүүлэгч / нөгөө тал<input id="ct-party" placeholder="Хаан банк / Б.Бат"></label>
+        <label class="f">Зээлдэгч (манай тал)<input id="ct-borrower" placeholder="Вивекавикториа ХХК / Б.Мөнхдорж"></label>
+        <label class="f">Гэрээний №<input id="ct-no" data-nofmt></label>
+        <label class="f">Зээлийн дүн (₮)<input id="ct-principal" inputmode="decimal"></label>
+        <label class="f">Хүү (жилийн %)<input id="ct-rate" inputmode="decimal" data-nofmt placeholder="18"></label>
+        <label class="f">Эхлэх огноо<input id="ct-start" type="date"></label>
+        <label class="f">Дуусах огноо<input id="ct-end" type="date"></label>
+        <label class="f">Сар бүрийн төлөх өдөр *<input id="ct-day" inputmode="numeric" data-nofmt required placeholder="15"></label>
+        <label class="f">Сарын төлбөр (₮) *<input id="ct-pay" inputmode="decimal" required placeholder="2 500 000"></label>
+        <label class="f">Төлөх данс (зээлдүүлэгчийн)<input id="ct-to" inputmode="numeric" data-nofmt placeholder="банкны гүйлгээгээр шалгахад"></label>
+        <label class="f">Аль данснаас төлдөг<select id="ct-from"></select></label>
+        <label class="f full">Төлбөрийн хуваарь (заавал биш — сар бүр өөр дүнтэй бол; мөр бүрт «огноо = дүн»)<textarea id="ct-sched" rows="3" placeholder="2026-11-15 = 2 512 300&#10;2026-12-15 = 2 498 100"></textarea></label>
+        <label class="f full">Тайлбар<textarea id="ct-note" rows="2"></textarea></label>
+        <label class="f">Гэрээ (PDF, хэд хэдэн файл; 15 МБ хүртэл)<input id="ct-file" type="file" multiple accept="application/pdf,image/*"></label>
+        <div class="f full row"><button class="btn primary" type="submit" id="ct-save">Хадгалах</button><button class="btn" type="button" id="ct-cancel" hidden>Болих</button><span class="note" id="ct-msg"></span></div>
+      </form>
+    </div>
+  </section>
+
   <!-- BALANCES -->
   <section class="panel" data-panel="bal" hidden>
     <div class="card">
@@ -723,10 +781,15 @@ window.VIVIFB = (() => {
     upload: async (file) => {
       let data, type;
       if (/^image\//.test(file.type)){ data = await shrink(file); type = 'image/jpeg'; }
-      else if (file.type === 'application/pdf'){ if (file.size > 700000) throw { code: 'too_big' }; data = await readAsDataURL(file); type = 'application/pdf'; }
+      else if (file.type === 'application/pdf'){ if (file.size > 15000000) throw { code: 'too_big' }; data = await readAsDataURL(file); type = 'application/pdf'; }
       else throw { code: 'type' };
-      const ref = db.collection('files').doc();
-      await ref.set({ data, type, by: current.uid, at: new Date().toISOString() });
+      const ref = db.collection('files').doc(), CH = 900000;
+      if (data.length <= CH) await ref.set({ data, type, by: current.uid, at: new Date().toISOString() });
+      else {   // a big PDF (a contract): parts of < 1 MB in files/{id}_p{i}, the head says how many
+        const n = Math.ceil(data.length / CH);
+        for (let i = 0; i < n; i++) await db.doc('files/' + ref.id + '_p' + i).set({ part: data.slice(i * CH, (i + 1) * CH), i, by: current.uid });
+        await ref.set({ parts: n, type, name: file.name || '', size: file.size, by: current.uid, at: new Date().toISOString() });
+      }
       return { id: ref.id, contentType: type };
     }
   };
@@ -734,7 +797,9 @@ window.VIVIFB = (() => {
   async function fileURL(id){
     if (fileCache[id]) return fileCache[id];
     const d = await db.doc('files/' + id).get(); if (!d.exists) return null;
-    const { data } = d.data(); const bin = atob(data.split(',')[1]); const arr = new Uint8Array(bin.length);
+    let { data, parts } = d.data();
+    if (parts){ data = ''; for (let i = 0; i < parts; i++){ const x = await db.doc('files/' + id + '_p' + i).get(); data += x.exists ? x.data().part : ''; } }
+    const bin = atob(data.split(',')[1]); const arr = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
     return fileCache[id] = URL.createObjectURL(new Blob([arr], { type: data.slice(5, data.indexOf(';')) }));
   }
@@ -2313,7 +2378,9 @@ PAYEES.set((PAYEES_DEFAULT.added || []).concat(PAYEES_DEFAULT.list)); VIVI.setBa
 (() => {
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt = n => (Math.round(+n || 0)).toLocaleString('ru-RU');
+const fmt = n => { const v = Math.round((+n || 0) * 100) / 100; return Number.isInteger(v) ? v.toLocaleString('ru-RU') : v.toLocaleString('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2}); };   // 100 500,5 — мөнгө (decimals) shown only when there are some
+// a typed amount: spaces group thousands, «,» or «.» is the decimal mark (100 500,50)
+const parseAmt = v => { const x = parseFloat(String(v == null ? '' : v).replace(/\s/g, '').replace(',', '.')); return isNaN(x) ? NaN : Math.round(x * 100) / 100; };
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
 const normAcc = a => { let s = String(a||'').replace(/\D/g,''); if (s.length >= 18) s = s.slice(-10); return s.replace(/^0+/,''); };
 const FROM_ACCS = [
@@ -2506,6 +2573,8 @@ function renderInner(){
   try{ renderPL(); }catch(e){ console.warn('pl', e); }
   try{ renderWh(); renderWhSettings(); }catch(e){ console.warn('wh', e); }
   try{ renderInv(); }catch(e){ console.warn('inv', e); }
+  try{ renderRs(); }catch(e){ console.warn('rs', e); }
+  try{ renderContr(); }catch(e){ console.warn('contr', e); }
   try{ renderDaily(); }catch(e){ console.warn('daily', e); }
 }
 function reqCard(r, matches){
@@ -2516,6 +2585,7 @@ function reqCard(r, matches){
   if (canWrite && !isOwner && s === 'hold') acts += `<button class="btn primary" data-act="resend" data-id="${esc(r.id)}">↻ Дахин илгээх</button>`;
   if (canWrite && s === 'approved') acts += `<button class="btn primary" data-act="paid" data-id="${esc(r.id)}">Шилжүүлсэн гэж тэмдэглэх</button>`;
   if (s === 'approved' || s === 'paid') acts += `<button class="btn" data-act="print" data-id="${esc(r.id)}">🖨 Зарлагын баримт</button>`;
+  if (canWrite && s === 'paid') acts += `<select data-fromacc="${esc(r.id)}" style="width:auto" title="Бодитоор аль данснаас шилжүүлсэн"><option value="">🏦 Данс солих…</option>${FROM_ACCS.filter(([a]) => a !== r.fromAcc).map(([a, l]) => `<option value="${a}">${esc(l)}</option>`).join('')}</select>`;
   if (canWrite && s !== 'rejected' && s !== 'pending' && s !== 'hold') acts += `<label class="btn" style="cursor:pointer">📎 Баримт нэмэх<input type="file" multiple accept="image/*,application/pdf" hidden data-attach="${esc(r.id)}"></label>`;
   if (canWrite && (s === 'pending' || s === 'hold') && (r.createdBy === me || isOwner)) acts += `<button class="btn" data-act="edit" data-id="${esc(r.id)}">✎ Засах</button>`;
   if (canWrite && (s === 'pending' || s === 'hold') && r.createdBy === me) acts += `<button class="btn" data-act="cancel" data-id="${esc(r.id)}">Цуцлах</button>`;
@@ -2526,7 +2596,8 @@ function reqCard(r, matches){
   return `<div class="req" data-req="${esc(r.id)}">
     <div><div class="who">${esc(r.payee)}</div>
       <div class="meta">${esc(r.payeeAcc)} · ${esc(r.payeeBank||'')}</div>
-      <div class="meta">Данснаас: ${esc(ACC_LABEL[r.fromAcc] || r.fromAcc || '')}</div>
+      <div class="meta">Данснаас: ${esc(ACC_LABEL[r.fromAcc] || r.fromAcc || '')}${(r.fromEdits || []).length ? ` <span class="note" title="${esc(r.fromEdits.map(x => fmtDT(x.at) + ' · ' + (ACC_LABEL[x.from] || x.from) + ' → ' + (ACC_LABEL[x.to] || x.to) + ' · ' + nameOf(x.by)).join('\n'))}">(солисон: өмнө ${esc(ACC_LABEL[r.fromEdits.at(-1).from] || r.fromEdits.at(-1).from || '—')})</span>` : ''}</div>
+      ${r.requester ? `<div class="meta">📨 Хүсэлт гаргасан: ${esc(nameOf(r.requester))}</div>` : ''}
       <div style="margin-top:4px">${esc(r.note||'')}</div>
       <div class="note">${esc(r.category||'')}${r.store ? ' · ' + esc(String(r.store).split(',').join(', ')) + (String(r.store).includes(',') ? ' (' + (ALLOC_LABEL[r.alloc || 'sales'] || '') + ')' : '') : ''} · ${esc(nameOf(r.createdBy))} · ${esc(fmtDT(r.createdAt))}${S.approvals[r.id] && S.approvals[r.id].at && localDay(S.approvals[r.id].at) !== localDay(r.createdAt) ? ' · шийдвэрлэсэн ' + esc(fmtDT(S.approvals[r.id].at)) : ''}</div>
       ${a && a.comment ? `<div class="note">Эзэмшигчийн тайлбар: ${esc(a.comment)}</div>` : ''}
@@ -2696,6 +2767,7 @@ document.addEventListener('click', async e => {
     if (act === 'approve' || act === 'reject'){
       const cm = ($('#cm-'+CSS.escape(id)) || {}).value || '';
       await db.doc('approvals/'+id).set({decision: act === 'approve' ? 'approved' : 'rejected', amount: +r.amount, payeeAcc: r.payeeAcc, comment: cm, at: new Date().toISOString(), by: me, to: r.createdBy || null, payee: r.payee || '', notified: false});
+      if (typeof rsSync === 'function') rsSync(r, act === 'approve' ? 'approved' : 'rejected');
     } else if (act === 'edit'){
       setReqEdit(r);
     } else if (act === 'print'){
@@ -2707,9 +2779,9 @@ document.addEventListener('click', async e => {
     } else if (act === 'resend'){
       await db.doc('requests/'+id).update({holdAt: null, remindAt: null, autoResent: false, resentAt: new Date().toISOString(), resendCount: (r.resendCount || 0) + 1, ownerNotified: false});
     } else if (act === 'paid'){
-      await db.doc('requests/'+id).update({paidAt: new Date().toISOString(), paidBy: me});
+      await db.doc('requests/'+id).update({paidAt: new Date().toISOString(), paidBy: me}); if (typeof rsSync === 'function') rsSync(r, 'paid');
     } else if (act === 'cancel'){
-      await db.doc('requests/'+id).delete();
+      await db.doc('requests/'+id).delete(); if (typeof rsSync === 'function') rsSync(r, 'cancel');
     } else if (act === 'note'){
       const text = $('#nt-'+CSS.escape(id)).value.trim();
       await db.doc('cashnotes/'+id).set({text, by: me, at: new Date().toISOString()});
@@ -2798,9 +2870,13 @@ function setReqEdit(r){
   $('#req-form-card').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 $('#rq-cancel-edit').addEventListener('click', () => setReqEdit(null));
+document.addEventListener('change', async e => { const sel = e.target.closest('select[data-fromacc]'); if (!sel || !sel.value || !db) return; const r = S.requests.find(x => x.id === sel.dataset.fromacc); if (!r) return;
+  if (!confirm(`«${r.payee}» ${fmt(r.amount)} ₮ — шилжүүлсэн дансыг\n${ACC_LABEL[r.fromAcc] || r.fromAcc || '—'}\n→ ${ACC_LABEL[sel.value] || sel.value}\nгэж солих уу?`)){ sel.value = ''; return; }
+  const now = new Date().toISOString();
+  try{ await db.doc('requests/' + r.id).update({fromAcc: sel.value, fromEdits: (r.fromEdits || []).concat([{at: now, by: me, from: r.fromAcc || '', to: sel.value}]).slice(-10)}); }catch(err){ alert('Хадгалж чадсангүй.'); sel.value = ''; } });
 $('#req-form').addEventListener('submit', async e => {
   e.preventDefault(); if (!db) return;
-  const amount = parseFloat(String($('#rq-amt').value).replace(/[\s,]/g,''));
+  const amount = parseAmt($('#rq-amt').value);
   const acc = $('#rq-acc').value.trim(), payee = $('#rq-payee').value.trim();
   if (!payee || !acc || !(amount > 0)){ $('#rq-msg').textContent = 'Хүлээн авагч, данс, дүнг бөглөнө үү.'; return; }
   $('#rq-submit').disabled = true; $('#rq-msg').textContent = editingReq ? 'Хадгалж байна…' : 'Илгээж байна…';
@@ -2817,8 +2893,10 @@ $('#req-form').addEventListener('submit', async e => {
       await db.doc('requests/' + editingReq).update(upd);
       setReqEdit(null); $('#rq-msg').textContent = 'Хүсэлт засагдлаа.';
     } else {
-      const attachId = ups.length ? ups[0].id : null, attachType = ups.length ? ups[0].type : null, attachments = ups;
-      await db.collection('requests').add({payee, payeeAcc: acc, payeeBank: $('#rq-bank').value, amount, fromAcc: $('#rq-from').value, category: $('#rq-cat').value, store: $('#rq-store').value, alloc: $('#rq-store').value.includes(',') ? $('#rq-alloc').value : '', note: $('#rq-note').value.trim(), attachments, attachId, attachType, createdBy: me, createdAt: new Date().toISOString(), ownerNotified: false});
+      const D = window.RQ_DRAFT || null, attachments = (D ? (D.attachments || []) : []).concat(ups), attachId = attachments.length ? attachments[0].id : null, attachType = attachments.length ? attachments[0].type : null;
+      const extra = D ? {fromDraft: D.id, requester: D.createdBy} : {};
+      const ref = await db.collection('requests').add({payee, payeeAcc: acc, payeeBank: $('#rq-bank').value, amount, fromAcc: $('#rq-from').value, category: $('#rq-cat').value, store: $('#rq-store').value, alloc: $('#rq-store').value.includes(',') ? $('#rq-alloc').value : '', note: $('#rq-note').value.trim(), attachments, attachId, attachType, createdBy: me, createdAt: new Date().toISOString(), ownerNotified: false, ...extra});
+      if (D){ try{ await db.doc('reqdraft/' + D.id).update({status: 'taken', reqId: ref.id, stAt: new Date().toISOString(), stBy: me, subNotified: false}); }catch(err){ console.warn('reqdraft', err); } window.RQ_DRAFT = null; $('#rq-title').textContent = 'Шинэ төлбөрийн хүсэлт'; $('#rq-cancel-edit').hidden = true; }
       e.target.reset(); $('#rq-msg').textContent = 'Хүсэлт илгээгдлээ.';
     }
   }catch(err){ alertMsg(err); } finally { $('#rq-submit').disabled = false; }
@@ -2827,7 +2905,7 @@ $('#req-form').addEventListener('submit', async e => {
 $('#bal-form').addEventListener('submit', async e => {
   e.preventDefault(); if (!db) return;
   const date = $('#bal-date').value || today(), items = {};
-  for (const [k] of BAL_ACCS){ const v = $('#bal-'+k).value.trim(); if (v !== '') items[k] = parseFloat(v.replace(/[\s,]/g,'')) || 0; }
+  for (const [k] of BAL_ACCS){ const v = $('#bal-'+k).value.trim(); if (v !== '') items[k] = parseAmt(v) || 0; }
   const old = S.balances.find(b => b.date === date); const hist = old ? (old.hist || []).concat([{items: old.items || {}, by: old.by || null, at: old.at || null}]).slice(-10) : [];
   try{ await db.doc('balances/'+date).set({date, items, by: me, at: new Date().toISOString(), hist}); $('#bal-msg').textContent = 'Хадгаллаа.'; BAL_ACCS.forEach(([k]) => $('#bal-'+k).value = ''); }
   catch(err){ $('#bal-msg').textContent = err && err.code === 'invalid_argument' ? 'Хадгалах эрх алга.' : 'Хадгалж чадсангүй.'; }
@@ -3235,7 +3313,7 @@ document.addEventListener('click', async e => {
       const left = Math.round((p.amt - (r ? r.sum : 0)) * 100) / 100;
       const v = prompt(`${p.name}: бэлнээр / өөр аргаар олгосон дүн (₮)`, String(left)); if (v == null) return;
       const note = prompt('Тайлбар (хэзээ, хэн олгосон)', '') || '';
-      const amount = parseFloat(String(v).replace(/[\s,]/g, '')) || 0;
+      const amount = (parseAmt(String(v)) || 0);
       const marks = {...(l.marks || {})}; if (amount > 0) marks[p.key] = {type: 'cash', amount, note, by: me, at: new Date().toISOString()}; else delete marks[p.key];
       await db.doc('payroll/' + l.id).update({marks});
     } else if (act === 'link'){
@@ -3580,12 +3658,12 @@ document.addEventListener('change', async e => {
 });
 document.addEventListener('click', async e => { const b = e.target.closest('button[data-fxsave]'); if (!b || !db) return; const i = b.dataset.fxsave, u = b.dataset.unit;
   const g = k => { const el = document.getElementById(`fx-${i}-${k}`); return el ? el.value : ''; };
-  const n = k => parseFloat(String(g(k)).replace(/[\s,]/g, '')) || 0;
+  const n = k => (parseAmt(String(g(k))) || 0);
   const from = g('from') || drRange()[1].slice(0, 7); const v = {from, rent: n('rent'), payroll: n('payroll'), media: n('media'), other: n('other'), otherLabel: g('otherLabel').trim(), at: new Date().toISOString()};
   const units = {...((PLS.fixedCfg || {}).units || {})}; units[u] = (units[u] || []).filter(x => x.from !== from).concat([v]);
   b.disabled = true; try{ await db.doc('config/plfixed').set({units}); b.textContent = '✓'; setTimeout(() => { b.textContent = 'Хадгалах'; }, 1500); }catch(err){ alert('Хадгалж чадсангүй'); } finally{ b.disabled = false; } });
 $('#pl-man').addEventListener('submit', async e => { e.preventDefault(); const per = drRange()[1].slice(0, 7); const pl = PLS.months[per] || {per};
-  const amount = parseFloat(String($('#pl-man-amt').value).replace(/[\s,]/g, '')) || 0; if (!amount) return;
+  const amount = (parseAmt(String($('#pl-man-amt').value)) || 0); if (!amount) return;
   const manual = (pl.manual || []).concat([{unit: $('#pl-man-unit').value, cat: $('#pl-man-cat').value, amount, note: $('#pl-man-note').value.trim(), at: new Date().toISOString()}]);
   await db.doc('pl/' + per).set({per, manual}, {merge: true}); $('#pl-man-amt').value = ''; $('#pl-man-note').value = ''; });
 $('#pl-man-list').addEventListener('click', async e => { const b = e.target.closest('button[data-rm]'); if (!b) return; const per = b.dataset.per, pl = PLS.months[per]; if (!pl) return;
@@ -3700,7 +3778,7 @@ document.addEventListener('click', async e => {
 });
 
 $('#pl-area-save').addEventListener('click', async () => { if (!db) return; const area = {};
-  $$('#pl-area input').forEach(el => { const v = parseFloat(String(el.value).replace(/[\s,]/g, '')) || 0; if (v) area[el.dataset.unit] = v; });
+  $$('#pl-area input').forEach(el => { const v = (parseAmt(String(el.value)) || 0); if (v) area[el.dataset.unit] = v; });
   try{ await db.doc('config/plarea').set({area, at: new Date().toISOString(), by: me}); $('#pl-area-msg').textContent = 'Хадгаллаа.'; }catch(e){ $('#pl-area-msg').textContent = 'Хадгалж чадсангүй.'; } });
 // ---------- daily report (Өдрийн тайлан) ----------
 const DR = {cfg: {}, canFlow: false, txExtra: {}, days: {}, day: '', range: 'day', from: '', to: '', supUnit: '', open: {}, groups: ['ORION WOJCIECH BARANKIEWICZ', 'Мөнхдорж'], parsed: null};
@@ -4071,7 +4149,7 @@ async function rcSave(v, id){
 $('#rc-form').addEventListener('submit', async e => {
   e.preventDefault(); if (!db) return;
   const v = {name: $('#rc-name').value.trim(), acc: $('#rc-acc').value.trim().replace(/\s/g, ''), holder: $('#rc-holder').value.trim(), desc: $('#rc-desc').value.trim(),
-    amount: parseFloat(String($('#rc-amt').value).replace(/[\s,]/g, '')) || 0, fromAcc: $('#rc-from').value,
+    amount: (parseAmt(String($('#rc-amt').value)) || 0), fromAcc: $('#rc-from').value,
     times: Math.max(1, Math.min(31, parseInt($('#rc-times').value, 10) || 1)), freq: $('#rc-freq').value || 'm', day: Math.max(0, Math.min(31, parseInt($('#rc-day').value, 10) || 0))};
   if (!v.name || !v.acc || !(v.amount > 0)){ $('#rc-msg').textContent = 'Харилцагч, данс, тогтмол дүнг бөглөнө үү.'; return; }
   try{ await rcSave(v, RC.edit); rcFill(null); $('#rc-msg').textContent = isOwner ? 'Хадгаллаа.' : 'Хадгаллаа — эзэмшигч батласны дараа хүчинтэй болно.'; }
@@ -5083,6 +5161,180 @@ function renderInv(){
   renderIvScan(); renderIvList();
   if (IV.rep && IV.mode === 'list'){ clearTimeout(ivRepT); ivRepT = setTimeout(renderIvRep, 400); }   // the report follows the live counts (throttled)
 }
+// ===================== requests from employees (reqdraft) =====================
+// employee (reqsub): amount, what for, payee/account if known, files → status «new»
+// accountant (req): completes the normal request from it (from-account, category, store) → the draft is «taken» and follows the request
+const RS = {list: [], edit: null};
+const RS_ST = {new: ['Нягтланд илгээсэн', 'c-warn'], taken: ['Нягтлан бөглөж эзэмшигчид илгээсэн', 'c-acc'], returned: ['Буцаасан — засаад дахин илгээнэ үү', 'c-bad'], rejected: ['Татгалзсан', 'c-bad'],
+  approved: ['Эзэмшигч зөвшөөрсөн', 'c-ok'], paid: ['Шилжүүлсэн ✓', 'c-ok'], cancel: ['Цуцлагдсан', 'c-grey']};
+const rsAtt = d => (d.attachments || []).map(a => `<a href="#" data-rs-file="${esc(a.id)}">${/pdf/.test(a.type || '') ? '📄 PDF' : '🖼 зураг'}</a>`).join(' · ');
+async function rsOpenFile(id){ const w = window.open('about:blank', '_blank'); try{ const u = await VIVIFB.fileURL(id); if (u && w) w.location = u; else if (w) w.close(); }catch(e){ if (w) w.close(); alert('Файл нээгдсэнгүй.'); } }
+// sets the status of the draft a request came from (approve / reject / paid / cancel are done on the request)
+async function rsSync(r, st){ if (!r || !r.fromDraft || !db) return; try{ await db.doc('reqdraft/' + r.fromDraft).update({status: st, stAt: new Date().toISOString(), stBy: me, subNotified: false}); }catch(e){ console.warn('reqdraft sync', e); } }
+
+// ---------- employee ----------
+function rsFill(d){
+  RS.edit = d ? d.id : null; $('#rs-title').textContent = d ? 'Хүсэлт засах' : 'Төлбөрийн хүсэлт гаргах'; $('#rs-submit').textContent = d ? 'Засаад дахин илгээх' : 'Нягтланд илгээх'; $('#rs-cancel').hidden = !d;
+  if (!d){ $('#rs-form').reset(); return; }
+  $('#rs-amt').value = numFmt(d.amount); $('#rs-what').value = d.what || ''; $('#rs-payee').value = d.payee || ''; $('#rs-acc').value = d.payeeAcc || ''; $('#rs-bank').value = d.payeeBank || ''; $('#rs-store').value = d.store || '';
+  $('#rs-msg').textContent = (d.attachments || []).length ? `Хавсаргасан ${d.attachments.length} баримт хэвээр; шинэ файл нэмэгдэнэ.` : '';
+  $('#rs-form').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+function renderRsMine(){
+  const el = $('#rs-list'); if (!el) return; const L = RS.list.filter(d => d.createdBy === me).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  el.innerHTML = L.length ? L.map(d => { const st = RS_ST[d.status] || [d.status, ''];
+    return `<div class="req rs"><div><div class="who">${esc(d.what || '')}</div><div class="meta">${esc(d.payee || '')}${d.payeeAcc ? ' · ' + esc(d.payeeAcc) : ''}${d.store ? ' · ' + esc(d.store) : ''}</div>
+      <div class="note">${esc(fmtDT(d.createdAt))}${d.stAt ? ' · төлөв ' + esc(fmtDT(d.stAt)) : ''}${rsAtt(d) ? ' · ' + rsAtt(d) : ''}</div>${d.comment ? `<div class="note" style="color:var(--bad)">Нягтлангийн тайлбар: ${esc(d.comment)}</div>` : ''}</div>
+      <div style="text-align:right"><div class="amt">${fmt(d.amount)} ₮</div><div class="chips" style="justify-content:flex-end;margin-top:6px"><span class="chip ${st[1]}">${st[0]}</span></div></div>
+      ${['new', 'returned'].includes(d.status) ? `<div class="acts"><button class="btn" data-rs="edit" data-id="${esc(d.id)}">✎ Засах</button><button class="btn" data-rs="del" data-id="${esc(d.id)}">Цуцлах</button></div>` : ''}</div>`; }).join('')
+    : '<div class="empty">Хүсэлт алга. Дээрх маягтаар илгээнэ үү.</div>';
+}
+$('#rs-form').addEventListener('submit', async e => {
+  e.preventDefault(); if (!db) return; const amount = parseAmt($('#rs-amt').value), what = $('#rs-what').value.trim();
+  if (!(amount > 0) || !what){ $('#rs-msg').textContent = 'Дүн, юуны төлөө гэдгийг бөглөнө үү.'; return; }
+  $('#rs-submit').disabled = true; $('#rs-msg').textContent = 'Илгээж байна…';
+  try{ const ups = []; for (const f of [...$('#rs-file').files]){ const up = await assets.upload(f); ups.push({id: up.id, type: up.contentType}); }
+    const v = {amount, what, payee: $('#rs-payee').value.trim(), payeeAcc: $('#rs-acc').value.trim().replace(/\s/g, ''), payeeBank: $('#rs-bank').value, store: $('#rs-store').value};
+    const now = new Date().toISOString();
+    if (RS.edit){ const d = RS.list.find(x => x.id === RS.edit); await db.doc('reqdraft/' + RS.edit).update({...v, attachments: ((d && d.attachments) || []).concat(ups), status: 'new', editedAt: now, comment: '', notified: false}); }
+    else await db.collection('reqdraft').add({...v, attachments: ups, status: 'new', createdBy: me, createdAt: now, notified: false, subNotified: true});
+    rsFill(null); $('#rs-msg').textContent = 'Нягтланд илгээлээ.';
+  }catch(err){ console.warn(err); $('#rs-msg').textContent = err && err.code === 'too_big' ? 'PDF хэт том (700 КБ хүртэл) — зураг болгож оруулна уу.' : 'Илгээж чадсангүй.'; }
+  finally { $('#rs-submit').disabled = false; }
+});
+$('#rs-cancel').addEventListener('click', () => rsFill(null));
+
+// ---------- accountant: inbox above the request form ----------
+(() => { const sec = document.querySelector('section[data-panel="req"]'), form = $('#req-form-card'); if (!sec || !form) return;
+  const box = document.createElement('div'); box.className = 'card'; box.id = 'rs-inbox'; box.hidden = true;
+  box.innerHTML = '<h2 style="margin:0 0 6px">📨 Ажилтны хүсэлт <span class="chip c-warn" id="rs-inbox-n"></span></h2><p class="note" style="margin:0 0 8px">Ажилтан дүн, юуны төлөө гэдгийг бичсэн. «Бөглөх» дарахад доорх маягт бөглөгдөнө — аль данснаас, ангилал, салбарыг сонгоод «Хүсэлт илгээх». Баримт нь хамт явна.</p><div id="rs-inbox-list"></div>';
+  form.parentNode.insertBefore(box, form); })();
+function renderRsInbox(){
+  const box = $('#rs-inbox'); if (!box) return; const L = RS.list.filter(d => d.status === 'new').sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  box.hidden = !(window.ALLOWX || {}).req || !L.length; $('#rs-inbox-n').textContent = L.length || '';
+  const tb = $('#t-rs'); if (tb){ tb.textContent = L.length || ''; tb.hidden = !L.length || !(window.ALLOWX || {}).req; }
+  $('#rs-inbox-list').innerHTML = L.map(d => `<div class="req"><div><div class="who">${esc(d.what || '')}</div><div class="meta">${esc(d.payee || '—')}${d.payeeAcc ? ' · ' + esc(d.payeeAcc) + ' · ' + esc(d.payeeBank || '') : ''}${d.store ? ' · ' + esc(d.store) : ''}</div>
+    <div class="note">📨 ${esc(nameOf(d.createdBy))} · ${esc(fmtDT(d.createdAt))}${d.editedAt ? ' · засварласан' : ''}${rsAtt(d) ? ' · ' + rsAtt(d) : ''}</div></div>
+    <div style="text-align:right"><div class="amt">${fmt(d.amount)} ₮</div></div>
+    <div class="acts"><button class="btn primary" data-rs="take" data-id="${esc(d.id)}">✍ Бөглөх</button><button class="btn" data-rs="ret" data-id="${esc(d.id)}">↩ Буцаах</button><button class="btn bad" data-rs="rej" data-id="${esc(d.id)}">Татгалзах</button></div></div>`).join('');
+}
+function rsTake(d){
+  setReqEdit(null); window.RQ_DRAFT = d;
+  $('#rq-payee').value = d.payee || ''; $('#rq-acc').value = d.payeeAcc || ''; if (d.payeeBank) $('#rq-bank').value = d.payeeBank;
+  $('#rq-amt').value = numFmt(d.amount); $('#rq-note').value = d.what || '';
+  const st = $('#rq-store'); if (st && d.store){ st.value = d.store; syncStoreChips(); }
+  $('#rq-title').textContent = 'Ажилтны хүсэлтээс: ' + nameOf(d.createdBy);
+  $('#rq-msg').textContent = `Хүлээн авагч, данс, аль данснаас, ангиллыг шалгаад «Хүсэлт илгээх» дарна уу.${(d.attachments || []).length ? ` Ажилтны ${d.attachments.length} баримт хамт явна.` : ''}`;
+  $('#rq-cancel-edit').hidden = false; $('#req-form-card').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+document.addEventListener('click', async e => {
+  const a = e.target.closest('a[data-rs-file]'); if (a){ e.preventDefault(); return rsOpenFile(a.dataset.rsFile); }
+  const b = e.target.closest('button[data-rs]'); if (!b || !db) return; const d = RS.list.find(x => x.id === b.dataset.id); if (!d) return; const now = new Date().toISOString();
+  try{
+    if (b.dataset.rs === 'edit') return rsFill(d);
+    if (b.dataset.rs === 'del'){ if (confirm('Энэ хүсэлтийг цуцлах уу?')) await db.doc('reqdraft/' + d.id).delete(); return; }
+    if (b.dataset.rs === 'take') return rsTake(d);
+    if (b.dataset.rs === 'ret' || b.dataset.rs === 'rej'){ const c = prompt(b.dataset.rs === 'ret' ? 'Юуг засах вэ? (ажилтанд харагдана)' : 'Татгалзсан шалтгаан (ажилтанд харагдана)', ''); if (c == null) return;
+      await db.doc('reqdraft/' + d.id).update({status: b.dataset.rs === 'ret' ? 'returned' : 'rejected', comment: c, stAt: now, stBy: me, subNotified: false}); }
+  }catch(err){ console.warn(err); alert('Хадгалж чадсангүй.'); }
+});
+$('#rq-cancel-edit').addEventListener('click', () => { window.RQ_DRAFT = null; });
+function renderRs(){ renderRsMine(); renderRsInbox(); { const s = $('#rs-store'); if (s && !s.options.length){ s.innerHTML = '<option value="">—</option>' + REQ_STORES.map(u => `<option>${esc(u)}</option>`).join(''); const bk = $('#rs-bank'); bk.innerHTML = '<option value="">—</option>' + $('#rq-bank').innerHTML; } } }
+// ===================== contracts (loans, leasing…): payment day, instalment, PDF; reminder 3 days before =====================
+const CT = {list: [], edit: null, open: '', f: 'act'};
+try{ const q = new URLSearchParams(location.search); if (q.get('c')) CT.open = q.get('c'); }catch(e){}
+const ctAcc = a => PAY.accShort(String(a || '').replace(/\s/g, ''));
+const ctDay = s => new Date(s + 'T00:00:00Z');
+const ctAdd = (s, n) => { const t = ctDay(s); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
+const ctDiff = (a, b) => Math.round((ctDay(a) - ctDay(b)) / 86400e3);
+// payment dates of a contract between two days: the schedule if typed, else the payment day of every month (start … end)
+function ctSched(c){ return String(c.sched || '').split('\n').map(l => l.match(/(\d{4}-\d{2}-\d{2})\s*[=:;\t ]\s*([\d\s.,]+)/)).filter(Boolean).map(m => ({d: m[1], amt: parseAmt(m[2]) || 0})).sort((a, b) => a.d.localeCompare(b.d)); }
+function ctDues(c, from, to){
+  const S0 = ctSched(c); if (S0.length) return S0.filter(x => x.d >= from && x.d <= to);
+  const day = +c.payDay || 0; if (!day) return []; const out = []; let y = +from.slice(0, 4), m = +from.slice(5, 7);
+  for (let k = 0; k < 400; k++){ const dim = new Date(Date.UTC(y, m, 0)).getUTCDate(), d = `${y}-${String(m).padStart(2, '0')}-${String(Math.min(day, dim)).padStart(2, '0')}`;
+    if (d > to) break; if (d >= from && (!c.start || d >= c.start) && (!c.end || d <= c.end)) out.push({d, amt: +c.payment || 0}); m++; if (m > 12){ m = 1; y++; } }
+  return out;
+}
+// was this due paid? a bank transfer to the lender's account with ≈ the amount, from 10 days before to 5 days after
+function ctPaid(c, due){
+  if (!c.toAcc || !(S.banktx || []).length) return null; const to = ctAcc(c.toAcc), tol = Math.max(1, due.amt * 0.01);
+  return S.banktx.find(t => ctAcc(t.toAcc) === to && Math.abs((+t.amount || 0) - due.amt) <= tol && ctDiff(String(t.dt).slice(0, 10), due.d) >= -10 && ctDiff(String(t.dt).slice(0, 10), due.d) <= 5) || false;
+}
+function ctState(c){
+  const t = today(), past = ctDues(c, ctAdd(t, -45), ctAdd(t, -1)), next = ctDues(c, t, ctAdd(t, 400))[0] || null, prev = past.at(-1) || null;
+  const pPrev = prev ? ctPaid(c, prev) : null, pNext = next ? ctPaid(c, next) : null;
+  const known = !!(c.end || ctSched(c).length), all = known ? ctDues(c, t, c.end || ctAdd(t, 3650)) : []; const rest = all.filter(x => !(x === next && pNext));
+  let st = 'later', txt = '';
+  if (prev && pPrev === false && ctDiff(t, prev.d) <= 30 && prev.d >= String(c.createdAt || '').slice(0, 10)){ /* dues before the contract was registered are not checked */ st = 'late'; txt = `✗ ${prev.d}-ны төлбөр олдсонгүй (${ctDiff(t, prev.d)} хоног хэтэрсэн)`; }
+  else if (next && pNext){ st = 'paid'; txt = `✓ төлсөн ${String(pNext.dt).slice(0, 10)}`; }
+  else if (next && ctDiff(next.d, t) <= 3){ st = 'soon'; txt = ctDiff(next.d, t) === 0 ? '⚠ ӨНӨӨДӨР төлөх' : `⚠ ${ctDiff(next.d, t)} хоногийн дараа`; }
+  else if (next){ txt = `${ctDiff(next.d, t)} хоногийн дараа`; }
+  if (st !== 'late' && prev && pPrev && !next) txt = '✓ сүүлийн төлбөр төлсөн';
+  return {next, prev, pPrev, pNext, st, txt, restN: rest.length, restSum: rest.reduce((a, x) => a + x.amt, 0), done: !next && (!prev || pPrev !== false)};
+}
+const CT_CLS = {late: 'c-bad', soon: 'c-warn', paid: 'c-ok', later: 'c-grey'};
+
+function renderContr(){
+  const tb = $('#ct-list'); if (!tb) return;
+  if (!$('#ct-from').options.length) $('#ct-from').innerHTML = '<option value="">—</option>' + FROM_ACCS.map(([a, l]) => `<option value="${a}">${esc(l)}</option>`).join('');
+  const L = CT.list.map(c => ({c, s: ctState(c)})).filter(x => CT.f === 'all' || !x.s.done || x.c.id === CT.open)
+    .sort((a, b) => ({late: 0, soon: 1, later: 2, paid: 3}[a.s.st] - {late: 0, soon: 1, later: 2, paid: 3}[b.s.st]) || String((a.s.next || {}).d || '9').localeCompare(String((b.s.next || {}).d || '9')));
+  const warn = CT.list.map(c => ({c, s: ctState(c)})).filter(x => x.s.st === 'late' || x.s.st === 'soon');
+  $('#ct-alert').innerHTML = warn.length ? `<div class="banner ${warn.some(x => x.s.st === 'late') ? 'bad' : ''}" style="margin-bottom:10px"><b>Анхаар:</b> ${warn.map(x => `<a href="#" data-ct-open="${esc(x.c.id)}"><b>${esc(x.c.name)}</b></a> — ${esc(x.s.txt)}${x.s.next && x.s.st === 'soon' ? ` (${x.s.next.d}, ${fmt(x.s.next.amt)} ₮)` : ''}`).join(' · ')}</div>` : '';
+  const tbg = $('#t-ct'); if (tbg){ tbg.textContent = warn.length || ''; tbg.hidden = !warn.length; }
+  tb.innerHTML = L.length ? L.map(({c, s}) => `<tr class="${s.st === 'late' ? 'sev-bad' : s.st === 'soon' ? 'sev-warn' : ''}" style="cursor:pointer" data-ct-row="${esc(c.id)}">
+      <td><b>${esc(c.name)}</b><div class="note">${esc(c.kind || '')}${c.no ? ' · №' + esc(c.no) : ''}${(c.files || []).length ? ' · 📄 ' + c.files.length : ''}</div></td><td>${esc(c.party || '')}<div class="note">${esc(c.borrower || '')}</div></td>
+      <td class="n">${s.next ? fmt(s.next.amt) : fmt(c.payment)} ₮<div class="note">сар бүрийн ${esc(c.payDay || '—')}</div></td><td class="mono">${s.next ? esc(s.next.d) : '—'}</td>
+      <td><span class="chip ${CT_CLS[s.st]}">${esc(s.txt || (s.done ? 'дууссан' : ''))}</span>${!c.toAcc ? '<div class="note">данс оруулаагүй — төлсөн эсэхийг шалгахгүй</div>' : ''}</td><td class="n">${s.restN ? fmt(s.restSum) + ' ₮<div class="note">' + s.restN + ' удаа</div>' : '–'}</td>
+      <td><button class="btn" data-ct-open="${esc(c.id)}">${CT.open === c.id ? 'Хаах' : 'Дэлгэрэнгүй'}</button></td></tr>`).join('')
+    : '<tr><td colspan="7" class="empty">Гэрээ бүртгэгдээгүй. Доорх маягтаар нэмнэ үү.</td></tr>';
+  renderCtDetail();
+}
+function renderCtDetail(){
+  const el = $('#ct-detail'); const c = CT.list.find(x => x.id === CT.open); if (!c){ el.innerHTML = ''; return; }
+  const s = ctState(c), t = today(), rows = ctDues(c, ctAdd(t, -200), ctAdd(t, 370));
+  el.innerHTML = `<div class="banner"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><div><b style="font-size:16px">${esc(c.name)}</b> · ${esc(c.kind || '')}${c.no ? ' · №' + esc(c.no) : ''}<div class="note">${esc(c.party || '')} → ${esc(c.borrower || '')}${c.principal ? ' · зээлийн дүн ' + fmt(c.principal) + ' ₮' : ''}${c.rate ? ' · ' + esc(c.rate) + '%' : ''}${c.start ? ' · ' + esc(c.start) : ''}${c.end ? ' – ' + esc(c.end) : ''}${c.toAcc ? ' · данс ' + esc(c.toAcc) : ''}${c.fromAcc ? ' · төлдөг ' + esc(ACC_LABEL[c.fromAcc] || c.fromAcc) : ''}</div>${c.note ? `<div class="note">${esc(c.note)}</div>` : ''}</div>
+    <div class="row" style="gap:6px;flex-wrap:wrap">${(c.files || []).map((f, i) => `<button class="btn primary" data-ct-file="${esc(f.id)}">📄 ${esc(f.name || 'Гэрээ ' + (i + 1))}</button>`).join('')}${s.next && (window.ALLOWX || {}).req ? `<button class="btn" data-ct-req="${esc(c.id)}">➕ Төлбөрийн хүсэлт (${esc(s.next.d)}, ${fmt(s.next.amt)} ₮)</button>` : ''}<button class="btn" data-ct-edit="${esc(c.id)}">✎ Засах</button><button class="btn bad" data-ct-del="${esc(c.id)}">🗑</button></div></div></div>
+    <div class="tbl" style="margin-top:8px;max-height:360px;overflow:auto"><table><thead><tr><th>Төлөх өдөр</th><th class="n">Дүн</th><th>Төлөв</th></tr></thead><tbody>${rows.map(x => { const p = x.d <= ctAdd(t, 5) ? ctPaid(c, x) : null;
+      return `<tr class="${x.d < t && p === false ? 'sev-bad' : ''}"><td class="mono">${esc(x.d)}</td><td class="n">${fmt(x.amt)}</td><td>${p ? `<span class="chip c-ok">✓ ${esc(String(p.dt).slice(0, 10))} · ${fmt(p.amount)}</span>` : p === false && x.d < t ? '<span class="chip c-bad">олдсонгүй</span>' : x.d >= t ? (ctDiff(x.d, t) <= 3 ? '<span class="chip c-warn">удахгүй</span>' : '') : '<span class="note">шалгах боломжгүй</span>'}</td></tr>`; }).join('') || '<tr><td colspan="3" class="empty">Төлбөрийн өдөр алга.</td></tr>'}</tbody></table></div>`;
+}
+function ctFill(c){
+  CT.edit = c ? c.id : null; $('#ct-form-title').textContent = c ? 'Гэрээ засах: ' + c.name : 'Шинэ гэрээ'; $('#ct-cancel').hidden = !c;
+  if (!c){ $('#ct-form').reset(); return; }
+  const v = (id, x) => { $(id).value = x == null ? '' : x; };
+  v('#ct-name', c.name); v('#ct-kind', c.kind || 'Зээл'); v('#ct-party', c.party); v('#ct-borrower', c.borrower); v('#ct-no', c.no); v('#ct-principal', c.principal ? numFmt(c.principal) : ''); v('#ct-rate', c.rate);
+  v('#ct-start', c.start); v('#ct-end', c.end); v('#ct-day', c.payDay); v('#ct-pay', numFmt(c.payment)); v('#ct-to', c.toAcc); v('#ct-from', c.fromAcc || ''); v('#ct-sched', c.sched); v('#ct-note', c.note);
+  $('#ct-msg').textContent = (c.files || []).length ? `${c.files.length} файл хавсаргасан; шинэ файл нэмэгдэнэ.` : ''; $('#ct-form-card').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+$('#ct-form').addEventListener('submit', async e => {
+  e.preventDefault(); if (!db) return; const g = id => $(id).value.trim();
+  const c = {name: g('#ct-name'), kind: g('#ct-kind'), party: g('#ct-party'), borrower: g('#ct-borrower'), no: g('#ct-no'), principal: parseAmt(g('#ct-principal')) || 0, rate: g('#ct-rate'),
+    start: g('#ct-start'), end: g('#ct-end'), payDay: Math.max(0, Math.min(31, parseInt(g('#ct-day'), 10) || 0)), payment: parseAmt(g('#ct-pay')) || 0, toAcc: g('#ct-to').replace(/\s/g, ''), fromAcc: g('#ct-from'), sched: $('#ct-sched').value, note: g('#ct-note')};
+  if (!c.name || (!c.payDay && !ctSched(c).length) || (!c.payment && !ctSched(c).length)){ $('#ct-msg').textContent = 'Нэр, төлөх өдөр, сарын төлбөрийг бөглөнө үү (эсвэл хуваарь).'; return; }
+  $('#ct-save').disabled = true; $('#ct-msg').textContent = 'Хадгалж байна…';
+  try{ const ups = []; for (const f of [...$('#ct-file').files]){ $('#ct-msg').textContent = `Файл хадгалж байна… ${f.name}`; const up = await assets.upload(f); ups.push({id: up.id, type: up.contentType, name: f.name}); }
+    const now = new Date().toISOString();
+    if (CT.edit){ const old = CT.list.find(x => x.id === CT.edit) || {}; await db.doc('contracts/' + CT.edit).update({...c, files: (old.files || []).concat(ups), editedAt: now, editedBy: me}); CT.open = CT.edit; }
+    else { const ref = await db.collection('contracts').add({...c, files: ups, createdAt: now, by: me, rem: {}}); CT.open = ref.id; }
+    ctFill(null); $('#ct-msg').textContent = 'Хадгаллаа.';
+  }catch(err){ console.warn(err); $('#ct-msg').textContent = err && err.code === 'too_big' ? 'Файл хэт том (15 МБ хүртэл).' : 'Хадгалж чадсангүй.'; }
+  finally { $('#ct-save').disabled = false; }
+});
+$('#ct-cancel').addEventListener('click', () => ctFill(null));
+$$('#ct-f button').forEach(b => b.addEventListener('click', () => { CT.f = b.dataset.f; $$('#ct-f button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderContr(); }));
+document.addEventListener('click', async e => {
+  const t = e.target.closest('[data-ct-open], [data-ct-row], [data-ct-file], [data-ct-edit], [data-ct-del], [data-ct-req]'); if (!t) return; const d = t.dataset;
+  if (d.ctFile){ return rsOpenFile(d.ctFile); }
+  if (d.ctOpen || (d.ctRow && !e.target.closest('button'))){ e.preventDefault(); const id = d.ctOpen || d.ctRow; CT.open = CT.open === id ? '' : id; renderContr(); return; }
+  if (d.ctEdit){ return ctFill(CT.list.find(x => x.id === d.ctEdit)); }
+  if (d.ctDel){ const c = CT.list.find(x => x.id === d.ctDel); if (!c || !confirm(`«${c.name}» гэрээг устгах уу?`)) return; try{ await db.doc('contracts/' + c.id).delete(); CT.open = ''; }catch(err){ alert('Устгаж чадсангүй.'); } return; }
+  if (d.ctReq){ const c = CT.list.find(x => x.id === d.ctReq), s = c && ctState(c); if (!s || !s.next) return;
+    showTab('req'); if (typeof setRcMode === 'function') setRcMode('one'); setReqEdit(null);
+    $('#rq-payee').value = c.party || ''; $('#rq-acc').value = c.toAcc || ''; $('#rq-amt').value = numFmt(s.next.amt); if (c.fromAcc) $('#rq-from').value = c.fromAcc;
+    const cat = [...$('#rq-cat').options].find(o => /зээл/i.test(o.text)); if (cat) $('#rq-cat').value = cat.value;
+    $('#rq-note').value = `${c.kind || 'Зээл'}ийн төлбөр: ${c.name}${c.no ? ' №' + c.no : ''} · ${s.next.d}`; $('#rq-msg').textContent = 'Гэрээнээс бөглөсөн — шалгаад илгээнэ үү.'; }
+});
 
 function payUsedLabel(t){                     // bank tab: salary transfers explained by an approved payroll list
   if (!PS.lists.length && !Object.keys(payExempt()).length) return null;
@@ -5117,16 +5369,16 @@ $('#rq-acc').addEventListener('change', () => { const b = PAYEES.get($('#rq-acc'
   if (n) n.textContent = `Сангаас: ${b.name}${b.group ? ' · ' + b.group : ''}${b.holder ? ' · эзэмшигч ' + b.holder : ''}`; });
 // ---------- settings (owner) ----------
 let ACCESS = {emails: [], perms: {}};
-const SECTIONS_WH = [['wh','Агуулах (LPP скан)'],['rcv_fc','Хүлээн авалт – Food City'],['rcv_dr','Хүлээн авалт – Драгон'],['rcv_ns','Хүлээн авалт – Нийслэл'],['rcv_ht','Хүлээн авалт – Бөөн'],['inv','Тооллого – тоолох'],['invadm','Тооллого – удирдах (үүсгэх, тайлан, Smart файл)']];
+const SECTIONS_WH = [['wh','Агуулах (LPP скан)'],['rcv_fc','Хүлээн авалт – Food City'],['rcv_dr','Хүлээн авалт – Драгон'],['rcv_ns','Хүлээн авалт – Нийслэл'],['rcv_ht','Хүлээн авалт – Бөөн'],['inv','Тооллого – тоолох'],['invadm','Тооллого – удирдах (үүсгэх, тайлан, Smart файл)'],['reqsub','Хүсэлт гаргах (ажилтан: худалдан авалт, онлайн, маркетинг…)'],['contr','Гэрээ (зээл, лизинг)']];
 const SECTIONS = [['req','Төлбөрийн хүсэлт'],['daily','Өдрийн тайлан'],['bank','Банкны гүйлгээ'],['rev','Орлого тулгалт'],['cash','Бэлэн мөнгө'],['bal','Дансны үлдэгдэл'],['pay','Цалин'],['pl','Дотоод тайлан']];
-const DEFAULT_PERMS = {daily:false, req:true, bank:true, rev:false, cash:true, bal:true, pay:false, pl:false, wh:false, rcv_fc:false, rcv_dr:false, rcv_ns:false, rcv_ht:false, inv:false, invadm:false};
+const DEFAULT_PERMS = {daily:false, req:true, bank:true, rev:false, cash:true, bal:true, pay:false, pl:false, wh:false, rcv_fc:false, rcv_dr:false, rcv_ns:false, rcv_ht:false, inv:false, invadm:false, reqsub:false, contr:false};
 const permsOf = e => ({...DEFAULT_PERMS, ...((ACCESS.perms || {})[e] || {})});
 function renderAccess(){
   const ownRow = `<div class="acc-row" style="background:var(--ok-bg,#eef8f1)"><div class="row" style="justify-content:space-between"><b>${esc(user.email())}</b><span class="chip c-ok">Эзэмшигч — бүх эрх автоматаар</span></div>
       <div class="row acc-perms">${SECTIONS.concat(SECTIONS_WH).map(([k,l]) => `<label class="row" style="gap:6px;width:auto;opacity:.75"><input type="checkbox" style="width:auto" checked disabled> ${esc(l)}</label>`).join('')}</div>
       <div class="note">Эзэмшигч бүх хэсгийг (Агуулах, бүх дэлгүүрийн «Хүлээн авалт») харж, ажиллана — тусад нь эрх өгөх шаардлагагүй.</div></div>`;
   $('#acc-list').innerHTML = ownRow + (ACCESS.emails.length ? ACCESS.emails.map(e => { const p = permsOf(e);
-    return `<div class="acc-row"><div class="row" style="justify-content:space-between"><b>${esc(e)}</b><button class="btn bad" data-rm="${esc(e)}">Хасах</button></div>
+    return `<div class="acc-row"><div class="row" style="justify-content:space-between"><b>${esc(e)}</b><span><button class="btn" data-preset-sub="${esc(e)}" title="Бүх эрхийг хасаад зөвхөн «Хүсэлт гаргах» үлдээнэ">Зөвхөн хүсэлт гаргагч</button> <button class="btn bad" data-rm="${esc(e)}">Хасах</button></span></div>
       <div class="row acc-perms">${SECTIONS.concat(SECTIONS_WH).map(([k,l]) => `<label class="row" style="gap:6px;width:auto"><input type="checkbox" style="width:auto" data-perm="${k}" data-email="${esc(e)}" ${p[k] ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div></div>`; }).join('')
     : '<div class="note">Нягтлан бүртгээгүй байна.</div>');
 }
@@ -5134,7 +5386,9 @@ $('#acc-form').addEventListener('submit', async e => {
   e.preventDefault(); const em = $('#acc-email').value.trim().toLowerCase(); if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { $('#acc-msg').textContent = 'Имэйл буруу байна.'; return; }
   try{ await db.doc('config/access').set({emails: [...new Set([...ACCESS.emails, em])], perms: {...(ACCESS.perms || {}), [em]: permsOf(em)}}); $('#acc-email').value = ''; $('#acc-msg').textContent = 'Нэмлээ. Доор юу харахыг нь сонгоно уу.'; }catch(err){ $('#acc-msg').textContent = 'Хадгалж чадсангүй.'; }
 });
-$('#acc-list').addEventListener('click', async e => { const b = e.target.closest('button[data-rm]'); if (!b) return;
+$('#acc-list').addEventListener('click', async e => { const ps = e.target.closest('button[data-preset-sub]'); if (ps){ const em = ps.dataset.presetSub, perms = {...(ACCESS.perms || {})};
+    perms[em] = Object.fromEntries(Object.keys(DEFAULT_PERMS).map(k => [k, k === 'reqsub'])); try{ await db.doc('config/access').set({emails: ACCESS.emails, perms}); $('#acc-msg').textContent = em + ': зөвхөн хүсэлт гаргах эрхтэй боллоо.'; }catch(err){ $('#acc-msg').textContent = 'Хадгалж чадсангүй.'; } return; }
+  const b = e.target.closest('button[data-rm]'); if (!b) return;
   const perms = {...(ACCESS.perms || {})}; delete perms[b.dataset.rm];
   try{ await db.doc('config/access').set({emails: ACCESS.emails.filter(x => x !== b.dataset.rm), perms}); }catch(err){ $('#acc-msg').textContent = 'Хадгалж чадсангүй.'; } });
 $('#acc-list').addEventListener('change', async e => { const c = e.target.closest('input[data-perm]'); if (!c) return;
@@ -5175,16 +5429,19 @@ else VIVIFB.start(async () => {
   $('#req-form-card').hidden = !canWrite;
   $('#tab-set').hidden = !isOwner;
   const onErr = e => console.warn('db', e);
-  let ALLOW = {daily:true, req:true, bank:true, rev:true, cash:true, bal:true, pay:true, pl:true, wh:true, rcv_fc:true, rcv_dr:true, rcv_ns:true, rcv_ht:true, inv:true, invadm:true};
+  let ALLOW = {daily:true, req:true, bank:true, rev:true, cash:true, bal:true, pay:true, pl:true, wh:true, rcv_fc:true, rcv_dr:true, rcv_ns:true, rcv_ht:true, inv:true, invadm:true, reqsub:false, contr:true};
   if (!isOwner){
     try{ const a = await db.doc('config/access').get(); const x = a.exists ? a.data() : {}; ALLOW = {...DEFAULT_PERMS, ...((x.perms || {})[String(user.email()).toLowerCase()] || {})}; }catch(e){ console.warn(e); }
   }
   ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); ALLOW.inv = !!(ALLOW.inv || ALLOW.invadm); window.ALLOWX = ALLOW;
-  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv', inv:'inv'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
+  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv', inv:'inv', reqsub:'rqs', contr:'contr'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
   for (const k in TABS){ const b = document.querySelector(`nav.tabs button[data-tab="${TABS[k]}"]`); if (b) b.hidden = !ALLOW[k]; if (KPI[k]) $(KPI[k]).closest('.kpi').hidden = !ALLOW[k]; }
   { const cur = document.querySelector('nav.tabs button[aria-selected="true"]'); if (!cur || cur.hidden){ const first = [...document.querySelectorAll('nav.tabs button')].find(b => !b.hidden); if (first) showTab(first.dataset.tab); } }
   if (!Object.values(ALLOW).some(Boolean)) gate('Танд харах хэсэг сонгогдоогүй байна. Эзэмшигчид хандана уу.', true);
   if (ALLOW.req) db.collection('requests').onSnapshot(s => { S.requests = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.requests.map(r => r.createdBy)); render(); }, onErr);
+  if (ALLOW.req) db.collection('reqdraft').onSnapshot(s => { RS.list = s.docs.map(d => ({id: d.id, ...d.data()})); resolveNames(RS.list.map(x => x.createdBy)); render(); }, onErr);
+  else if (ALLOW.reqsub) db.collection('reqdraft').where('createdBy', '==', me).onSnapshot(s => { RS.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+  if (ALLOW.contr) db.collection('contracts').onSnapshot(s => { CT.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.inv) db.collection('inv').onSnapshot(s => { IV.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.wh || ALLOW.rcv) db.doc('config/wh').onSnapshot(d => { WS.cfg = d.exists ? d.data() : null; render(); }, onErr);
   if (ALLOW.wh){
