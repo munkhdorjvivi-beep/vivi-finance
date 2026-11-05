@@ -553,6 +553,10 @@ body{margin:0;background:var(--bg)}
       <p class="note" style="margin:0 0 8px">Нээлттэй → «Илгээх» → дэлгүүр скан хийж тулгана → зөрүүгүй бол «Хүлээн авсан», зөрүүтэй бол агуулах мөр бүрийг шийдвэрлэнэ. Smart-ын файл дэлгүүр хүлээн авсны дараа, бодит хүлээн авсан тоогоор гарна.</p>
       <div class="tbl"><table><thead><tr><th>№</th><th>Дэлгүүр</th><th>Хүргэлт</th><th class="n">Илгээсэн</th><th class="n">Хүлээн авсан</th><th>Төлөв</th><th>Огноо</th><th></th></tr></thead><tbody id="wh-ships"></tbody></table></div>
       <div id="wh-ship-detail" style="margin-top:12px"></div>
+      <h2 style="margin-top:18px">🗂 Илгээлтийн архив — хэвлэх</h2>
+      <p class="note" style="margin:0 0 8px">«Скан дуусгах» эсвэл «Илгээх» бүр энд хадгалагдана. Дэлгүүр бүрийн хуваарилалтын жагсаалтыг хэвлэж бараатай хамт явуулна (дэлгүүр бүр тусдаа хуудас).</p>
+      <div class="row" style="gap:8px;margin-bottom:6px"><label class="note row" style="gap:6px;width:auto">Огноо <input type="date" id="wh-arch-d" style="width:auto"></label><button class="btn" id="wh-arch-all">Бүгдийг харуулах</button></div>
+      <div class="tbl"><table><thead><tr><th>Илгээсэн</th><th>Хүргэлт</th><th>Дэлгүүр · ширхэг</th><th class="n">Нийт</th><th>Илгээсэн хүн</th><th></th></tr></thead><tbody id="wh-arch"></tbody></table></div>
     </div>
 
     <div class="card" id="wh-deliv-card" hidden>
@@ -3914,7 +3918,7 @@ function renderSession(){
   const el = $('#wh-session'); if (!el) return; const S = WS.session; if (!S){ el.innerHTML = ''; return; }
   const L = S.ids.map(i => WS.ships.find(s => s.id === i)).filter(Boolean);
   el.innerHTML = `<div class="banner"><b>✓ ${esc(fmtDT(S.at))} — ${L.length} илгээмж илгээлээ</b> (${fmt(L.reduce((a, s) => a + (s.tq || 0), 0))} ш). Дэлгүүр бүрийн хуваарилалтын жагсаалт:
-    <div class="row" style="margin-top:6px;gap:6px">${L.map(s => `<button class="btn" data-wh-list="${esc(s.id)}">📄 ${esc(storeName(s.store))} · ${fmt(s.tq || 0)} ш</button>`).join('')}<button class="btn primary" data-wh-listall="1">📄 Бүгд нэг Excel-д</button><button class="btn" data-wh-sessx="1">✕</button></div>
+    <div class="row" style="margin-top:6px;gap:6px">${L.map(s => `<button class="btn" data-wh-list="${esc(s.id)}">📄 ${esc(storeName(s.store))} · ${fmt(s.tq || 0)} ш</button>`).join('')}<button class="btn primary" data-wh-print="${esc(S.ids.join(','))}">🖨 Бүгдийг хэвлэх</button><button class="btn" data-wh-listall="1">📄 Бүгд нэг Excel-д</button><button class="btn" data-wh-sessx="1">✕</button></div>
     <div class="note" style="margin-top:4px">Smart-ын хөдөлгөөний файл дэлгүүр тоолж хүлээн авсны дараа «Илгээмж» хэсэгт гарна (бодит хүлээн авсан тоогоор).</div></div>`;
 }
 // allocation / packing list of shipments (what goes to which store, with location and price)
@@ -3933,6 +3937,42 @@ async function listFile(ids){
   for (const s of L){ const rows = shipRows(s); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([[`${s.no} · ${storeName(s.store)} · ${s.dname || ''} · ${fmtDT(s.sentAt || s.createdAt)}`], SHIP_HEAD, ...rows, [], ['', 'Нийт', '', '', '', '', rows.reduce((a, r) => a + r[6], 0)]]), String(storeName(s.store) + ' ' + s.no).replace(/[\\/?*\[\]:]/g, '').slice(0, 31)); }
   XLSX.writeFile(wb, L.length > 1 ? `Huvaarilalt_${localDay(L[0].sentAt || L[0].createdAt)}_${L.length}.xlsx` : `Huvaarilalt_${L[0].no}.xlsx`);
 }
+// archive of sendings (one «Скан дуусгах» = all shipments with the same sentAt) + printing
+function sendGroups(){
+  const G = {}; for (const s of WS.ships) if (s.sentAt && s.status !== 'open'){ const k = s.deliv + '|' + s.sentAt; (G[k] = G[k] || {at: s.sentAt, deliv: s.deliv, dname: s.dname || '', by: s.sentBy || '', ids: []}).ids.push(s.id); }
+  return Object.values(G).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+}
+function renderArch(){
+  const tb = $('#wh-arch'); if (!tb) return; const d = ($('#wh-arch-d') || {}).value || ''; let L = sendGroups(); if (d) L = L.filter(g => localDay(g.at) === d); const more = !d && !WS.archAll && L.length > 30; if (more) L = L.slice(0, 30);
+  tb.innerHTML = L.length ? L.map(g => { const S2 = g.ids.map(i => WS.ships.find(s => s.id === i)).filter(Boolean);
+    return `<tr><td class="mono">${esc(fmtDT(g.at))}</td><td>${esc(g.dname)}</td><td>${S2.map(s => `<b style="color:${STORE_COLOR[s.store] || '#555'}">${esc(storeName(s.store))}</b> ${fmt(s.tq || 0)}`).join(' · ')}</td><td class="n">${fmt(S2.reduce((a, s) => a + (s.tq || 0), 0))}</td><td class="note">${esc(g.by)}</td>
+      <td style="white-space:nowrap"><button class="btn primary" data-wh-print="${esc(g.ids.join(','))}">🖨 Хэвлэх</button><button class="btn" data-wh-listids="${esc(g.ids.join(','))}">📄 Excel</button></td></tr>`; }).join('')
+    + (more ? '<tr><td colspan="6" class="note">Сүүлийн 30 — бүгдийг харахын тулд «Бүгдийг харуулах» эсвэл огноо сонгоно уу.</td></tr>' : '')
+    : '<tr><td colspan="6" class="empty">Илгээлт алга.</td></tr>';
+}
+async function printShips(ids){
+  const L = ids.map(i => WS.ships.find(s => s.id === i)).filter(Boolean); if (!L.length) return;
+  const w = window.open('', '_blank'); if (!w){ alert('Цонх нээгдсэнгүй — хөтчийн popup зөвшөөрнө үү.'); return; }
+  w.document.write('<p style="font-family:Arial">Бэлтгэж байна…</p>');
+  for (const s of L) await loadParts(s.deliv);
+  const page = (s, last) => { const rows = shipRows(s); const groups = {}; for (const r of rows) (groups[r[4]] = groups[r[4]] || []).push(r);
+    return `<section class="${last ? '' : 'pb'}"><div class="hd"><div><div class="co">Вивекавикториа ХХК · VIVI</div><h1>Хуваарилалтын жагсаалт — ${esc(storeName(s.store))}</h1></div><div class="no">№ ${esc(s.no)}</div></div>
+      <div class="meta">Хүргэлт: <b>${esc(s.dname || '')}</b> · Илгээсэн: <b>${esc(fmtDT(s.sentAt || s.createdAt))}</b> · ${esc(s.sentBy || '')} · Нийт: <b>${fmt(s.tq || 0)} ш</b> · ${rows.length} баркод</div>
+      <table><thead><tr><th>#</th><th>Баркод</th><th>Барааны нэр</th><th>Загвар</th><th>Хэмжээ</th><th class="n">Үнэ</th><th class="n">Тоо</th><th>✓</th></tr></thead><tbody>
+      ${Object.entries(groups).map(([loc, rs]) => `<tr class="loc"><td colspan="8">Байршил ${esc(loc)} — ${fmt(rs.reduce((a, r) => a + r[6], 0))} ш</td></tr>` + rs.map((r, i) => `<tr><td>${i + 1}</td><td class="m">${esc(r[0])}</td><td>${esc(r[1])}${r[7] ? ' *' : ''}</td><td class="m">${esc(r[2])}</td><td>${esc(r[3])}</td><td class="n">${r[5] ? fmt(r[5]) : ''}</td><td class="n"><b>${fmt(r[6])}</b></td><td></td></tr>`).join('')).join('')}
+      <tr class="tot"><td colspan="6">Нийт</td><td class="n">${fmt(rows.reduce((a, r) => a + r[6], 0))}</td><td></td></tr></tbody></table>
+      ${rows.some(r => r[7]) ? '<div class="meta">* жагсаалтгүй ирсэн бараа</div>' : ''}
+      <div class="sig"><div>Илгээсэн (агуулах): ____________________</div><div>Хүлээн авсан (дэлгүүр): ____________________</div><div>Огноо: ______________</div></div></section>`; };
+  w.document.open(); w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Хуваарилалт ${esc(localDay(L[0].sentAt || L[0].createdAt))}</title><style>
+    @page{size:A4;margin:10mm} body{font-family:Arial,sans-serif;font-size:11px;color:#000;margin:0} .pb{page-break-after:always} .hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:6px}
+    h1{font-size:17px;margin:2px 0 0} .co{font-size:11px;color:#444} .no{font-size:15px;font-weight:700;font-family:monospace} .meta{margin:4px 0 8px}
+    table{border-collapse:collapse;width:100%} th,td{border:1px solid #888;padding:2px 4px;vertical-align:top} th{background:#eee;text-align:left} .n{text-align:right} .m{font-family:monospace}
+    tr.loc td{background:#f3f3f3;font-weight:700} tr.tot td{font-weight:700;background:#eee} tr{page-break-inside:avoid} thead{display:table-header-group}
+    .sig{display:flex;gap:30px;margin-top:22px} @media screen{body{margin:16px} .bar{margin-bottom:12px}} @media print{.bar{display:none}}
+    </style></head><body><div class="bar"><button onclick="print()" style="font-size:16px;padding:6px 14px">🖨 Хэвлэх</button> ${L.length} дэлгүүр — дэлгүүр бүр тусдаа хуудсанд</div>${L.map((s, i) => page(s, i === L.length - 1)).join('')}</body></html>`);
+  w.document.close(); setTimeout(() => { try{ w.focus(); w.print(); }catch(e){} }, 400);
+}
+
 // receipt report: sent vs counted
 function rcvFile(sid){
   const s = WS.ships.find(x => x.id === sid); if (!s || typeof XLSX === 'undefined') return; const cmp = WH.compare(decMap(s.l), decMap(s.r)), I = decMap(s.i), res = decMap(s.res);
@@ -3982,9 +4022,9 @@ function renderWhShips(){
     return `<tr class="${s.status === 'diff' ? 'sev-bad' : ''}"><td class="mono">${esc(s.no || s.id)}</td><td><b style="color:${STORE_COLOR[s.store] || '#555'}">${esc(storeName(s.store))}</b></td><td>${esc(s.dname || '')}</td>
       <td class="n">${fmt(s.tq || 0)}</td><td class="n">${s.status === 'open' || s.status === 'sent' ? '–' : fmt(s.rq || 0)}</td><td><span class="chip ${st[1]}">${st[0]}</span>${s.cmp && !s.cmp.ok ? `<div class="note">дутуу ${fmt(s.cmp.miss)} · илүү ${fmt(s.cmp.extra)}</div>` : ''}</td>
       <td class="note">${esc(fmtDT(s.sentAt || s.createdAt))}${s.recvAt ? '<br>хүлээн авсан ' + esc(fmtDT(s.recvAt)) : ''}</td>
-      <td style="white-space:nowrap"><button class="btn" data-wh-det="${esc(s.id)}">Дэлгэрэнгүй</button><button class="btn" data-wh-list="${esc(s.id)}" title="Хуваарилалтын жагсаалт (Excel)">📄</button>${['recv', 'diff', 'closed'].includes(s.status) ? `<button class="btn" data-wh-rcvx="${esc(s.id)}" title="Тулгалтын тайлан">📋</button>` : ''}${s.status === 'open' && s.store !== whCfg().over.key ? `<button class="btn" data-wh-send="${esc(s.id)}">🚚 Илгээх</button>` : ''}${can ? `<button class="btn primary" data-wh-smart="${esc(s.id)}">📥 Smart</button>` : ''}</td></tr>`; }).join('')
+      <td style="white-space:nowrap"><button class="btn" data-wh-det="${esc(s.id)}">Дэлгэрэнгүй</button><button class="btn" data-wh-list="${esc(s.id)}" title="Хуваарилалтын жагсаалт (Excel)">📄</button>${s.status !== 'open' ? `<button class="btn" data-wh-print="${esc(s.id)}" title="Хэвлэх">🖨</button>` : ''}${['recv', 'diff', 'closed'].includes(s.status) ? `<button class="btn" data-wh-rcvx="${esc(s.id)}" title="Тулгалтын тайлан">📋</button>` : ''}${s.status === 'open' && s.store !== whCfg().over.key ? `<button class="btn" data-wh-send="${esc(s.id)}">🚚 Илгээх</button>` : ''}${can ? `<button class="btn primary" data-wh-smart="${esc(s.id)}">📥 Smart</button>` : ''}</td></tr>`; }).join('')
     : '<tr><td colspan="8" class="empty">Илгээмж алга.</td></tr>';
-  renderShipDetail();
+  renderShipDetail(); renderArch();
 }
 const RES = [['resend', 'Олдсон — дахин илгээнэ'], ['lost', 'Олдсонгүй (акт)'], ['keep', 'Илүү — дэлгүүрт үлдээнэ'], ['back', 'Илүү — агуулах руу буцаана'], ['other', 'Бусад (тайлбартай)']];
 function renderShipDetail(){
@@ -4109,11 +4149,9 @@ async function renderRecon(id){
       <div class="banner ${S.unk ? 'bad' : ''}"><div class="note">Мастерт ч байхгүй</div><b style="font-size:20px">${fmt(S.unk)} ш</b></div>
     </div>
     <div class="row" style="margin-top:10px;gap:6px">
-      <button class="btn primary" data-wd-upd="${esc(id)}" ${S.pending ? '' : 'disabled'}>🔄 Жагсаалт шинэчлэх${S.pending ? ` (${fmt(S.pending)} мөр)` : ' — шинэчлэгдсэн'}</button>
-      <button class="btn" data-wd-purchase="${esc(id)}" data-mode="list">📥 Purchase — шинэчилсэн жагсаалтаар</button>
-      <button class="btn" data-wd-purchase="${esc(id)}" data-mode="scan">📥 Purchase — бодит скан</button>
+      <button class="btn primary" data-wd-purchase="${esc(id)}">📥 Purchase (Smart) — бодит ирсэн бараагаар</button>
       <button class="btn" data-wd-repx="${esc(id)}">📊 Тайлан Excel</button></div>
-    <p class="note">«Шинэчлэх» нь жагсаалтгүй ирсэн барааг (мастер файлын нэр, ангилал, үнэтэй) энэ хүргэлтийн жагсаалтад скан хийсэн тоогоор нэмнэ — Purchase, хуваарилалтын жагсаалт, үнэ шалгах бүгд шинэчлэгдэнэ. Хүргэлтийг «Хаах» үед автоматаар шинэчлэгдэнэ. «Бодит скан» Purchase: зөвхөн үнэхээр скан хийсэн тоо (ирээгүй бараа орохгүй).</p>
+    <p class="note">Purchase-д зөвхөн скан хийгдсэн бараа орно (жагсаалтаас ирсэн + илүү + жагсаалтгүй). Ирээгүй бараа орохгүй. Жагсаалтгүй бараа мастер файлын нэр, ангилал, үнээр хүргэлтийн жагсаалтад автоматаар нэмэгдэнэ${S.pending ? ` (одоо ${fmt(S.pending)} мөр нэмэгдэх)` : ''}. Скан бүрэн дууссаны дараа (хүргэлтийг «Хаах») татахыг зөвлөе.</p>
     <div class="filter chips" id="wd-rep-f" style="margin:8px 0">${[['extra', 'Жагсаалтгүй'], ['over', 'Илүү'], ['miss', 'Ирээгүй'], ['list', 'Жагсаалтын бүх бараа']].map(([v, t]) => `<button data-f="${v}" aria-pressed="${f === v}">${t}</button>`).join('')}</div>
     <div class="tbl" style="max-height:420px;overflow:auto"><table><thead><tr><th>Баркод</th><th>Бараа</th><th>Загвар · хэмжээ</th><th class="n">Үнэ</th><th class="n">Жагсаалт</th><th class="n">Скан</th><th class="n">Зөрүү</th></tr></thead><tbody>${rows.slice(0, 500).map(r => `<tr><td class="mono">${esc(r.e)}</td><td>${esc(r.n)}</td><td class="mono">${esc(r.m)} · ${esc(r.s)}</td><td class="n">${r.p ? fmt(r.p) : ''}</td><td class="n">${fmt(r.list)}</td><td class="n">${fmt(r.scan)}</td><td class="n"><b>${r.scan - r.list > 0 ? '+' : ''}${fmt(r.scan - r.list)}</b></td></tr>`).join('') || '<tr><td colspan="7" class="empty">–</td></tr>'}</tbody></table></div>
     ${rows.length > 500 ? `<div class="note">Эхний 500 мөр — бүгдийг Excel-ээр.</div>` : ''}
@@ -4142,17 +4180,35 @@ function renderWhDelivs(){
   tb.innerHTML = L.length ? L.map(d => { const t = totOf(d.id), sc = Object.values(t).reduce((a, b) => a + b, 0);
     return `<tr><td><b>${esc(d.name)}</b></td><td class="note">${esc(fmtDT(d.createdAt))}</td><td class="n">${fmt(d.total)}</td><td class="note">${Object.entries(d.pct || {}).filter(([, p]) => p).map(([k, p]) => `${esc(storeName(k))} ${p}%`).join(' · ')}</td>
       <td class="n">${WS.cnt[d.id] ? fmt(sc) : '…'}</td><td>${d.status === 'closed' ? '<span class="chip c-grey">Хаасан</span>' : '<span class="chip c-ok">Идэвхтэй</span>'}</td>
-      <td style="white-space:nowrap"><button class="btn primary" data-wd-rep="${esc(d.id)}">📊 Тайлан / Purchase</button>${d.extraQ ? `<div class="note">+${fmt(d.extraQ)} ш жагсаалтгүй нэмэгдсэн</div>` : ''}${d.status === 'closed' ? `<button class="btn" data-wd-open="${esc(d.id)}">Нээх</button>` : `<button class="btn" data-wd-close="${esc(d.id)}">Хаах</button>`}</td></tr>`; }).join('')
+      <td style="white-space:nowrap"><button class="btn primary" data-wd-rep="${esc(d.id)}">📊 Тайлан / Purchase</button>${d.extraQ ? `<div class="note">+${fmt(d.extraQ)} ш жагсаалтгүй нэмэгдсэн</div>` : ''}${d.status === 'closed' ? `<button class="btn" data-wd-open="${esc(d.id)}">Нээх</button>` : `<button class="btn" data-wd-close="${esc(d.id)}">Хаах</button>`}${WS.ships.some(s => s.deliv === d.id && s.status !== 'open') ? '' : `<button class="btn" data-wd-del="${esc(d.id)}" title="Буруу жагсаалт оруулсан бол" style="color:var(--bad)">🗑 Устгах</button>`}</td></tr>`; }).join('')
     : '<tr><td colspan="7" class="empty">Хүргэлт алга.</td></tr>';
 }
-async function purchaseFile(id, mode){
-  const D = WS.delivs.find(d => d.id === id); if (!D || typeof XLSX === 'undefined') return;
-  const R2 = await deliveryRecon(id);
-  if (mode !== 'scan' && R2.S.pending && confirm(`${R2.S.pending} жагсаалтгүй бараа жагсаалтад нэмэгдээгүй байна. Эхлээд шинэчлэх үү?`)){ await updateList(id, true); return purchaseFile(id, mode); }
-  const lines = R2.L.map(r => ({e: r.e, n: r.n, q: mode === 'scan' ? r.scan : (r.extra ? r.scan : r.list)})).filter(l => l.q > 0 && l.e).sort((a, b) => a.e.localeCompare(b.e));
+// delete a delivery loaded by mistake (only while nothing has been sent to the stores)
+async function deleteDeliv(id){
+  const D = WS.delivs.find(d => d.id === id); if (!D) return; await flush();
+  const S2 = WS.ships.filter(s => s.deliv === id), sent = S2.filter(s => s.status !== 'open'), sc = Object.values(totOf(id)).reduce((a, b) => a + b, 0);
+  if (sent.length){ alert(`«${D.name}» устгах боломжгүй: ${sent.length} илгээмж дэлгүүр рүү илгээгдсэн. Хүргэлтийг «Хаах» боломжтой.`); return; }
+  if (sc){ const t = prompt(`«${D.name}» хүргэлтэд ${sc} ш скан хийгдсэн байна. Устгавал скан, нээлттэй илгээмж бүгд устана, сэргээх боломжгүй.\n\nБаталгаажуулахын тулд УСТГАХ гэж бичнэ үү:`); if ((t || '').trim().toUpperCase() !== 'УСТГАХ') return; }
+  else if (!confirm(`«${D.name}» хүргэлтийг (${fmt(D.total)} ш жагсаалт) устгах уу?`)) return;
+  try{ const b = db.batch();
+    for (let i = 0; i < (D.parts || 0); i++) b.delete(db.doc('delivpart/' + id + '_' + i));
+    for (let i = 0; i < (D.xparts || 0); i++) b.delete(db.doc('delivpart/' + id + '_x' + i));
+    for (const s of S2) b.delete(db.doc('ship/' + s.id));
+    b.delete(db.doc('delivcnt/' + id)); b.delete(db.doc('deliv/' + id)); await b.commit();
+    for (const k of Object.keys(WS.open)) if (k.startsWith(id + '|')) delete WS.open[k];
+    WS.ships = WS.ships.filter(s => s.deliv !== id); delete WS.parts[id]; delete WS.pend[id]; if (WS.repId === id) renderRecon('');
+    if (WS.active === id){ WS.active = ''; try{ localStorage.removeItem('vivi-wh-active'); localStorage.removeItem('vivi-wh-last-' + id); }catch(e){} }
+  }catch(err){ alertMsg(err); }
+}
+async function purchaseFile(id){
+  const D = WS.delivs.find(d => d.id === id); if (!D || typeof XLSX === 'undefined') return; await flush();
+  let R2 = await deliveryRecon(id);
+  if (D.status !== 'closed' && !confirm(`Энэ хүргэлтийн скан дуусаагүй байна (${fmt(R2.S.scan)} / ${fmt(R2.S.list)} ш). Purchase-д зөвхөн одоогоор скан хийсэн бараа орно. Үргэлжлүүлэх үү?`)) return;
+  if (R2.S.pending){ await updateList(id, true); R2 = await deliveryRecon(id); }     // extras into the delivery list first, so every document agrees
+  const lines = R2.L.map(r => ({e: r.e, n: r.n, q: r.scan})).filter(l => l.q > 0 && l.e).sort((a, b) => a.e.localeCompare(b.e));
   const aoa = WH.purchaseAoa(lines, {date: localDay(D.createdAt), no: '0', desc: (whCfg().purchase.desc || 'Татан авалт') + ' · ' + D.name}, whCfg());
   for (let r = 9; r < aoa.length; r++) aoa[r][4] = {f: `C${r + 1}*D${r + 1}`, v: aoa[r][2]};
-  const ws = XLSX.utils.aoa_to_sheet(aoa), wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Purchase'); XLSX.writeFile(wb, `Purchase_${mode === 'scan' ? 'scan_' : ''}${D.name.replace(/[^\wА-Яа-яӨөҮү-]+/g, '_')}.xlsx`);
+  const ws = XLSX.utils.aoa_to_sheet(aoa), wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Purchase'); XLSX.writeFile(wb, `Purchase_${D.name.replace(/[^\wА-Яа-яӨөҮү-]+/g, '_')}.xlsx`);
 }
 
 // ---------- store receiving (blind count) ----------
@@ -4223,14 +4279,16 @@ document.addEventListener('click', async e => {
   if (d.whListall) return listFile((WS.session || {}).ids || []);
   if (d.whSessx){ WS.session = null; return renderSession(); }
   if (d.whRcvx) return rcvFile(d.whRcvx);
+  if (d.whPrint) return printShips(d.whPrint.split(','));
+  if (d.whListids) return listFile(d.whListids.split(','));
+  if (d.wdDel) return deleteDeliv(d.wdDel);
   if (d.whUndo != null) return undoScan(+d.whUndo);
   if (d.whDet){ WS.detail = WS.detail === d.whDet ? '' : d.whDet; return renderShipDetail(); }
   if (d.whSmart) return smartFile(d.whSmart);
   if (d.whResolve) return resolveShip(d.whResolve);
-  if (d.wdPurchase) return purchaseFile(d.wdPurchase, d.mode || 'list');
+  if (d.wdPurchase) return purchaseFile(d.wdPurchase);
   if (d.wdRep) return renderRecon(WS.repId === d.wdRep && $('#wd-rep').innerHTML ? '' : d.wdRep);
   if (d.wdRepx) return reconFile(d.wdRepx);
-  if (d.wdUpd){ b.disabled = true; try{ await updateList(d.wdUpd); }catch(err){ alertMsg(err); } return renderRecon(d.wdUpd); }
   if (d.wdClose){ if (confirm('Энэ хүргэлтийг хаах уу? (Скан хийхээ больсон үед) Жагсаалтгүй ирсэн бараа жагсаалтад автоматаар нэмэгдэнэ.')){ await flush(); try{ await updateList(d.wdClose, true); }catch(err){ console.warn(err); } await db.doc('deliv/' + d.wdClose).update({status: 'closed', closedAt: new Date().toISOString()}); } return; }
   if (d.wdOpen){ await db.doc('deliv/' + d.wdOpen).update({status: 'active'}); return; }
   if (d.rcOpen || d.rcView){ await rcFlush(); WS.rc = {ship: d.rcOpen || d.rcView, pend: {}, last: []}; $('#rc-msg').textContent = ''; renderRcvCount(); if (d.rcOpen) $('#rc-input').focus(); return; }
@@ -4238,6 +4296,7 @@ document.addEventListener('click', async e => {
 });
 $('#rc-finish').addEventListener('click', rcFinish);
 $('#wh-end').addEventListener('click', endSession);
+$('#wh-arch-d').addEventListener('change', renderArch); $('#wh-arch-all').addEventListener('click', () => { WS.archAll = true; $('#wh-arch-d').value = ''; renderArch(); });
 $('#wh-price-input').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); const v = e.target.value; e.target.value = ''; priceCheck(v); } });
 $$('#rc-f button').forEach(b => b.addEventListener('click', () => { WS.rcF = b.dataset.f; $$('#rc-f button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderRcv(); }));
 $('#rc-close').addEventListener('click', async () => { await rcFlush(); WS.rc = {ship: '', pend: {}, last: []}; renderRcvCount(); });
