@@ -41,7 +41,11 @@ h1{font-size:22px;font-weight:700;margin:0;letter-spacing:-.01em;text-wrap:balan
 .kpi .v{font-family:var(--mono);font-size:20px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px}
 .kpi.bad .v{color:var(--bad)} .kpi.warn .v{color:var(--warn)} .kpi.ok .v{color:var(--ok)}
 .kpi .s{font-size:12px;color:var(--muted);font-family:var(--mono)}
-nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px;overflow-x:auto}
+nav.tabs{display:flex;flex-wrap:wrap;gap:2px 4px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.nav-groups{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}
+.nav-groups button{font:inherit;font-weight:700;border:1px solid var(--line);background:var(--card,#fff);color:var(--muted);border-radius:999px;padding:7px 14px;cursor:pointer}
+.nav-groups button[aria-pressed="true"]{background:var(--fg);color:var(--bg,#fff);border-color:var(--fg)}
+.nav-groups .n{font-family:var(--mono);font-weight:500;font-size:11px;background:var(--bad-soft);color:var(--bad);border-radius:999px;padding:1px 6px;margin-left:6px}
 nav.tabs button{font:inherit;font-weight:600;background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;color:var(--muted);cursor:pointer;white-space:nowrap}
 nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
 nav.tabs .n{font-family:var(--mono);font-weight:500;font-size:11px;background:var(--bad-soft);color:var(--bad);border-radius:999px;padding:1px 6px;margin-left:4px}
@@ -2616,6 +2620,7 @@ function renderInner(){
   try{ renderRs(); }catch(e){ console.warn('rs', e); }
   try{ renderContr(); }catch(e){ console.warn('contr', e); }
   try{ renderChat(); }catch(e){ console.warn('chat', e); }
+  try{ renderNav(); }catch(e){ console.warn('nav', e); }
   try{ renderDaily(); }catch(e){ console.warn('daily', e); }
 }
 function reqCard(r, matches){
@@ -5516,6 +5521,27 @@ $('#ch-q').addEventListener('input', e => { CH.q = e.target.value; renderChat();
 document.addEventListener('visibilitychange', chMarkRead);
 // a chat button under every payment request (count of messages, ● when unread)
 function chatBtn(r){ const c = CH.chats.find(x => x.id === 'req_' + r.id); return `<button class="btn" data-chat-req="${esc(r.id)}" title="Энэ хүсэлтийн чат">💬${c && c.n ? ' ' + c.n : ''}${c && chUnread(c) ? ' <span style="color:var(--bad)">●</span>' : ''}</button>`; }
+// ===================== two-level menu: groups on top, the group's tabs below (wrapping, no sideways scroll) =====================
+const NAV_GROUPS = [['fin', '💰 Санхүү', ['req', 'rqs', 'bank', 'rev', 'cash', 'bal', 'pay', 'contr']], ['rep', '📊 Тайлан', ['daily', 'pl']],
+  ['wh', '📦 Агуулах, дэлгүүр', ['wh', 'rcv', 'inv']], ['chat', '💬 Чат', ['chat']], ['set', '⚙ Тохиргоо', ['set']]];
+const navGrpOf = t => (NAV_GROUPS.find(g => g[2].includes(t)) || NAV_GROUPS[0])[0];
+let NAV_G = '';
+(() => { const nav = document.querySelector('nav.tabs'); if (!nav) return; const bar = document.createElement('div'); bar.className = 'nav-groups'; bar.id = 'nav-groups'; nav.parentNode.insertBefore(bar, nav);
+  bar.addEventListener('click', e => { const b = e.target.closest('button[data-grp]'); if (!b) return; NAV_G = b.dataset.grp;
+    const vis = [...document.querySelectorAll('nav.tabs button')].filter(x => !x.hidden && navGrpOf(x.dataset.tab) === NAV_G);
+    let t = null; try{ t = localStorage.getItem('vivi-tab-' + NAV_G); }catch(err){} const pick = vis.find(x => x.dataset.tab === t) || vis[0]; if (pick) showTab(pick.dataset.tab); else renderNav(); }); })();
+{ const _show = showTab; showTab = function(t){ _show(t); NAV_G = navGrpOf(t); try{ localStorage.setItem('vivi-tab-' + NAV_G, t); }catch(e){} renderNav(); }; }
+function renderNav(){
+  const bar = $('#nav-groups'); if (!bar) return; const btns = [...document.querySelectorAll('nav.tabs button')];
+  const cur = btns.find(b => b.getAttribute('aria-selected') === 'true'); if (!NAV_G) NAV_G = navGrpOf(cur ? cur.dataset.tab : 'req');
+  const groups = NAV_GROUPS.map(([k, label, tabs]) => { const vis = btns.filter(b => !b.hidden && tabs.includes(b.dataset.tab));
+    const n = vis.reduce((a, b) => { const x = b.querySelector('.n'); return a + (x && !x.hidden ? (+String(x.textContent).replace(/\D/g, '') || 0) : 0); }, 0); return {k, label, vis, n}; }).filter(g => g.vis.length);
+  if (!groups.some(g => g.k === NAV_G) && groups[0]) NAV_G = groups[0].k;
+  const html = groups.length > 1 ? groups.map(g => `<button data-grp="${g.k}" aria-pressed="${g.k === NAV_G}">${g.label}${g.n ? `<span class="n">${g.n}</span>` : ''}</button>`).join('') : '';
+  if (bar.innerHTML !== html) bar.innerHTML = html; bar.hidden = groups.length < 2;
+  const g = groups.find(x => x.k === NAV_G); for (const b of btns) b.style.display = g && g.vis.includes(b) ? '' : 'none';
+  const nav = document.querySelector('nav.tabs'); if (nav) nav.style.display = g && g.vis.length > 1 ? '' : 'none';   // a group with one tab (Чат, Тохиргоо) needs no second row
+}
 
 function payUsedLabel(t){                     // bank tab: salary transfers explained by an approved payroll list
   if (!PS.lists.length && !Object.keys(payExempt()).length) return null;
