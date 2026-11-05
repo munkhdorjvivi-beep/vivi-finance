@@ -4128,6 +4128,9 @@ $('#rc-xlsx').addEventListener('click', () => {
 const WS = {cfg: null, delivs: [], active: '', parts: {}, cnt: {}, ships: [], master: null, masterMeta: null, mode: 'scan', shipF: 'act', detail: '',
   pend: {}, pendN: 0, last: [], lastKey: '', lastAt: 0, open: {}, flushing: false, rc: {ship: '', pend: {}, pendN: 0, last: []}, rcF: 'act', priceLast: [], session: null};
 const whCfg = () => WH.cfgOf(WS.cfg);
+// the confirmation word: Latin look-alikes (Y C T A X from a Polish/English keyboard) count as Cyrillic; DELETE / USUN / USTGAH also accepted
+function delWordOk(t){ const m = {Y: 'У', C: 'С', T: 'Т', A: 'А', X: 'Х', B: 'В', E: 'Е', H: 'Н', K: 'К', M: 'М', O: 'О', P: 'Р'}; const u = String(t || '').trim().toUpperCase();
+  return u.replace(/[A-Z]/g, ch => m[ch] || ch) === 'УСТГАХ' || ['DELETE', 'USUN', 'USUŃ', 'USTGAH', 'USTGAKH'].includes(u); }
 // warehouse errors must be visible here (the general message line lives on the requests tab)
 function whErr(err){ console.warn(err); const c = err && err.code || ''; alert((c === 'permission-denied' ? 'Эрх хүрэлцэхгүй байна (Firestore rules). ' : 'Алдаа гарлаа. ') + (c ? '[' + c + '] ' : '') + (err && err.message || err || '')); }
 const fv = () => firebase.firestore.FieldValue;
@@ -4550,7 +4553,7 @@ async function deleteDeliv(id){
   const D = WS.delivs.find(d => d.id === id); if (!D) return; await flush();
   const S2 = WS.ships.filter(s => s.deliv === id), sent = S2.filter(s => s.status !== 'open'), sc = Object.values(totOf(id)).reduce((a, b) => a + b, 0);
   if (sent.length){ alert(`«${D.name}» устгах боломжгүй: ${sent.length} илгээмж дэлгүүр рүү илгээгдсэн. Хүргэлтийг «Хаах» боломжтой.`); return; }
-  if (sc){ const t = prompt(`«${D.name}» хүргэлтэд ${sc} ш скан хийгдсэн байна. Устгавал скан, нээлттэй илгээмж бүгд устана, сэргээх боломжгүй.\n\nБаталгаажуулахын тулд УСТГАХ гэж бичнэ үү:`); if ((t || '').trim().toUpperCase() !== 'УСТГАХ') return; }
+  if (sc){ const t = prompt(`«${D.name}» хүргэлтэд ${sc} ш скан хийгдсэн байна. Устгавал скан, нээлттэй илгээмж бүгд устана, сэргээх боломжгүй.\n\nБаталгаажуулахын тулд УСТГАХ гэж бичнэ үү:`); if (t == null) return; if (!delWordOk(t)){ alert('Баталгаажуулах үг буруу — «УСТГАХ» гэж бичнэ үү (эсвэл DELETE). Устгаагүй.'); return; } }
   else if (!confirm(`«${D.name}» хүргэлтийг (${fmt(D.total)} ш жагсаалт) устгах уу?`)) return;
   // one document at a time: a list part is big (hundreds of indexed fields) and a single batch is refused as «Transaction too big»
   const msg = t => { const el = $('#wd-msg'); if (el) el.textContent = t; };
@@ -4982,7 +4985,7 @@ async function ivExcel(id){
   XLSX.writeFile(wb, `Toollogo_${I.store}_${I.date || ''}.xlsx`);
 }
 async function ivDelete(id){
-  const I = ivOf(id); if (!I) return; const t = prompt(`«${I.name}» тооллогыг бүх скантай нь устгах уу? Сэргээх боломжгүй.\n\nБаталгаажуулахын тулд УСТГАХ гэж бичнэ үү:`); if ((t || '').trim().toUpperCase() !== 'УСТГАХ') return;
+  const I = ivOf(id); if (!I) return; const t = prompt(`«${I.name}» тооллогыг бүх скантай нь устгах уу? Сэргээх боломжгүй.\n\nБаталгаажуулахын тулд УСТГАХ гэж бичнэ үү:`); if (t == null) return; if (!delWordOk(t)){ alert('Баталгаажуулах үг буруу — «УСТГАХ» гэж бичнэ үү (эсвэл DELETE). Устгаагүй.'); return; }
   try{ const z = await db.collection('invz').where('inv', '==', id).get();
     for (const d of z.docs) await db.doc('invz/' + d.id).delete();
     for (let i = 0; i < (I.parts || 0); i++) await db.doc('invpart/' + id + '_' + i).delete();
