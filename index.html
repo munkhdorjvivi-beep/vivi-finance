@@ -330,6 +330,7 @@ body{margin:0;background:var(--bg)}
       <h2>Кассчин — буруу төлбөрийн хэлбэр</h2>
       <p class="note" style="margin:0 0 8px">Тухайн өдөр карт (POS) банкинд X илүү, QPay X дутуу орсон (эсвэл эсрэгээр) бол нэг төлбөрийг буруу хэлбэрээр бүртгэсэн байна. Smart-д ≈X дүнтэй төлбөр оруулсан кассчин: <b>тодорхой</b> = ганц тохирох төлбөр, <b>магадгүй</b> = хэд хэдэн хувилбар эсвэл 2 төлбөр. Дэлгэрэнгүйг Excel-ийн «Кассчин», «Буруу хэлбэр» хуудаснаас.</p>
       <div class="tbl"><table><thead><tr><th>Дэлгүүр</th><th>Кассчин</th><th class="n">Төлбөр</th><th class="n">Өдөр</th><th class="n">Тодорхой</th><th class="n">Магадгүй</th><th class="n">Алдааны дүн</th><th class="n">1000 төлбөрт</th></tr></thead><tbody id="rev-kas"><tr><td colspan="8" class="empty">–</td></tr></tbody></table></div>
+      <div class="note" id="rev-kas-cov" style="margin:6px 0"></div>
       <h3 style="margin:12px 0 6px;font-size:14px">Буруу бүртгэсэн төлбөрүүд</h3>
       <div class="tbl" style="max-height:420px;overflow:auto"><table><thead><tr><th>Өдөр</th><th>Дэлгүүр</th><th>Кассчин</th><th>Цаг</th><th class="n">Дүн</th><th>Smart-д</th><th>Бодитоор</th><th>Итгэл</th></tr></thead><tbody id="rev-kas-err"><tr><td colspan="8" class="empty">–</td></tr></tbody></table></div>
     </div>
@@ -1214,6 +1215,8 @@ const VIVI = (() => {
     const forms = Object.values(F).filter(o => Math.abs(o.smart) + Math.abs(o.bank) > 0).map(o => ({...o, smart:Math.round(o.smart), bank:Math.round(o.bank)})).sort((a,b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
     for (const k in W){ W[k].smart = Math.round(W[k].smart); W[k].bank = Math.round(W[k].bank); }
     const kas = kasCheck(smart.filter(r => inWin(r.d)), forms);
+    { const all = new Set(), wk = new Set(); for (const r of smart){ if (!inWin(r.d) || r.form === 'Бэлнээр') continue; all.add(r.d); if (r.kas) wk.add(r.d); }
+      kas.cov = {days: all.size, withKas: wk.size, miss: [...all].filter(d => !wk.has(d)).sort()}; }
     return {d0, d1, summary, cash, noncash, deposits: allDeps, totals, forms, waterfall: W, kas, nSmart: smart.length, nBank: bank.length};
   }
   // ---------- bank e-mail parser (Khan / Golomt / TDB transfer receipts) ----------
@@ -1355,13 +1358,26 @@ const VIVI = (() => {
     sheets.push({name:'Өдрийн зөрүү (хэлбэрээр)', aoa: dForm, widths:[12,8,22,18,14,14,14,8,60]});
     // --- 2c. cashiers: payments probably entered with the wrong form
     const K = m.kas, kH = [['Дэлгүүр / Sklep', 'Кассчин / Kasjer', 'Төлбөр (тоо) / Płatności', 'Дүн / Kwota', 'Ажилласан өдөр / Dni', 'Буруу хэлбэр — тодорхой / Pewne', 'Буруу хэлбэр — магадгүй / Możliwe', 'Алдааны дүн / Kwota błędów', '1000 төлбөрт / na 1000']];
-    for (const c of K.cashiers) kH.push([c.store, c.kas, c.n, c.sum, c.days, c.sure, c.maybe, c.errAmt, c.per1000]);
+    kH[0].push('Алдаатай өдрүүд / Dni z błędami');
+    for (const c of K.cashiers){ const ed = [...new Set(K.errors.filter(e => e.store === c.store && e.kas === c.kas).map(e => e.d.slice(5)))].join(', ');
+      kH.push([c.store, c.kas, c.n, c.sum, c.days, c.sure, c.maybe, c.errAmt, c.per1000, ed]); }
+    const cov = K.cov || {days: 0, withKas: 0, miss: []};
+    if (!K.cashiers.length) kH.push(['⚠ Кассчны мэдээлэл алга / Brak danych o kasjerach: Smart-ын бэлэн бус төлбөр кассчны нэргүй байна. «Өдрийн тайлан»-д Smart «төлбөрийн хэлбэрээр» тайланг (кассчин, цагтай) оруулах, эсвэл энэ тайланг хуулгатай хамт «Орлогын хяналт»-д оруулна уу.']);
+    kH.push([], ['Кассчны мэдээлэлтэй өдөр / Dni z danymi kasjerów: ' + cov.withKas + ' / ' + cov.days + (cov.miss.length ? ' · дутуу / brak: ' + cov.miss.map(d => d.slice(5)).join(', ') : '')]);
     kH.push([], ['Аргачлал / Metoda: тухайн өдөр карт (POS) банкинд X илүү, QPay X дутуу (эсвэл эсрэгээр) орсон бол нэг төлбөр буруу хэлбэрээр бүртгэгдсэн. Smart-д ≈X дүнтэй төлбөр бүртгэсэн кассчин = «тодорхой» (ганц тохирох төлбөр) эсвэл «магадгүй» (хэд хэдэн хувилбар / 2 төлбөр).']);
-    sheets.push({name:'Кассчин', aoa: kH, widths:[22,22,12,14,10,14,14,14,10]});
-    sheets.push({name:'Буруу хэлбэр', aoa: [['Огноо / Data', 'Гараг', 'Дэлгүүр / Sklep', 'Кассчин / Kasjer', 'Цаг / Godz.', 'Дүн / Kwota', 'Smart-д бүртгэсэн / Wpisano', 'Бодитоор / Faktycznie', 'Зөрүү бодит хэлбэрт', 'Зөрүү бүртгэсэн хэлбэрт', 'Итгэл / Pewność', 'Өөр хувилбар / Inne']]
-      .concat(K.errors.map(e => [e.d, wdOf(e.d), e.store, e.kas, e.t || '', R(e.amt), e.rec, e.real, e.dReal, e.dRec, e.sure ? 'тодорхой' : 'магадгүй', (e.alt || []).join('; ')]))
+    sheets.push({name:'Кассчин', aoa: kH, widths:[22,22,12,14,10,14,14,14,10,30]});
+    sheets.push({name:'Буруу хэлбэр', aoa: [['Огноо / Data', 'Гараг', 'Дэлгүүр / Sklep', 'Кассчин / Kasjer', 'Цаг / Godz.', 'Дүн / Kwota', 'Smart-д бүртгэсэн / Wpisano', 'Бодитоор / Faktycznie', 'Зөрүү бодит хэлбэрт', 'Зөрүү бүртгэсэн хэлбэрт', 'Итгэл / Pewność', 'Өөр хувилбар / Inne', 'Smart-д засах / Poprawka w Smart', 'Нягтлан шалгасан ✓/✗ / Sprawdzone', 'Тайлбар / Uwagi']]
+      .concat(K.errors.map(e => [e.d, wdOf(e.d), e.store, e.kas, e.t || '', R(e.amt), e.rec, e.real, e.dReal, e.dRec, e.sure ? 'тодорхой' : 'магадгүй', (e.alt || []).join('; '), `${e.d} ${e.t || ''} ${R(e.amt)}₮: «${e.rec}» → «${e.real}»`, '', '']))
       .concat([[], ['Тайлбаргүй зөрүү (нэг төлбөрөөр тайлбарлагдаагүй) / Niewyjaśnione'], ['Огноо', 'Гараг', 'Дэлгүүр', 'Тэр өдрийн кассчид', '', '', '', 'Илүү орсон хэлбэр', 'Зөрүү', 'Зөрүү (нөгөө)']])
-      .concat(K.unres.map(u => [u.d, wdOf(u.d), u.store, u.kas, '', '', '', u.real, u.dReal, u.dRec])), widths:[12,8,22,20,10,12,20,18,14,14,12,40]});
+      .concat(K.unres.map(u => [u.d, wdOf(u.d), u.store, u.kas, '', '', '', u.real, u.dReal, u.dRec])), widths:[12,8,22,20,10,12,20,18,14,14,12,40,44,14,30]});
+    // --- 2d. how the accountant checks it, step by step
+    sheets.push({name:'Шалгах заавар', aoa: [['Нягтлан кассчны алдааг хэрхэн шалгах / Jak księgowa sprawdza błędy kasjerów'], [],
+      ['1', '«Буруу хэлбэр» хуудас: «тодорхой» мөрөөс эхэлнэ. Smart-д тухайн өдөр, цаг, дүнгээр төлбөрийг хайж, баримт / POS slip / QPay түүхтэй тулгана.'],
+      ['2', 'Үнэхээр буруу бол Smart-д төлбөрийн хэлбэрийг «Smart-д засах» баганын дагуу засна. «Нягтлан шалгасан» баганад ✓ (буруу байсан) эсвэл ✗ (зөв байсан) тавина.'],
+      ['3', '«магадгүй» мөр: «Өөр хувилбар» баганын бусад төлбөрүүдийг мөн шалгана — аль нэг нь буруу.'],
+      ['4', '«Тайлбаргүй зөрүү» хэсэг: нэг төлбөрөөр тайлбарлагдахгүй — тэр өдрийн кассчдаас асууж, хуулга дутуу эсэхийг шалгана.'],
+      ['5', '«Кассчин» хуудас: 1000 төлбөрт ногдох алдаа өндөр, эсвэл сар бүр давтагддаг кассчинд сургалт / анхааруулга өгнө.'],
+      ['6', 'Засварласны дараа Smart тайланг дахин оруулж хяналтыг шинэчлэхэд зөрүү арилсан байх ёстой.']], widths:[6,140]});
     // --- 3/4. cash rows (with cash registers)
     const kas = {}; for (const r of smart) if (r.form === 'Бэлнээр'){ const k = r.store + '|' + r.d; (kas[k] = kas[k] || {}); kas[k][r.kas || '?'] = (kas[k][r.kas || '?'] || 0) + r.amt; }
     const cashHead = ['Дэлгүүр / Sklep','Борлуулалтын огноо / Data(y)','Гараг / Dzień','Smart бэлэн / Gotówka Smart','Тушаасан / Wpłacono','Тушаасан огноо / Data wpłaty','Зөрүү / Brakuje','Төлөв / Status','Касс (бэлэн) / Kasy','Тушаалтын утга / Opis wpłaty','Тайлбар / Wyjaśnienie'];
@@ -2745,7 +2761,10 @@ function renderRev(){
     + (rows.length > lim.length ? `<tr><td colspan="6" class="empty">… өөр ${rows.length - lim.length} мөр. Дэлгүүр эсвэл хэлбэрээр шүүнэ үү.</td></tr>` : '')
     : '<tr><td colspan="6" class="empty">Зөрүүтэй өдөр алга.</td></tr>';
   { const K = run.kas, st = revStore;
-    if (!K){ $('#rev-kas').innerHTML = '<tr><td colspan="8" class="empty">Энэ хяналтад кассчны шинжилгээ алга — Smart тайлан, хуулгаа дахин оруулж хадгална уу.</td></tr>'; $('#rev-kas-err').innerHTML = ''; }
+    if ((!K || !K.cashiers.length) && run.rawN && !run.pending) refreshRunKas(run);
+    const cov = K && K.cov, covTxt = cov ? `Кассчны мэдээлэлтэй өдөр: ${cov.withKas} / ${cov.days}${cov.miss && cov.miss.length ? ' · дутуу: ' + cov.miss.slice(0, 12).map(d => d.slice(5)).join(', ') + (cov.miss.length > 12 ? '…' : '') : ''}` : '';
+    $('#rev-kas-cov').innerHTML = (covTxt ? esc(covTxt) + ' ' : '') + (run.rawN && !run.pending ? '<button class="btn" id="rev-kas-re" style="padding:4px 10px">↻ Кассчны шинжилгээг шинэчлэх</button>' : '');
+    if (!K){ $('#rev-kas').innerHTML = '<tr><td colspan="8" class="empty">Энэ хяналтад кассчны шинжилгээ алга — «↻ Кассчны шинжилгээг шинэчлэх» дарна уу.</td></tr>'; $('#rev-kas-err').innerHTML = ''; }
     else {
  const C = K.cashiers.filter(c => (!st || c.store === st) && c.store !== '?' && c.n >= 5);
       $('#rev-kas').innerHTML = !K.cashiers.length ? '<tr><td colspan="8" class="empty">Кассчны мэдээлэл алга: энэ хугацааны «Өдрийн тайлан»-д төлбөрийн хэлбэрийн Smart тайланг (кассчинтай) дахин оруулах, эсвэл Smart «төлбөрийн хэлбэрээр» тайланг энд хуулгатай хамт оруулна уу.</td></tr>' : C.length ? C.map(c => `<tr class="${c.sure >= 2 ? 'sev-bad' : c.sure + c.maybe ? 'sev-warn' : ''}"><td>${esc(c.store)}</td><td><b>${esc(c.kas)}</b></td><td class="n">${fmt(c.n)}</td><td class="n">${c.days}</td><td class="n">${c.sure ? `<b style="color:var(--bad)">${c.sure}</b>` : '–'}</td><td class="n">${c.maybe || '–'}</td><td class="n">${c.errAmt ? fmt(c.errAmt) : '–'}</td><td class="n">${c.sure + c.maybe ? c.per1000 : '–'}</td></tr>`).join('') : '<tr><td colspan="8" class="empty">–</td></tr>';
@@ -3011,7 +3030,7 @@ async function runRev(){
   if (fromDaily){ lastFiles.push(fromDaily); $('#cash-filelist').insertAdjacentHTML('beforeend', `<div class="auto"><span class="chip c-ok">✓</span> ${esc(fromDaily.label)} · ${fromDaily.rows.length} мөр</div>`); }
   const m = VIVI.build(lastFiles, {d0, d1});
   if (m.error){ $('#cash-msg').textContent = parsedFiles.some(f => f.type === 'bank') ? (window.REV_DAILY === false ? 'Smart «Борлуулалтын жагсаалт /төлбөрийн хэлбэрээр/» тайланг хуулгатай хамт оруулна уу.' : 'Хуулгын хугацаанд «Өдрийн тайлан»-д төлбөрийн хэлбэрийн өгөгдөл алга — тухайн өдрүүдийн Smart тайланг «Өдрийн тайлан»-д оруулна уу.') : 'Банкны хуулгаа оруулна уу.'; return; }
-  pendingRun = {d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, kas: m.kas ? {cashiers: m.kas.cashiers, errors: m.kas.errors.slice(0, 400), unres: m.kas.unres.slice(0, 200)} : null, accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
+  pendingRun = {d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, kas: m.kas ? {cashiers: m.kas.cashiers, errors: m.kas.errors.slice(0, 400), unres: m.kas.unres.slice(0, 200), cov: m.kas.cov || null} : null, accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
   $('#cash-save').disabled = false; $('#cash-msg').textContent = 'Тооцоолсон. Хадгалбал нягтлан тайлбар бичих боломжтой болно.';
   render();
 }
@@ -3022,6 +3041,27 @@ async function loadKas(a, z){
   if (typeof DR === 'undefined' || !db || !a || !z) return; DR.kas = DR.kas || {};
   const need = []; for (let t = new Date(a + 'T00:00:00Z'); isoU(+t) <= z; t.setUTCDate(t.getUTCDate() + 1)){ const d = isoU(+t); if (!(d in DR.kas)) need.push(d); }
   await Promise.all(need.map(d => db.doc('dailykas/' + d).get().then(x => { DR.kas[d] = x.exists ? x.data().u : null; }).catch(() => { DR.kas[d] = null; })));
+}
+// a saved run keeps the Smart rows it was computed with; the ones taken from «Өдрийн тайлан» are rebuilt so cashiers loaded later count too
+async function freshSmart(files, d0, d1){
+  if (files.some(f => f.type === 'smart' && f.file !== 'Өдрийн тайлан')) return files;
+  const out = files.filter(f => f.type !== 'smart');
+  if (typeof DR !== 'undefined' && DR.kas) for (const d of Object.keys(DR.kas)) if (DR.kas[d] == null) delete DR.kas[d];   // re-ask the days that had nothing
+  await loadKas(d0, d1); const sm = dailySmartFile(out, d0, d1);
+  return sm ? out.concat(sm) : files;
+}
+// recompute and store the cashier analysis of a saved run
+const KAS_TRIED = {};
+async function refreshRunKas(run, manual){
+  if (!run || !run.rawN || !db || (!manual && KAS_TRIED[run.id])) return;
+  if (typeof DR === 'undefined' || !DR.days || !Object.keys(DR.days).some(d => d >= run.d0 && d <= run.d1)) return;   // the daily reports are not loaded yet — try at the next render
+  KAS_TRIED[run.id] = true;
+  try{ const files = await freshSmart(await loadRaw(run.rawN, run.id), run.d0, run.d1); const m = VIVI.build(files, {d0: run.d0, d1: run.d1}); if (m.error || !m.kas) return;
+    const kas = {cashiers: m.kas.cashiers, errors: m.kas.errors.slice(0, 400), unres: m.kas.unres.slice(0, 200), cov: m.kas.cov || null};
+    if (!kas.cashiers.length && !manual) return;
+    if (canWrite){ await db.doc('cashruns/' + run.id).update({kas}); if (S.cash && S.cash.runId === run.id) await db.doc('cash/latest').update({kas}); }
+    run.kas = kas; render();
+  }catch(e){ console.warn('kas refresh', e); }
 }
 function dailySmartFile(files, a0, z0){
   if (typeof DR === 'undefined') return null;
@@ -3141,6 +3181,9 @@ async function loadRaw(n, id){
   let str = ''; for (let i = 0; i < n; i++){ const d = await db.doc(id && id !== 'latest' ? 'cashraw/' + id + '_' + i : 'cash/raw_' + i).get(); if (!d.exists) throw new Error('хадгалсан хуулга дутуу'); str += d.data().part; }
   return JSON.parse(str).map(f => ({...f, rows: f.rows.map(r => typeof r.dt === 'number' ? {...r, dt: new Date(r.dt)} : r)}));
 }
+document.addEventListener('click', async e => { const b = e.target.closest('#rev-kas-re'); if (!b) return; b.disabled = true; b.textContent = 'Шинэчилж байна…';
+  const r = selectedRun(); KAS_TRIED[r && r.id] = false; await refreshRunKas(r, true); const K = r && r.kas;
+  if (K && !K.cashiers.length) alert('Кассчны мэдээлэл олдсонгүй. Энэ хугацааны өдрүүдэд Smart «төлбөрийн хэлбэрээр» тайлан (кассчин, цагтай) «Өдрийн тайлан»-д ороогүй байна — Тохиргоо → «Өгөгдөл импортлох»-оор кассчны түүх (vivi-kasjer…json) оруулах эсвэл өдрийн тайлангуудаа дахин оруулна уу.'); });
 $('#rev-xlsx').addEventListener('click', async () => {
   if (typeof XLSX === 'undefined') return;
   const btn = $('#rev-xlsx'); btn.disabled = true; btn.textContent = 'Бэлтгэж байна…';
@@ -3148,7 +3191,7 @@ $('#rev-xlsx').addEventListener('click', async () => {
   const sr = selectedRun();
   if (!files && sr && sr.rawN){
     try{ files = await loadRaw(sr.rawN, sr.id); d0 = sr.d0; d1 = sr.d1;
-      if (!files.some(f => f.type === 'smart')){ await loadKas(d0, d1); const sm = dailySmartFile(files, d0, d1); if (sm) files.push(sm); } }
+      files = await freshSmart(files, d0, d1); }
     catch(err){ console.warn(err); alert('Хадгалсан хуулгыг уншиж чадсангүй: ' + (err.message || err)); btn.disabled = false; btn.textContent = '📥 Excel тайлан татах'; return; }
   }
   if (!files){ btn.disabled = false; btn.textContent = '📥 Excel тайлан татах'; return; }
@@ -5541,10 +5584,20 @@ async function chFiles(files){
   if (ups.length) await chSend({files: ups});
 }
 // voice: tap 🎤 to record, tap again to send (✕ cancels)
+// where to turn the microphone on — differs per phone/browser
+function chMicHelp(e){
+  const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1), crios = /CriOS/.test(ua), and = /Android/.test(ua), pwa = window.matchMedia && matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  const head = 'Микрофон ашиглах зөвшөөрөл алга' + (e && e.name === 'NotFoundError' ? ' (микрофон олдсонгүй)' : '') + '.\n\n';
+  if (ios && crios) return head + 'iPhone-ийн «Тохиргоо» (Settings) → Chrome → Микрофон-г асаана. Дараа нь хуудсаа дахин ачаалаад 🎤 дарж «Зөвшөөрөх» сонгоно.';
+  if (ios) return head + (pwa ? 'iPhone «Тохиргоо» (Settings) → Apps → Safari → Микрофон → «Асуух» эсвэл «Зөвшөөрөх». Дараа нь апп-аа хааж дахин нээгээд 🎤 дарж «Зөвшөөрөх» сонгоно.'
+    : 'Safari-ийн хаягийн мөрний зүүн талын «аА» (эсвэл ⋯) → «Вэбсайтын тохиргоо» (Website Settings) → Микрофон → «Зөвшөөрөх».\nЭсвэл iPhone «Тохиргоо» → Apps → Safari → Микрофон → «Асуух».\nДараа нь хуудсаа дахин ачаалаад 🎤 дарна.');
+  if (and) return head + 'Chrome-ийн хаягийн мөрний зүүн талын тэмдэг (⚙/🔒) → Зөвшөөрөл → Микрофон → «Зөвшөөрөх». Хэрэв тэнд асаалттай бол утасны «Тохиргоо» → Апп → Chrome → Зөвшөөрөл → Микрофон.';
+  return head + 'Хаягийн мөрний 🔒 дээр дарж «Микрофон — Зөвшөөрөх» болгоод хуудсаа дахин ачаална уу.';
+}
 async function chMic(){
   if (CH.rec){ CH.rec.stop(); return; }
   if (!navigator.mediaDevices || !window.MediaRecorder){ alert('Энэ төхөөрөмж дуу бичихийг дэмжихгүй байна.'); return; }
-  let stream; try{ stream = await navigator.mediaDevices.getUserMedia({audio: true}); }catch(e){ alert('Микрофон ашиглах зөвшөөрөл алга. Хөтчийн хаягийн мөрний 🔒 дээр дарж «Микрофон — Зөвшөөрөх» болгоод дахин оролдоно уу.'); return; }
+  let stream; try{ stream = await navigator.mediaDevices.getUserMedia({audio: true}); }catch(e){ alert(chMicHelp(e)); return; }
   const type = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'].find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
   let rec; try{ rec = new MediaRecorder(stream, type ? {mimeType: type, audioBitsPerSecond: 24000} : {}); }catch(e){ rec = new MediaRecorder(stream); }
   const chunks = [], t0 = Date.now(); CH.rec = rec; CH.recCancel = false;
@@ -5677,6 +5730,7 @@ $('#imp-file').addEventListener('change', async e => {
     for (const [col, docs] of Object.entries(data)) for (const [id, d] of Object.entries(docs)){
       if (!/^[A-Za-z0-9_-]+$/.test(col) || !/^[A-Za-z0-9_.:@+-]+$/.test(id)) continue;
       if (col === 'daily'){ d.by = me; d.ownerNotified = true; }   // history import: no push per day
+      if (col === 'dailykas') d.by = me;   // the rules want the writer's own uid
       await db.collection(col).doc(id).set(d); n++; if (n % 20 === 0) $('#imp-msg').textContent = `Импортолж байна… ${n}`;
     }
     $('#imp-msg').textContent = `${n} бичлэг орлоо.`;
