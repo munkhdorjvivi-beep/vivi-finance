@@ -326,6 +326,13 @@ body{margin:0;background:var(--bg)}
       <div class="tbl"><table><thead><tr><th>Өдөр</th><th>Дэлгүүр</th><th>Хэлбэр</th><th class="n">Smart</th><th class="n">Банк</th><th class="n">Зөрүү</th></tr></thead><tbody id="rev-days"><tr><td colspan="6" class="empty">–</td></tr></tbody></table></div>
       <p class="note" style="margin:8px 0 0">Бэлэн мөнгийг тушаасан өдрөөр, картыг хаалтын өдрөөр, QPay/шилжүүлгийг орсон өдрөөр харуулна. Бэлэн мөнгө хэд хоногоор нийлж тушаагддаг тул бэлэн мөнгөний дэлгэрэнгүйг «Бэлэн мөнгө» хэсгээс харна.</p>
     </div>
+    <div class="card" id="rev-exp-card">
+      <h2>Зөрүү яагаад гарсан бэ</h2>
+      <p class="note" style="margin:0 0 8px">Өдөр × дэлгүүр × хэлбэр бүрийн зөрүүг систем өөрөө тайлбарлана: өөр дэлгүүрийн дансанд орсон (гүйлгээний утгаар нотолно), карт ↔ QPay андуурсан, хаалт өөр өдөр орсон, Smart-д бэлэн гэж бүртгэсэн шилжүүлэг, хуулга дутуу. Үлдсэнийг нягтлан шалгана.</p>
+      <div class="tbl"><table><thead><tr><th>Хэлбэр</th><th class="n">Зөрүү</th><th>Юунаас</th></tr></thead><tbody id="rev-exp-sum"><tr><td colspan="3" class="empty">–</td></tr></tbody></table></div>
+      <div class="note" id="rev-exp-credit" style="margin:8px 0"></div>
+      <div class="tbl" style="max-height:420px;overflow:auto"><table><thead><tr><th>Өдөр</th><th>Шалтгаан</th><th class="n">Дүн</th><th>Тайлбар</th></tr></thead><tbody id="rev-exp-list"><tr><td colspan="4" class="empty">–</td></tr></tbody></table></div>
+    </div>
     <div class="card" id="rev-kas-card">
       <h2>Кассчин — буруу төлбөрийн хэлбэр</h2>
       <p class="note" style="margin:0 0 8px">Тухайн өдөр карт (POS) банкинд X илүү, QPay X дутуу орсон (эсвэл эсрэгээр) бол нэг төлбөрийг буруу хэлбэрээр бүртгэсэн байна. Smart-д ≈X дүнтэй төлбөр оруулсан кассчин: <b>тодорхой</b> = ганц тохирох төлбөр, <b>магадгүй</b> = хэд хэдэн хувилбар эсвэл 2 төлбөр. Дэлгэрэнгүйг Excel-ийн «Кассчин», «Буруу хэлбэр» хуудаснаас.</p>
@@ -1196,7 +1203,7 @@ const VIVI = (() => {
       totals[c.ch] = (totals[c.ch]||0) + t.cr;
       const d = iso(t.dt);
       if (c.ch === 'cash'){ if (d >= d0 && d <= addDays(d1,1)){ (deposits[c.store] = deposits[c.store] || []).push({d, dt:t.dt, cr:t.cr, desc:t.desc, acc:t.acc}); W.cash.bank += t.cr; } }
-      else if (['pos','qpay','transfer'].includes(c.ch) && c.sd && inWin(c.sd)){ const k = c.store+'|'+c.sd; ncBank[k] = (ncBank[k]||0) + c.g; ncBankRows.push({...c, acc:t.acc, cr:t.cr}); const fc = c.ch === 'pos' ? 'pos' : 'qpay'; W[fc].bank += c.g; fAdd(c.store, c.sd, fc, 'bank', c.g); }
+      else if (['pos','qpay','transfer'].includes(c.ch) && c.sd && inWin(c.sd)){ const k = c.store+'|'+c.sd; ncBank[k] = (ncBank[k]||0) + c.g; ncBankRows.push({...c, acc:t.acc, cr:t.cr, desc:t.desc}); const fc = c.ch === 'pos' ? 'pos' : 'qpay'; W[fc].bank += c.g; fAdd(c.store, c.sd, fc, 'bank', c.g); }
       else if ((c.ch === 'storepay' || c.ch === 'pocket') && inWin(d)) W.credit.bank += t.cr;
     }
     const stores = [...new Set([...Object.keys(cashSales), ...Object.keys(deposits)])];
@@ -1217,7 +1224,72 @@ const VIVI = (() => {
     const kas = kasCheck(smart.filter(r => inWin(r.d)), forms);
     { const all = new Set(), wk = new Set(); for (const r of smart){ if (!inWin(r.d) || r.form === 'Бэлнээр') continue; all.add(r.d); if (r.kas) wk.add(r.d); }
       kas.cov = {days: all.size, withKas: wk.size, miss: [...all].filter(d => !wk.has(d)).sort()}; }
-    return {d0, d1, summary, cash, noncash, deposits: allDeps, totals, forms, waterfall: W, kas, nSmart: smart.length, nBank: bank.length};
+    const explain = explainDiffs({d0, d1, forms, smart, bank, ncBankRows, cash, W, kas});
+    return {d0, d1, summary, cash, noncash, deposits: allDeps, totals, forms, waterfall: W, kas, explain, nSmart: smart.length, nBank: bank.length};
+  }
+  // ---------- why the forms differ: every day × store × form difference gets a reason ----------
+  // words customers write in the transfer description → which shop (a pop-up's money often lands on a regular shop's account)
+  const STORE_KW = {'Дархан / Сандэй плаза': /dar?k?h?an|дархан|darxan|sunday|сандэй/i, 'Драгон': /dragon|драгон/i, 'Food city': /food ?city|фүүд/i, 'Онлайн дэлгүүр': /online|онлайн/i};
+  const EXP_KIND = {nostore: 'Дэлгүүрт хуваарилагдаагүй данс', nostmt: 'Хуулга ороогүй / дутуу', mix: 'Карт ↔ QPay андуурсан (Smart-д буруу хэлбэр)', cross: 'Өөр дэлгүүрийн дансанд орсон',
+    shift: 'Өөр өдөр орсон (хаалтын хоцролт)', cashx: 'Smart-д бэлэн, бодитоор шилжүүлэг', left: 'Тайлбаргүй — шалгах'};
+  function explainDiffs(o){
+    const {d0, d1, forms, smart, bank, ncBankRows, cash, W, kas} = o, R0 = v => Math.round(v), F = v => R0(v).toLocaleString('ru-RU').replace(/,/g, ' ');
+    const CHN = {pos: 'карт', qpay: 'QPay/шилжүүлэг'}, items = [], cell = {};
+    const sStores = new Set(smart.map(r => r.store));
+    for (const f of forms) if (f.ch === 'pos' || f.ch === 'qpay'){ const k = f.store + '|' + f.d + '|' + f.ch; cell[k] = {store: f.store, d: f.d, ch: f.ch, smart: f.smart, bank: f.bank, r: f.bank - f.smart}; }
+    const C = Object.values(cell), thr = c => Math.max(3000, Math.abs(c.smart) * 0.004), live = c => Math.abs(c.r) > thr(c);
+    const take = (c, v) => { c.r -= v; return v; };
+    const add = (kind, parts, text, conf, extra) => items.push({kind, parts: parts.map(([c, v]) => ({store: c.store, d: c.d, ch: c.ch, v: R0(v)})), amt: R0(Math.max(...parts.map(([, v]) => Math.abs(v)))), text, conf, d: parts[0][0].d, ...(extra || {})});
+    // statement coverage per shop (its accounts' first/last statement day)
+    const cov = {}; for (const t of bank){ const st = ACC_STORE[t.acc]; if (!st) continue; const d = iso(t.dt); const c2 = cov[st] = cov[st] || [d, d]; if (d < c2[0]) c2[0] = d; if (d > c2[1]) c2[1] = d; }
+    // 0) money on an account that belongs to no selling shop
+    { const G = {}; for (const c of C) if (live(c) && (!sStores.has(c.store) || c.store === '?') && c.smart === 0) (G[c.store] = G[c.store] || []).push([c, take(c, c.r)]);
+      for (const [st, P] of Object.entries(G)){ const tot = P.reduce((a, [, v]) => a + v, 0), ds = P.map(([c]) => c.d).sort();
+        add('nostore', P, `${st}: ${P.length} өдөр (${ds[0].slice(5)} – ${ds.at(-1).slice(5)}) нийт ${F(tot)}₮ орсон, Smart-д энэ нэрээр борлуулалт алга — аль дэлгүүрийнх болохыг тодруулах (онлайн / поп-ап?)`, 'тодорхой', {amt: R0(Math.abs(tot)), d: ds[0]}); } }
+    // 1) statement missing: nothing in the bank for that shop after the sale day
+    for (const c of C) if (live(c) && c.r < 0 && c.bank === 0){ const ended = !cov[c.store] || cov[c.store][1] <= c.d, v = take(c, c.r);
+      add('nostmt', [[c, v]], `${c.d} ${c.store}: ${CHN[c.ch]} ${F(-v)}₮ банкинд огт харагдахгүй — ${!cov[c.store] ? 'энэ дэлгүүрийн хуулга ороогүй' : ended ? 'хуулга ' + cov[c.store][1] + '-нд дууссан' : 'тэр өдрийн ' + CHN[c.ch] + ' орох дансны хуулга дутуу байж магадгүй (бүх дансны хуулгыг оруулсан эсэхийг шалгах)'}`, ended ? 'тодорхой' : 'магадгүй'); }
+    // 2) one shop, one day: card short and QPay over (or the reverse) by the same money → the form was chosen wrongly in Smart
+    const kasBy = {}; for (const e of (kas && kas.errors) || []) (kasBy[e.store + '|' + e.d] = kasBy[e.store + '|' + e.d] || []).push(e);
+    for (const c of C){ if (c.ch !== 'pos') continue; const q = cell[c.store + '|' + c.d + '|qpay']; if (!q || !live(c) || !live(q) || Math.sign(c.r) === Math.sign(q.r)) continue;
+      const x = Math.min(Math.abs(c.r), Math.abs(q.r)); if (x < Math.max(thr(c), thr(q))) continue;
+      const neg = c.r < 0 ? c : q, pos = neg === c ? q : c, a = take(neg, -x), b = take(pos, x), K = kasBy[c.store + '|' + c.d] || [];
+      add('mix', [[neg, a], [pos, b]], `${c.d} ${c.store}: ${CHN[neg.ch]} ${F(-a)}₮ дутуу, ${CHN[pos.ch]} ${F(b)}₮ илүү → Smart-д ${CHN[pos.ch]}-ийг ${CHN[neg.ch]} гэж бүртгэсэн` + (K.length ? ` (кассчин: ${[...new Set(K.map(e => e.kas))].join(', ')})` : ''), Math.abs(c.r + q.r) <= x * 0.25 ? 'тодорхой' : 'магадгүй'); }
+    // 3) same day, two shops: one short, the other over → the money went to the other shop's account (description words prove it)
+    const kwEv = (from, to, d) => { const re = STORE_KW[from]; if (!re) return null; const L = ncBankRows.filter(r => r.store === to && (r.sd === d || r.sd === addDays(d, 1)) && re.test(String(r.desc || ''))); return L.length ? {n: L.length, sum: R0(L.reduce((s2, r) => s2 + r.cr, 0)), ex: String(L[0].desc).slice(0, 40)} : null; };
+    for (let pass = 0; pass < 2; pass++) for (const n of C.filter(live).filter(c => c.r < 0).sort((a, b) => a.r - b.r)){
+      for (const p of C.filter(c => live(c) && c.r > 0 && c.store !== n.store && (c.d === n.d || pass && c.d === addDays(n.d, 1))).sort((a, b) => b.r - a.r)){
+        if (!live(n)) break; const ev = kwEv(n.store, p.store, n.d), x = Math.min(-n.r, p.r);
+        if (!ev && (pass || Math.abs(n.r + p.r) > 0.25 * x || x < 50000)) continue;
+        const a = take(n, -x), b = take(p, x);
+        add('cross', [[n, a], [p, b]], `${n.d} ${n.store} ${CHN[n.ch]} ${F(-a)}₮ дутуу, ${p.store} ${CHN[p.ch]} ${F(b)}₮ илүү → ${n.store}-ийн худалдан авагчид ${p.store}-ийн данс руу төлсөн` + (ev ? ` (утгад «${ev.ex}» гэх мэт ${ev.n} гүйлгээ, ${F(ev.sum)}₮)` : ''), ev ? 'тодорхой' : 'магадгүй'); } }
+    // 4) same shop and form, the next 1–3 days: short today, over tomorrow → settled late (weekend, holiday)
+    for (const c of C.filter(live).sort((a, b) => a.d < b.d ? -1 : 1)) for (let k = 1; k <= 3 && live(c); k++){
+      const n2 = cell[c.store + '|' + addDays(c.d, k) + '|' + c.ch]; if (!n2 || !live(n2) || Math.sign(n2.r) === Math.sign(c.r)) continue;
+      const x = Math.min(Math.abs(c.r), Math.abs(n2.r)), a = take(c, Math.sign(c.r) * x), b = take(n2, Math.sign(n2.r) * x);
+      add('shift', [[c, a], [n2, b]], `${c.store} ${CHN[c.ch]}: ${c.d}-нд ${a < 0 ? 'дутуу' : 'илүү'} ${F(Math.abs(a))}₮, ${n2.d}-нд ${b < 0 ? 'дутуу' : 'илүү'} ${F(Math.abs(b))}₮ → хаалт өөр өдөр орсон (зөрүү биш)`, 'тодорхой'); }
+    // 5) a shop with cash in Smart but no cash deposit at all, and transfers nobody recorded → payments by transfer entered as cash
+    const cashBy = {}; for (const g of cash || []){ const o2 = cashBy[g.store] = cashBy[g.store] || {smart: 0, dep: 0}; o2.smart += g.smart || 0; o2.dep += g.dep || 0; }
+    for (const [st, o2] of Object.entries(cashBy)){ if (o2.dep > 0 || o2.smart <= 0) continue; const Q = C.filter(c => c.store === st && live(c) && c.r > 0); const over = Q.reduce((s2, c) => s2 + c.r, 0); if (!over) continue;
+      const x = Math.min(over, o2.smart); let left = x; const parts = []; for (const c of Q){ if (left <= 0) break; const v = Math.min(c.r, left); take(c, v); left -= v; parts.push([c, v]); }
+      add('cashx', parts, `${st}: Smart-д бэлэн ${F(o2.smart)}₮ бүртгэсэн ч бэлэн тушаалт огт алга, харин банкинд бүртгээгүй шилжүүлэг ${F(over)}₮ орсон → шилжүүлгээр төлснийг «бэлэн» гэж бүртгэсэн (≈${F(x)}₮)`, Math.abs(over - o2.smart) <= 0.2 * x ? 'тодорхой' : 'магадгүй', {cash: R0(x), amt: R0(x), d: d0}); }
+    // 6) whatever is left
+    for (const c of C) if (live(c)){ const v = take(c, c.r); add('left', [[c, v]], `${c.d} ${c.store}: ${CHN[c.ch]} банкинд ${v < 0 ? 'дутуу' : 'илүү'} ${F(Math.abs(v))}₮ — тайлбаргүй. Тухайн өдрийн Smart төлбөр, хуулгыг тулгаж шалгах`, 'шалгах'); }
+    // per form: how much of the difference each reason explains
+    const byForm = {}; for (const ch of ['pos', 'qpay']){ const b2 = byForm[ch] = {diff: R0(forms.filter(f => f.ch === ch).reduce((s2, f) => s2 + f.bank - f.smart, 0)), parts: {}}; }
+    for (const it of items) for (const p of it.parts) if (byForm[p.ch]) byForm[p.ch].parts[it.kind] = (byForm[p.ch].parts[it.kind] || 0) + p.v;
+    // tiny differences below the threshold
+    for (const ch of ['pos', 'qpay']){ const b2 = byForm[ch], ex = Object.values(b2.parts).reduce((a, v) => a + v, 0); b2.small = b2.diff - ex; }
+    // credit (StorePay / Pocket): what came in during the period and right after it
+    const crIn = (a, z) => bank.filter(t => { const c2 = classifyCredit(t); const d = iso(t.dt); return c2 && (c2.ch === 'storepay' || c2.ch === 'pocket') && d >= a && d <= z; }).reduce((s2, t) => s2 + t.cr, 0);
+    const lastBank = bank.length ? iso(new Date(Math.max(...bank.map(t => +t.dt)))) : d1, after = crIn(addDays(d1, 1), addDays(d1, 5));
+    const credit = {smart: R0(W.credit.smart), bank: R0(W.credit.bank), diff: R0(W.credit.bank - W.credit.smart), after: R0(after), lastBank,
+      text: [!W.credit.bank && W.credit.smart ? 'StorePay/Pocket-ын нэг ч төлбөр хуулгад алга — тэдгээр орох дансны (TDB 405095875, Хаан 5224167095, Голомт 5175306931…) хуулга ороогүй байна.' : '', `Smart-д зээлээр ${F(W.credit.smart)}₮, тухайн хугацаанд StorePay/Pocket-оос ${F(W.credit.bank)}₮ орсон (зөрүү ${F(W.credit.bank - W.credit.smart)}₮).`,
+        after ? `Хугацааны дараах 5 хоногт дахиад ${F(after)}₮ орсон — сүүлийн өдрүүдийн зээлийн төлбөр сарын дараа ордог.` : (lastBank <= addDays(d1, 2) ? `Хуулга ${lastBank}-нд дууссан тул сүүлийн өдрүүдийн StorePay/Pocket төлбөр хараахан харагдахгүй.` : ''),
+        lastBank < addDays(d1, 2) ? 'Үлдсэн зөрүүг хуулга бүрэн орсны дараа дүгнэнэ.' : W.credit.smart ? `Үлдсэн ${F(Math.max(0, W.credit.smart - W.credit.bank - after))}₮ (${(Math.max(0, W.credit.smart - W.credit.bank - after) / W.credit.smart * 100).toFixed(1)}%) — StorePay/Pocket-ын шимтгэл эсвэл Smart-д «Зээлээр» гэж бүртгэсэн бусад төлбөр. StorePay-ын тайлантай тулгаж шалгах.` : ''].filter(Boolean)};
+    if (!W.credit.bank) credit.text = credit.text.slice(0, 2);
+    items.sort((a, b) => b.amt - a.amt);
+    return {items, byForm, credit, kinds: EXP_KIND};
   }
   // ---------- bank e-mail parser (Khan / Golomt / TDB transfer receipts) ----------
   // returns: null = not a completed outgoing transfer (skip); {doc} = parsed; {doc, unparsed:true} = looks like a transfer but failed
@@ -1324,9 +1396,12 @@ const VIVI = (() => {
     const sheets = [];
     // --- 1. summary
     const W = m.waterfall, sum = [['VIVI – орлогын хяналт / kontrola przychodów'], [`Хугацаа / Okres: ${m.d0} – ${m.d1} · Smart мөр: ${m.nSmart} · банкны гүйлгээ: ${bank.length}`], [],
-      ['Төлбөрийн хэлбэр / Forma', 'Smart', 'Банкинд орсон / Bank', 'Зөрүү / Różnica', '%']];
-    let ts = 0, tb = 0;
-    for (const k of ['cash','pos','qpay','credit']){ const s = W[k].smart, b = W[k].bank; ts += s; tb += b; sum.push([CH_TXT[k], s, b, b - s, s ? +((b - s) / s).toFixed(4) : '']); }
+      ['Төлбөрийн хэлбэр / Forma', 'Smart', 'Банкинд орсон / Bank', 'Зөрүү / Różnica', '%', 'Яагаад / Dlaczego (дэлгэрэнгүй «Зөрүүний тайлбар»)']];
+    let ts = 0, tb = 0; const EX = m.explain, fM = v => (Math.abs(v) >= 1e9 ? (v / 1e9).toFixed(2).replace('.', ',') + ' mld' : Math.round(v).toLocaleString('ru-RU').replace(/,/g, ' ')) + '₮';
+    const whyF = k => { if (!EX) return ''; if (k === 'credit') return EX.credit.text.slice(1).join(' ');
+      if (k === 'cash'){ const cx = EX.items.filter(i => i.kind === 'cashx'); const miss = m.summary.reduce((a, x) => a + (x.missAmt || 0), 0); return [miss ? 'тушаагаагүй өдрүүд ' + fM(miss) + ' («Бэлэн – тайлбар авах»)' : '', ...cx.map(i => i.parts[0].store + ': Smart-д бэлэн, бодитоор шилжүүлэг ≈' + fM(i.cash))].filter(Boolean).join('; '); }
+      const B = EX.byForm[k]; if (!B) return ''; return Object.entries(B.parts).filter(([, v]) => Math.abs(v) >= 1000).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).map(([kk, v]) => EX.kinds[kk] + ' ' + (v > 0 ? '+' : '') + fM(v)).join('; '); };
+    for (const k of ['cash','pos','qpay','credit']){ const s = W[k].smart, b = W[k].bank; ts += s; tb += b; sum.push([CH_TXT[k], s, b, b - s, s ? +((b - s) / s).toFixed(4) : '', whyF(k)]); }
     sum.push(['Нийт / Razem', ts, tb, tb - ts, ts ? +((tb - ts) / ts).toFixed(4) : '']);
     sum.push([], ['Дэлгүүр / Sklep', 'Smart бэлэн бус / bezgotówka', 'Банк бэлэн бус / Bank', 'Зөрүү / Różnica', 'Smart бэлэн / Gotówka', 'Тушаасан / Wpłacono', 'Бэлэн зөрүү / Brak gotówki', 'Тушаагаагүй өдөр / Dni bez wpłaty', 'Тушаагаагүй дүн / Kwota']);
     for (const s of m.summary) sum.push([s.store, R(s.ncSmart), R(s.ncBank), R(s.ncBank - s.ncSmart), R(s.smartCash), R(s.dep), R(s.smartCash - s.dep), s.missDays, R(s.missAmt)]);
@@ -1337,7 +1412,16 @@ const VIVI = (() => {
     Object.entries(byCat).sort((a,b) => b[1][0] - a[1][0]).forEach(([k,v]) => sum.push([CAT[k], R(v[0]), v[1]]));
     const loansIn = bank.filter(t => t.cr > 0 && inWin(t) && classifyCredit(t) && classifyCredit(t).ch === 'loan');
     sum.push([], ['Авсан зээл / Otrzymane kredyty', R(loansIn.reduce((s,t) => s + t.cr, 0)), loansIn.length]);
-    sheets.push({name:'Хураангуй', aoa: sum, widths:[38,18,18,16,16,16,18,16,16]});
+    sheets.push({name:'Хураангуй', aoa: sum, widths:[38,18,18,16,16,60,18,16,16]});
+    // --- 1b. why: every difference with its reason
+    if (EX){ const KO = ['cross', 'mix', 'cashx', 'nostore', 'nostmt', 'shift', 'left'], ex = [['Зөрүү яагаад гарсан бэ / Skąd różnice'], [],
+        ['Хэлбэр / Forma', 'Нийт зөрүү / Różnica', ...KO.map(k => EX.kinds[k]), 'Жижиг (босгоос доош) / Drobne']];
+      for (const k of ['pos', 'qpay']){ const B = EX.byForm[k]; ex.push([CH_TXT[k], B.diff, ...KO.map(kk => B.parts[kk] ? R(B.parts[kk]) : ''), R(B.small)]); }
+      ex.push([], ['Зээл (StorePay, Pocket) / Kredyt'], ...EX.credit.text.map(t => [t]));
+      ex.push([], ['Дэлгэрэнгүй (томоос нь) / Szczegóły', '', '', '', '', '', ''], ['Огноо / Data', 'Шалтгаан / Przyczyna', 'Дүн / Kwota', 'Итгэл / Pewność', 'Тайлбар / Wyjaśnienie', 'Нягтлан шалгасан ✓/✗', 'Тэмдэглэл / Uwagi']);
+      for (const i of EX.items.filter(i => i.kind !== 'shift' || i.amt >= 500000)) ex.push([i.d, EX.kinds[i.kind], i.amt, i.conf, i.text, '', '']);
+      ex.push([], ['Аргачлал: өдөр × дэлгүүр × хэлбэр бүрийн зөрүүг дарааллаар нь тайлбарлана — 1) Smart-д борлуулалтгүй данс, 2) хуулга ороогүй өдөр, 3) нэг дэлгүүрт карт ↔ QPay андуурсан, 4) өөр дэлгүүрийн дансанд орсон (гүйлгээний утгын үгээр нотолно: darhan, dragon…), 5) хаалт дараагийн өдөр орсон, 6) Smart-д бэлэн гэж бүртгэсэн шилжүүлэг. Үлдсэнийг «Тайлбаргүй — шалгах».']);
+      sheets.push({name:'Зөрүүний тайлбар', aoa: ex, widths:[12,34,14,12,110,14,30]}); }
     // --- 2. stores by day
     const sd = {}; for (const f of m.forms){ const k = f.store + '|' + f.d; const o = sd[k] = sd[k] || {store: f.store, d: f.d, ns:0, nb:0, cs:0, cb:0}; if (f.ch === 'cash'){ o.cs += f.smart; o.cb += f.bank; } else { o.ns += f.smart; o.nb += f.bank; } }
     const daily = [['Дэлгүүр / Sklep','Огноо / Data','Гараг / Dzień','Smart бэлэн бус','Банк бэлэн бус','Зөрүү / Różnica','%','Smart бэлэн / Gotówka','Тушаасан / Wpłaty','Хуримтлагдсан тушаагаагүй / Narastająco']];
@@ -1348,7 +1432,9 @@ const VIVI = (() => {
     sheets.push({name:'Дэлгүүр өдрөөр', aoa: daily, widths:[24,12,8,16,16,14,8,14,14,18]});
     // --- 2b. the same day differences as on the screen: store × day × form
     const KF = {}; for (const e of m.kas.errors) KF[e.store + '|' + e.d] = (KF[e.store + '|' + e.d] || []).concat(e);
+    const XC = {}; if (m.explain) for (const i of m.explain.items) for (const p of i.parts) (XC[p.store + '|' + p.d + '|' + p.ch] = XC[p.store + '|' + p.d + '|' + p.ch] || []).push(m.explain.kinds[i.kind] + (i.conf !== 'тодорхой' ? ' (' + i.conf + ')' : '') + ': ' + (p.v > 0 ? '+' : '') + Math.round(p.v).toLocaleString('ru-RU').replace(/,/g, ' '));
     const CHD = {cash: 'Бэлэн / Gotówka', pos: 'Карт / Karta', qpay: 'QPay + шилжүүлэг'}, why = (f, dd) => { const t = Math.max(3000, f.smart * 0.004); if (Math.abs(dd) <= t) return 'Тохирсон / OK';
+      if (XC[f.store + '|' + f.d + '|' + f.ch]) return XC[f.store + '|' + f.d + '|' + f.ch].join('; ');
       const e = (KF[f.store + '|' + f.d] || []).find(x => x.real === CH_NAME[f.ch] || x.rec && smartCh({form: x.rec === 'Бэлэн' ? 'Бэлнээр' : '', bank: x.rec}) === f.ch);
       if (e) return `Буруу хэлбэр: ${e.kas} ${Math.round(e.amt)}₮ «${e.rec}» → ${e.real}${e.sure ? '' : ' (магадгүй)'}`;
       return f.ch === 'cash' ? 'Тушаалтын өдрөөр (бэлэн)' : dd < 0 ? 'Банкинд дутуу орсон / mniej w banku' : 'Банкинд илүү орсон / więcej w banku'; };
@@ -2761,7 +2847,8 @@ function renderRev(){
     + (rows.length > lim.length ? `<tr><td colspan="6" class="empty">… өөр ${rows.length - lim.length} мөр. Дэлгүүр эсвэл хэлбэрээр шүүнэ үү.</td></tr>` : '')
     : '<tr><td colspan="6" class="empty">Зөрүүтэй өдөр алга.</td></tr>';
   { const K = run.kas, st = revStore;
-    if ((!K || !K.cashiers.length) && run.rawN && !run.pending) refreshRunKas(run);
+    if ((!K || !K.cashiers.length || !run.explain) && run.rawN && run !== pendingRun) refreshRunKas(run);
+    renderExp(run, st);
     const cov = K && K.cov, covTxt = cov ? `Кассчны мэдээлэлтэй өдөр: ${cov.withKas} / ${cov.days}${cov.miss && cov.miss.length ? ' · дутуу: ' + cov.miss.slice(0, 12).map(d => d.slice(5)).join(', ') + (cov.miss.length > 12 ? '…' : '') : ''}` : '';
     $('#rev-kas-cov').innerHTML = (covTxt ? esc(covTxt) + ' ' : '') + (run.rawN && !run.pending ? '<button class="btn" id="rev-kas-re" style="padding:4px 10px">↻ Кассчны шинжилгээг шинэчлэх</button>' : '');
     if (!K){ $('#rev-kas').innerHTML = '<tr><td colspan="8" class="empty">Энэ хяналтад кассчны шинжилгээ алга — «↻ Кассчны шинжилгээг шинэчлэх» дарна уу.</td></tr>'; $('#rev-kas-err').innerHTML = ''; }
@@ -3030,7 +3117,7 @@ async function runRev(){
   if (fromDaily){ lastFiles.push(fromDaily); $('#cash-filelist').insertAdjacentHTML('beforeend', `<div class="auto"><span class="chip c-ok">✓</span> ${esc(fromDaily.label)} · ${fromDaily.rows.length} мөр</div>`); }
   const m = VIVI.build(lastFiles, {d0, d1});
   if (m.error){ $('#cash-msg').textContent = parsedFiles.some(f => f.type === 'bank') ? (window.REV_DAILY === false ? 'Smart «Борлуулалтын жагсаалт /төлбөрийн хэлбэрээр/» тайланг хуулгатай хамт оруулна уу.' : 'Хуулгын хугацаанд «Өдрийн тайлан»-д төлбөрийн хэлбэрийн өгөгдөл алга — тухайн өдрүүдийн Smart тайланг «Өдрийн тайлан»-д оруулна уу.') : 'Банкны хуулгаа оруулна уу.'; return; }
-  pendingRun = {d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, kas: m.kas ? {cashiers: m.kas.cashiers, errors: m.kas.errors.slice(0, 400), unres: m.kas.unres.slice(0, 200), cov: m.kas.cov || null} : null, accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
+  pendingRun = {d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, kas: m.kas ? {cashiers: m.kas.cashiers, errors: m.kas.errors.slice(0, 400), unres: m.kas.unres.slice(0, 200),  cov: m.kas.cov || null} : null, explain: trimExp(m.explain), accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
   $('#cash-save').disabled = false; $('#cash-msg').textContent = 'Тооцоолсон. Хадгалбал нягтлан тайлбар бичих боломжтой болно.';
   render();
 }
@@ -3052,16 +3139,27 @@ async function freshSmart(files, d0, d1){
 }
 // recompute and store the cashier analysis of a saved run
 const KAS_TRIED = {};
+// what is kept of the explanation in the saved run (Firestore doc size)
+const trimExp = E => E ? {byForm: E.byForm, credit: E.credit, kinds: E.kinds, items: E.items.filter(i => i.kind !== 'shift' || i.amt >= 500000).slice(0, 200).map(i => ({kind: i.kind, d: i.d, amt: i.amt, conf: i.conf, text: i.text, stores: [...new Set(i.parts.map(p => p.store))]}))} : null;
 async function refreshRunKas(run, manual){
   if (!run || !run.rawN || !db || (!manual && KAS_TRIED[run.id])) return;
   if (typeof DR === 'undefined' || !DR.days || !Object.keys(DR.days).some(d => d >= run.d0 && d <= run.d1)) return;   // the daily reports are not loaded yet — try at the next render
   KAS_TRIED[run.id] = true;
   try{ const files = await freshSmart(await loadRaw(run.rawN, run.id), run.d0, run.d1); const m = VIVI.build(files, {d0: run.d0, d1: run.d1}); if (m.error || !m.kas) return;
     const kas = {cashiers: m.kas.cashiers, errors: m.kas.errors.slice(0, 400), unres: m.kas.unres.slice(0, 200), cov: m.kas.cov || null};
-    if (!kas.cashiers.length && !manual) return;
-    if (canWrite){ await db.doc('cashruns/' + run.id).update({kas}); if (S.cash && S.cash.runId === run.id) await db.doc('cash/latest').update({kas}); }
-    run.kas = kas; render();
+    const explain = trimExp(m.explain);
+    if (!kas.cashiers.length && !manual && run.explain) return;
+    if (canWrite){ await db.doc('cashruns/' + run.id).update({kas, explain}); if (S.cash && S.cash.runId === run.id) await db.doc('cash/latest').update({kas, explain}); }
+    run.kas = kas; run.explain = explain; render();
   }catch(e){ console.warn('kas refresh', e); }
+}
+function renderExp(run, st){
+  const E = run.explain, CHT = {pos: 'Карт (POS)', qpay: 'QPay + шилжүүлэг'};
+  if (!E){ $('#rev-exp-sum').innerHTML = `<tr><td colspan="3" class="empty">${run.rawN ? 'Тооцоолж байна…' : 'Тайлбар алга — Smart тайлан, хуулгаа дахин оруулна уу.'}</td></tr>`; $('#rev-exp-list').innerHTML = ''; $('#rev-exp-credit').textContent = ''; return; }
+  $('#rev-exp-sum').innerHTML = Object.entries(E.byForm).map(([k, B]) => `<tr><td>${CHT[k] || k}</td><td class="n"><b>${sgn(B.diff)}</b></td><td>${Object.entries(B.parts).filter(([, v]) => Math.abs(v) >= 1000).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).map(([kk, v]) => `<span class="chip ${kk === 'left' ? 'c-bad' : kk === 'nostmt' || kk === 'nostore' ? 'c-warn' : 'c-acc'}" style="margin:2px">${esc(E.kinds[kk])} ${sgn(v)}</span>`).join('') || '—'}</td></tr>`).join('');
+  $('#rev-exp-credit').innerHTML = '<b>Зээл (StorePay, Pocket):</b> ' + E.credit.text.map(esc).join(' ');
+  const L = E.items.filter(i => !st || (i.stores || []).includes(st));
+  $('#rev-exp-list').innerHTML = L.length ? L.slice(0, 120).map(i => `<tr class="${i.kind === 'left' ? 'sev-warn' : ''}"><td class="mono">${esc(String(i.d || '').slice(5))}</td><td><span class="chip ${i.kind === 'left' ? 'c-bad' : i.conf === 'тодорхой' ? 'c-ok' : 'c-warn'}">${esc(E.kinds[i.kind])}</span></td><td class="n">${fmt(i.amt)}</td><td style="white-space:normal">${esc(i.text)}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">Зөрүү алга.</td></tr>';
 }
 function dailySmartFile(files, a0, z0){
   if (typeof DR === 'undefined') return null;
