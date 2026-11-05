@@ -148,6 +148,7 @@ body{margin:0;background:var(--bg)}
     <button role="tab" data-tab="pl" aria-selected="false">Дотоод тайлан</button>
     <button role="tab" data-tab="wh" aria-selected="false">Агуулах (LPP)</button>
     <button role="tab" data-tab="rcv" aria-selected="false">Хүлээн авалт<span class="n" id="t-rcv" hidden></span></button>
+    <button role="tab" data-tab="inv" aria-selected="false">Тооллого</button>
     <button role="tab" data-tab="set" aria-selected="false" id="tab-set" hidden>Тохиргоо</button>
   </nav>
 
@@ -607,6 +608,45 @@ body{margin:0;background:var(--bg)}
       <div id="rc-cmp" style="margin-top:12px"></div>
     </div>
   </section>
+  <!-- INVENTORY COUNT (Тооллого) -->
+  <section class="panel" data-panel="inv" hidden>
+    <div class="filter chips" id="iv-mode" style="margin-bottom:12px"><button data-m="scan" aria-pressed="true">📦 Тоолох</button><button data-m="list" aria-pressed="false" id="iv-mode-list">📋 Тооллогууд, тайлан</button></div>
+
+    <div class="card" id="iv-scan-card">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px;gap:10px;flex-wrap:wrap">
+        <div class="row" style="gap:8px;flex-wrap:wrap"><b>Тооллого:</b><select id="iv-active" style="width:auto;min-width:220px"></select><b>Бүс:</b><select id="iv-zone" style="width:auto;min-width:200px"></select></div>
+        <div class="row"><span class="chip" id="iv-sync">✓ Синк хийгдсэн</span></div>
+      </div>
+      <div id="iv-prog" class="note" style="margin-bottom:8px"></div>
+      <div class="row" style="gap:10px;margin-bottom:6px"><label class="row note" style="gap:6px;width:auto"><input type="checkbox" id="iv-manual" style="width:auto"> Тоо гараар оруулах</label><input id="iv-qty" inputmode="numeric" data-nofmt value="1" style="width:90px;text-align:right" hidden><span class="note" id="iv-qty-note" hidden>ширхэг — дараагийн скан энэ тоогоор бүртгэгдэнэ</span></div>
+      <input id="iv-input" autocomplete="off" inputmode="none" placeholder="Баркод уншуулна уу… (скан бүрт Enter)" style="font-size:22px;padding:14px;text-align:center;letter-spacing:1px">
+      <div id="iv-result" class="wh-result"><div class="wh-big">Тоолоход бэлэн</div><div class="note">Тооллого, бүсээ сонгоод баркод уншуулна уу. Тоолж буй хүн Smart-ын үлдэгдлийг харахгүй.</div></div>
+      <div class="row" style="margin-top:10px;justify-content:space-between;gap:8px"><span class="note" id="iv-zone-info"></span><span><button class="btn primary" id="iv-zone-done">✅ Энэ бүсийг дуусгах</button><button class="btn" id="iv-zone-open" hidden>Бүсийг дахин нээх</button></span></div>
+      <div id="iv-re-box" style="margin-top:10px" hidden></div>
+      <h3 style="margin:14px 0 6px;font-size:14px">Сүүлийн скан</h3>
+      <div class="tbl"><table><thead><tr><th>Цаг</th><th>Код</th><th>Бараа</th><th class="n">Тоо</th><th>Тэмдэглэл</th><th></th></tr></thead><tbody id="iv-last"></tbody></table></div>
+    </div>
+
+    <div class="card" id="iv-list-card" hidden>
+      <div id="iv-new-box">
+        <h2>Шинэ тооллого</h2>
+        <p class="note" style="margin:0 0 8px">Smart «Бараа материалын насжилтын тайлан»-г (тооллого эхлэхийн өмнөх өдрийн эцсийн үлдэгдэл) оруулж, дэлгүүр, тоолох байршлаа сонгоно. Бүс бүрт нэг хүн (стеллаж, хана, тавиур…). Бүсийн байршлыг хоосон орхивол бараа Smart дахь байршлаараа тоологдоно.</p>
+        <div class="grid">
+          <label class="f">Нэр<input id="ivn-name" placeholder="Драгон — 2026-11 тооллого"></label>
+          <label class="f">Насжилтын тайлан (Excel)<input id="ivn-file" type="file" accept=".xlsx,.xls"></label>
+          <label class="f">Дэлгүүр / агуулах<select id="ivn-store"></select></label>
+          <label class="f full">Тоолох байршил<div class="row" id="ivn-locs" style="gap:10px;flex-wrap:wrap"></div></label>
+          <label class="f full">Бүсүүд (мөр бүрт нэг бүс; «Нэр=байршил» гэвэл тэр бүсэд тоолсон бүх бараа тэр байршилд бүртгэгдэнэ)<textarea id="ivn-zones" rows="4" placeholder="Хувцас — зүүн хана&#10;Хувцас — төв&#10;Гутал=222-1&#10;Агуулах тавиур"></textarea></label>
+        </div>
+        <div id="ivn-info" class="note" style="margin-top:6px"></div>
+        <div class="row" style="margin-top:8px"><button class="btn primary" id="ivn-save" disabled>Тооллого үүсгэх</button><span class="note" id="ivn-msg"></span></div>
+      </div>
+      <h2 style="margin-top:18px">Тооллогууд</h2>
+      <div class="tbl"><table><thead><tr><th>Нэр</th><th>Дэлгүүр · байршил</th><th>Үлдэгдлийн огноо</th><th class="n">Smart үлдэгдэл</th><th class="n">Тоолсон</th><th>Бүс</th><th>Төлөв</th><th></th></tr></thead><tbody id="iv-list"></tbody></table></div>
+      <div id="iv-rep" style="margin-top:14px"></div>
+    </div>
+  </section>
+
   <!-- BALANCES -->
   <section class="panel" data-panel="bal" hidden>
     <div class="card">
@@ -2094,6 +2134,93 @@ const WH = (() => {
   return R;
 })();
 
+// ===================== Inventory count (Тооллого): Smart aging report = book stock, Smart sales list = sales during the count =====================
+const INV = (() => {
+  const str = v => v == null ? '' : String(v).trim();
+  const num = v => { if (typeof v === 'number') return v; const n = parseFloat(String(v == null ? '' : v).replace(/[\s,]/g, '')); return isNaN(n) ? 0 : n; };
+  const codeOf = v => { if (v == null) return ''; if (typeof v === 'number') return String(Math.round(v)); return String(v).trim().replace(/\s+/g, ''); };
+  const pad = n => String(n).padStart(2, '0');
+  const xlDay = v => { if (typeof v === 'number'){ const t = new Date(Math.round((v - 25569) * 86400) * 1000); return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`; }
+    const m = String(v || '').match(/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/); return m ? `${m[1]}-${pad(m[2])}-${pad(m[3])}` : ''; };
+  // the store a location belongs to: «220-2» → «220»
+  const storeOfLoc = l => String(l).split('-')[0];
+
+  // «Бараа материалын насжилтын тайлан»: a «220-2 - Food city -Хувцас» row opens a location; then code, name, in, out, balance, 0-30 … 120+
+  function parseAging(rows){
+    let date = '', hi = -1;
+    for (let i = 0; i < Math.min(rows.length, 15); i++){ const r = rows[i] || []; for (const c of r){ const d = typeof c === 'string' && /^\d{4}\/\d{2}\/\d{2}$/.test(c.trim()) ? xlDay(c) : ''; if (d && !date) date = d; }
+      if (r.some(c => /үлдэгдэл/i.test(str(c)))) hi = i; }
+    if (hi < 0) return {error: 'Насжилтын тайлан биш байна («Үлдэгдэл» багана олдсонгүй)'};
+    const H = rows[hi].map(str), qi = H.findIndex(h => /үлдэгдэл/i.test(h)), ai = H.findIndex(h => /^0-30$/.test(h));
+    const locs = {}, items = []; let loc = null;
+    for (const r of rows.slice(hi + 1)){
+      if (!r) continue; const a = r[0];
+      if (a != null && r[1] == null && r[qi] == null){ const m = str(a).match(/^(\S+)\s+-\s+(.+)$/); if (m){ loc = m[1]; locs[loc] = {l: loc, name: m[2].trim(), lines: 0, q: 0}; } continue; }
+      if (!loc || a == null || /^(байршлын дүн|нийт)/i.test(str(a)) || /^(тайлан|дарга|хэвлэсэн)/i.test(str(r[1]) + str(a))) continue;
+      const c = codeOf(a), q = num(r[qi]); if (!c || r[qi] == null) continue;
+      const ag = ai >= 0 ? [0, 1, 2, 3, 4].map(k => num(r[ai + k])) : [];
+      items.push({c, n: str(r[1]), l: loc, q, ag}); locs[loc].lines++; locs[loc].q += q;
+    }
+    return {date, locs, items};
+  }
+
+  // Smart «Борлуулалтын жагсаалт»: date, item code, quantity, department code (= location) — net quantity sold per location|code
+  function parseSales(rows){
+    const hi = rows.findIndex(r => r && r.some(c => str(c) === 'Барааны код') && r.some(c => str(c) === 'Тоо хэмжээ'));
+    if (hi < 0) return {error: 'Борлуулалтын жагсаалт биш байна («Барааны код», «Тоо хэмжээ» багана олдсонгүй)'};
+    const H = rows[hi].map(str), ix = k => H.indexOf(k), ci = ix('Барааны код'), qi = ix('Тоо хэмжээ'), li = ix('Тасгийн код'), di = ix('Огноо');
+    if (li < 0) return {error: '«Тасгийн код» (байршил) багана олдсонгүй'};
+    const sold = {}, days = new Set(); let n = 0;
+    for (const r of rows.slice(hi + 1)){ if (!r) continue; const c = codeOf(r[ci]), l = str(r[li]), q = num(r[qi]); if (!c || !l || !q) continue;
+      const d = di >= 0 ? xlDay(r[di]) : ''; if (d) days.add(d); const k = l + '|' + c; sold[k] = (sold[k] || 0) + q; n++; }
+    const ds = [...days].sort(); return {sold, lines: n, d0: ds[0] || '', d1: ds[ds.length - 1] || ''};
+  }
+
+  // result of a count, per location × code
+  //  book B (aging), counted C (zones; a recount replaces the total), sold S during the count (net)
+  //  sold before it was counted E = min(S, B − C) when C < B  →  real difference = C − B + E
+  //  quantity for the Smart «Count» import (stock right now) = C − (S − E)
+  // inv: {locs: [in scope], zones: [{z, l}]}; book: items; counts: {zoneIndex: {code: n}}; re: {code: n}; sold: {loc|code: n}
+  function compute(inv, book, counts, re, sold){
+    const scope = new Set(inv.locs || []), zones = inv.zones || [];
+    const B = {}, byCode = {}; for (const it of book){ const k = it.l + '|' + it.c; B[k] = it; (byCode[it.c] = byCode[it.c] || []).push(it); }
+    const C = {}, outside = {}, unknown = {};
+    const homeOf = c => { const L = (byCode[c] || []).filter(x => scope.has(x.l)); if (L.length) return L.sort((a, b) => b.q - a.q)[0].l; return null; };
+    const add = (l, c, n) => { const k = l + '|' + c; C[k] = (C[k] || 0) + n; };
+    const total = {};   // per code, all zones
+    for (const [zi, M] of Object.entries(counts || {})){ const z = zones[+zi] || {}; for (const [c, n] of Object.entries(M || {})){ if (!n) continue; total[c] = total[c] || {n: 0, z: {}}; total[c].n += n; total[c].z[zi] = (total[c].z[zi] || 0) + n; } }
+    for (const [c, n] of Object.entries(re || {})) if (n != null){ total[c] = total[c] || {n: 0, z: {}}; total[c].re = n; }
+    for (const [c, T] of Object.entries(total)){
+      const home = homeOf(c);
+      if (T.re != null){   // recount: the whole quantity of this code, on its own location
+        const l = home || (Object.keys(T.z).map(zi => (zones[+zi] || {}).l).find(Boolean));
+        if (l && scope.has(l)) add(l, c, T.re); else if ((byCode[c] || []).length) outside[c] = {c, n: T.re, at: byCode[c].map(x => x.l).join(', '), name: byCode[c][0].n}; else unknown[c] = {c, n: T.re, zones: Object.keys(T.z).map(zi => (zones[+zi] || {}).z).join(', ')};
+        continue; }
+      for (const [zi, n] of Object.entries(T.z)){ const zl = (zones[+zi] || {}).l || '';
+        const l = zl || home;
+        if (l && scope.has(l)) add(l, c, n);
+        else if ((byCode[c] || []).length){ const o = outside[c] = outside[c] || {c, n: 0, at: byCode[c].map(x => x.l).join(', '), name: byCode[c][0].n}; o.n += n; }
+        else { const u = unknown[c] = unknown[c] || {c, n: 0, zones: ''}; u.n += n; u.zones = [...new Set([...u.zones.split(', ').filter(Boolean), (zones[+zi] || {}).z])].join(', '); } }
+    }
+    const lines = [];
+    const keys = new Set([...Object.keys(B).filter(k => scope.has(k.split('|')[0])), ...Object.keys(C)]);
+    for (const k of keys){ const [l, c] = [k.slice(0, k.indexOf('|')), k.slice(k.indexOf('|') + 1)]; const it = B[k] || {c, n: ((byCode[c] || [])[0] || {}).n || '', l, q: 0, ag: []};
+      const b = it.q || 0, cn = C[k] || 0, s = (sold || {})[k] || 0, e = cn < b && s > 0 ? Math.min(s, b - cn) : 0, d = cn - b + e, imp = Math.max(0, cn - (s - e));
+      lines.push({c, n: it.n, l, b, cnt: cn, s, e, d, imp, ag: it.ag || [], other: !B[k] && (byCode[c] || []).some(x => x.l !== l) ? byCode[c].filter(x => x.l !== l).map(x => x.l).join(', ') : ''}); }
+    lines.sort((a, b) => a.l.localeCompare(b.l) || a.c.localeCompare(b.c));
+    const sum = {}; for (const x of lines){ const o = sum[x.l] = sum[x.l] || {l: x.l, lines: 0, b: 0, cnt: 0, s: 0, e: 0, short: 0, shortN: 0, over: 0, overN: 0, ok: 0, imp: 0};
+      o.lines++; o.b += x.b; o.cnt += x.cnt; o.s += x.s; o.e += x.e; o.imp += x.imp; if (x.d < 0){ o.short += -x.d; o.shortN++; } else if (x.d > 0){ o.over += x.d; o.overN++; } else o.ok++; }
+    return {lines, sum, outside: Object.values(outside), unknown: Object.values(unknown)};
+  }
+  // pieces to check again: the biggest differences (before the sales correction is known, the raw count)
+  function recountList(res, max){ return res.lines.filter(x => x.d !== 0).sort((a, b) => Math.abs(b.d) - Math.abs(a.d) || b.b - a.b).slice(0, max || 100); }
+  // Smart «Count» import: Barcode, Qty, ItemId, UnitCost (cost is filled by Smart)
+  function countAoa(lines){ return [['Barcode', 'Qty', 'ItemId', 'UnitCost'], ['Бааркод', 'Тоо хэмжээ', 'Барааны код', 'Нэгж өртөг'], ...lines.map(x => [x.c, x.imp, x.c, null])]; }
+  const R = {parseAging, parseSales, compute, recountList, countAoa, storeOfLoc, codeOf};
+  if (typeof module !== 'undefined') module.exports = R;
+  return R;
+})();
+
 // ===== Counterparty base (Харилцагчийн сан): known receiving accounts → category, store, name =====
 const PAYEES = (() => {
   const accShort = a => { let s = String(a == null ? '' : a).toUpperCase().replace(/\s/g, ''); const m = s.match(/^(?:MN)?(\d{2})(\d{4})(\d{12,13})$/); if (m) return m[3].replace(/^0+/, ''); s = s.replace(/\D/g, ''); if (s.length >= 18) return s.slice(-10).replace(/^0+/, ''); return s.replace(/^0+/, ''); };
@@ -2358,6 +2485,7 @@ function renderInner(){
   try{ renderPay(); }catch(e){ console.warn('pay', e); }
   try{ renderPL(); }catch(e){ console.warn('pl', e); }
   try{ renderWh(); renderWhSettings(); }catch(e){ console.warn('wh', e); }
+  try{ renderInv(); }catch(e){ console.warn('inv', e); }
   try{ renderDaily(); }catch(e){ console.warn('daily', e); }
 }
 function reqCard(r, matches){
@@ -4595,6 +4723,296 @@ async function uploadMaster(f){
     msg(`✓ Нийт ${fmt(Object.keys(M).length)} баркод · ${fmt(added)} шинэ нэмэгдсэн${kept ? ` · ${fmt(kept)} өмнөх нэрээрээ үлдсэн` : ''}.`);
   }catch(err){ console.warn(err); msg('Алдаа: ' + (err.message || err)); }
 }
+// ===================== Inventory count (Тооллого) =====================
+// Firestore: inv/{id} (count: store, locations, zones, status) · invpart/{id}_{i} (book stock from the aging report, chunks)
+//            invz/{id}_{zone} (counted per code in one zone, increments) · invz/{id}_re (recount) · invsale/{id}_{i} (sales during the count)
+const IV = {list: [], active: '', zone: '', mode: 'scan', book: {}, zones: {}, sales: {}, subs: {}, pend: {}, pendN: 0, last: [], lastE: '', lastAt: 0, rep: '', repF: 'short', newA: null, flushing: false};
+const ivAdm = () => isOwner || !!((window.ALLOWX || {}).invadm);
+const ivOf = id => IV.list.find(x => x.id === id);
+const ivZoneDoc = (id, zi) => 'invz/' + id + '_' + zi;
+
+// ---------- data ----------
+async function ivBook(id){
+  if (IV.book[id]) return IV.book[id]; const I = ivOf(id); if (!I || !db) return null;
+  let items = []; for (let i = 0; i < (I.parts || 0); i++){ const s = await db.doc('invpart/' + id + '_' + i).get(); if (s.exists) items = items.concat(s.data().items || []); }
+  const by = {}, by0 = {}; for (const it of items){ (by[it.c] = by[it.c] || []).push(it); (by0[it.c.replace(/^0+/, '')] = by0[it.c.replace(/^0+/, '')] || []).push(it); }
+  IV.book[id] = {items, by, by0}; return IV.book[id];
+}
+async function ivSales(id){
+  const I = ivOf(id); if (!I || !I.sales || !db) return {};
+  if (IV.sales[id] && IV.sales[id].at === I.sales.at) return IV.sales[id].sold;
+  const sold = {}; for (let i = 0; i < (I.sales.parts || 0); i++){ const s = await db.doc('invsale/' + id + '_' + i).get(); if (s.exists) for (const [k, n] of Object.entries(s.data().sold || {})) sold[dk(k)] = n; }
+  IV.sales[id] = {at: I.sales.at, sold}; return sold;
+}
+// live zone documents of one count
+function ivSub(id){
+  if (!id || IV.subs[id] || !db) return;
+  IV.subs[id] = db.collection('invz').where('inv', '==', id).onSnapshot(s => { IV.zones[id] = {}; for (const d of s.docs){ const x = d.data(); IV.zones[id][x.zi] = x; } renderInv(); }, e => console.warn('invz', e));
+}
+// counted per zone, server + not yet sent
+function ivCounts(id){
+  const Z = IV.zones[id] || {}, out = {}, re = {};
+  for (const [zi, x] of Object.entries(Z)){ if (zi === 're'){ for (const [k, n] of Object.entries(x.c || {})) re[dk(k)] = n; continue; } const m = out[zi] = {}; for (const [k, n] of Object.entries(x.c || {})) m[dk(k)] = n; }
+  for (const [key, n] of Object.entries(IV.pend[id] || {})){ const [zi, c] = [key.slice(0, key.indexOf('|')), key.slice(key.indexOf('|') + 1)]; if (zi === 're') re[c] = (re[c] || 0) + n; else { const m = out[zi] = out[zi] || {}; m[c] = (m[c] || 0) + n; } }
+  return {counts: out, re};
+}
+const zoneTot = (id, zi) => { const x = (IV.zones[id] || {})[zi] || {}; let t = x.tot || 0; for (const [key, n] of Object.entries(IV.pend[id] || {})) if (key.startsWith(zi + '|')) t += n; return t; };
+
+// ---------- scanning ----------
+function ivAdd(id, zi, c, n){ const P = IV.pend[id] = IV.pend[id] || {}; const k = zi + '|' + c; P[k] = (P[k] || 0) + n; IV.pendN += Math.abs(n); ivChip(); }
+function ivChip(){ const el = $('#iv-sync'); if (!el) return; const n = IV.pendN; el.textContent = n ? `⏳ Илгээгдээгүй ${n}` : (navigator.onLine === false ? '⚠ Интернэтгүй' : '✓ Синк хийгдсэн'); el.className = 'chip ' + (n ? 'c-warn' : 'c-ok'); }
+async function ivFlush(){
+  if (IV.flushing || !db || !IV.pendN) return; IV.flushing = true;
+  const P = IV.pend, was = IV.pendN; IV.pend = {}; IV.pendN = 0;
+  try{ const b = db.batch(), inc = n => fv().increment(n);
+    for (const [id, map] of Object.entries(P)){ const per = {};
+      for (const [key, n] of Object.entries(map)){ if (!n) continue; const zi = key.slice(0, key.indexOf('|')), c = key.slice(key.indexOf('|') + 1); const u = per[zi] = per[zi] || {tot: 0};
+        u['c.' + ek(c)] = inc(n); u.tot += n; }
+      for (const [zi, u] of Object.entries(per)){ const t = u.tot; delete u.tot; u.tot = inc(t); u['by.' + ek(me)] = inc(t); u.upd = new Date().toISOString();
+        const ref = db.doc(ivZoneDoc(id, zi)), Z = (IV.zones[id] || {})[zi];
+        if (!Z){ const I = ivOf(id) || {}, zz = zi === 're' ? {z: 'Дахин тоололт', l: ''} : ((I.zones || [])[+zi] || {}); b.set(ref, {inv: id, zi, z: zz.z || '', l: zz.l || ''}, {merge: true}); }
+        b.update(ref, u); } }
+    await b.commit();
+  }catch(err){ console.warn('iv flush', err); for (const [id, map] of Object.entries(P)) for (const [key, n] of Object.entries(map)){ const zi = key.slice(0, key.indexOf('|')); ivAdd(id, zi, key.slice(key.indexOf('|') + 1), n); } IV.pendN = Math.max(IV.pendN, was); }
+  finally { IV.flushing = false; ivChip(); }
+}
+setInterval(ivFlush, 1500);
+window.addEventListener('beforeunload', e => { if (IV.pendN){ ivFlush(); e.preventDefault(); e.returnValue = ''; } });
+function ivShow(kind, big, small){
+  const el = $('#iv-result'); if (!el) return; const col = kind === 'bad' ? '#c0392b' : kind === 'warn' ? '#b7791f' : '#1f9d6b';
+  el.style.borderColor = col; el.style.background = kind === 'bad' ? 'rgba(192,57,43,.10)' : kind === 'warn' ? 'rgba(183,121,31,.10)' : 'rgba(31,157,107,.08)';
+  el.innerHTML = `<div class="wh-big" style="color:${col}">${esc(big)}</div><div>${small}</div>`;
+}
+async function ivScan(raw){
+  const c0 = INV.codeOf(raw); if (!c0) return; const id = IV.active, zi = IV.zone, I = ivOf(id), now = Date.now();
+  if (!I){ ivShow('bad', 'Тооллого сонгоогүй', 'Дээрээс тооллогоо сонгоно уу.'); return; }
+  if (I.status === 'closed'){ ivShow('bad', 'Тооллого хаагдсан', ''); return; }
+  if (zi === ''){ ivShow('bad', 'Бүс сонгоогүй', 'Аль бүсийг тоолж байгаагаа сонгоно уу.'); return; }
+  const Z = (IV.zones[id] || {})[zi]; if (Z && Z.status === 'done' && zi !== 're'){ ivShow('bad', 'Бүс дууссан', 'Энэ бүсийг дуусгасан — «Бүсийг дахин нээх» дарна уу.'); return; }
+  const manual = $('#iv-manual').checked, n = manual ? Math.max(1, parseInt($('#iv-qty').value, 10) || 1) : 1;
+  if (!manual && c0 === IV.lastE && now - IV.lastAt < 250) return; IV.lastE = c0; IV.lastAt = now;
+  const B = await ivBook(id); let L = B.by[c0] || B.by0[c0.replace(/^0+/, '')] || []; const c = L.length ? L[0].c : c0;
+  const scope = new Set(I.locs || []), inScope = L.filter(x => scope.has(x.l)), zl = zi === 're' ? '' : ((I.zones || [])[+zi] || {}).l || '';
+  let kind = 'ok', note = '';
+  if (!L.length){ kind = 'bad'; note = 'Smart-ын үлдэгдэлд байхгүй код — тусад нь тавьж шалгана'; }
+  else if (!inScope.length){ kind = 'warn'; note = `Энэ тооллогын байршилд биш: Smart-д ${[...new Set(L.map(x => x.l))].join(', ')}`; }
+  else if (zl && !inScope.some(x => x.l === zl)){ kind = 'warn'; note = `Буруу байршил: Smart-д ${inScope.map(x => x.l).join(', ')}, тоолж буй бүс ${zl}`; }
+  ivAdd(id, zi, c, n);
+  const here = ((ivCounts(id).counts[zi] || {})[c] || 0) + (zi === 're' ? (ivCounts(id).re[c] || 0) : 0);
+  const name = L.length ? L[0].n : '';
+  ivShow(kind, kind === 'bad' ? 'ТОДОРХОЙГҮЙ КОД' : (n > 1 ? `+${n} ш` : '✓'), `<b>${esc(name || c)}</b><div class="mono">${esc(c)}${inScope.length ? ' · ' + esc(inScope.map(x => x.l).join(', ')) : ''}</div><div class="note">энэ бүсэд энэ код: ${fmt(zi === 're' ? (ivCounts(id).re[c] || 0) : here)} ш</div>${note ? `<div style="margin-top:4px"><b>${esc(note)}</b></div>` : ''}`);
+  beep(kind === 'bad' ? 'bad' : kind === 'warn' ? 'extra' : 'ok');
+  IV.last.unshift({t: new Date().toTimeString().slice(0, 8), c, n, name, kind, note, id, zi}); IV.last = IV.last.slice(0, 12);
+  try{ localStorage.setItem('vivi-iv-last-' + id, JSON.stringify(IV.last)); }catch(e){}
+  if (manual){ $('#iv-qty').value = '1'; }
+  renderIvScan();
+}
+function ivUndo(i){ const x = IV.last[i]; if (!x || x.undone) return; ivAdd(x.id, x.zi, x.c, -x.n); x.undone = true; renderIvScan(); }
+async function ivZoneStatus(st){
+  const id = IV.active, zi = IV.zone; if (!id || zi === '' || zi === 're') return; await ivFlush();
+  if (st === 'done' && !confirm('Энэ бүсийн тоололтыг дуусгах уу? (Дараа нь шаардлагатай бол дахин нээж болно.)')) return;
+  const I = ivOf(id) || {}, zz = (I.zones || [])[+zi] || {};
+  try{ await db.doc(ivZoneDoc(id, zi)).set({inv: id, zi, z: zz.z || '', l: zz.l || '', status: st, [st === 'done' ? 'doneAt' : 'openAt']: new Date().toISOString(), [st === 'done' ? 'doneBy' : 'openBy']: me}, {merge: true}); }catch(err){ whErr(err); }
+}
+
+// ---------- render: counting ----------
+function renderIvScan(){
+  const sel = $('#iv-active'); if (!sel) return;
+  const L = IV.list.filter(x => x.status !== 'closed').sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  if (!L.some(x => x.id === IV.active)){ try{ IV.active = localStorage.getItem('vivi-iv-active') || ''; }catch(e){} if (!L.some(x => x.id === IV.active)) IV.active = L[0] ? L[0].id : ''; }
+  const oh = L.length ? L.map(x => `<option value="${esc(x.id)}" ${x.id === IV.active ? 'selected' : ''}>${esc(x.name)}</option>`).join('') : '<option value="">— нээлттэй тооллого алга —</option>';
+  if (sel.innerHTML !== oh) sel.innerHTML = oh;
+  const I = ivOf(IV.active); ivSub(IV.active);
+  if (I && IV.lastFor !== I.id){ IV.lastFor = I.id; try{ IV.last = JSON.parse(localStorage.getItem('vivi-iv-last-' + I.id) || '[]'); }catch(e){ IV.last = []; } }
+  const Z = I ? (IV.zones[I.id] || {}) : {};
+  const zh = I ? ['<option value="">— бүс сонгох —</option>', ...(I.zones || []).map((z, i) => { const s = (Z[i] || {}).status; return `<option value="${i}" ${String(i) === IV.zone ? 'selected' : ''}>${s === 'done' ? '✅ ' : zoneTot(I.id, String(i)) ? '⏳ ' : ''}${esc(z.z)}${z.l ? ' (' + esc(z.l) + ')' : ''}</option>`; }),
+    ...(I.recount && I.recount.length ? [`<option value="re" ${IV.zone === 're' ? 'selected' : ''}>🔁 Дахин тоололт (${I.recount.length} код)</option>`] : [])].join('') : '';
+  if ($('#iv-zone').innerHTML !== zh) $('#iv-zone').innerHTML = zh;
+  if (I && IV.zone !== '' && IV.zone !== 're' && !(I.zones || [])[+IV.zone]) IV.zone = '';
+  const done = I ? (I.zones || []).filter((z, i) => (Z[i] || {}).status === 'done').length : 0;
+  $('#iv-prog').innerHTML = I ? `<b>${esc(I.name)}</b> · ${esc((I.locs || []).join(', '))} · бүс ${done}/${(I.zones || []).length} дууссан · нийт тоолсон ${fmt((I.zones || []).reduce((a, z, i) => a + zoneTot(I.id, String(i)), 0))} ш` : '';
+  const zs = I && IV.zone !== '' ? (Z[IV.zone] || {}) : null;
+  $('#iv-zone-info').innerHTML = zs ? (IV.zone === 're' ? `Дахин тоололт: жагсаалтын код бүрийг <b>дэлгүүрийн хаана ч байсан</b> бүгдийг нь тоолно. Энд тоолсон тоо тухайн кодын нийт тоог орлоно.` : `Энэ бүсэд ${fmt(zoneTot(I.id, IV.zone))} ш тоолсон${zs.status === 'done' ? ' · <b>дууссан</b>' : ''}${zs.by ? ' · ' + Object.keys(zs.by).length + ' хүн' : ''}`) : '';
+  $('#iv-zone-done').hidden = !zs || IV.zone === 're' || zs.status === 'done'; $('#iv-zone-open').hidden = !zs || IV.zone === 're' || zs.status !== 'done';
+  // recount list
+  const box = $('#iv-re-box'); box.hidden = IV.zone !== 're' || !I;
+  if (!box.hidden){ const re = ivCounts(I.id).re;
+    box.innerHTML = `<div class="tbl" style="max-height:300px;overflow:auto"><table><thead><tr><th>Код</th><th>Бараа</th><th>Байршил</th><th class="n">Дахин тоолсон</th><th></th></tr></thead><tbody>${(I.recount || []).map(r => `<tr><td class="mono">${esc(r.c)}</td><td>${esc(r.n || '')}</td><td>${esc(r.l || '')}</td><td class="n"><b>${re[r.c] != null ? fmt(re[r.c]) : '–'}</b></td><td>${re[r.c] == null ? `<button class="btn" data-iv-zero="${esc(r.c)}" title="Олдсонгүй — 0">0</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`; }
+  $('#iv-last').innerHTML = IV.last.length ? IV.last.slice(0, 8).map((x, i) => `<tr style="${x.undone ? 'opacity:.45;text-decoration:line-through' : ''}"><td class="mono">${x.t}</td><td class="mono">${esc(x.c)}</td><td>${esc(x.name || '')}</td><td class="n">${x.n}</td><td>${x.kind === 'bad' ? '<span class="chip c-bad">тодорхойгүй</span>' : x.kind === 'warn' ? `<span class="chip c-warn" title="${esc(x.note)}">байршил</span>` : ''}</td><td>${x.undone ? '' : `<button class="btn" data-iv-undo="${i}">↶</button>`}</td></tr>`).join('') : '<tr><td colspan="6" class="empty">–</td></tr>';
+  ivChip();
+}
+
+// ---------- new count ----------
+function ivNewRender(){
+  const A = IV.newA, st = $('#ivn-store'); if (!A){ st.innerHTML = ''; $('#ivn-locs').innerHTML = ''; $('#ivn-save').disabled = true; return; }
+  const stores = [...new Set(Object.keys(A.locs).map(INV.storeOfLoc))];
+  const nameOf = s => (A.locs[s] || A.locs[Object.keys(A.locs).find(l => INV.storeOfLoc(l) === s)] || {}).name || s;
+  if (!st.dataset.drawn){ st.innerHTML = stores.map(s => `<option value="${esc(s)}">${esc(s)} — ${esc(String(nameOf(s)).split('-')[0].trim())}</option>`).join(''); st.dataset.drawn = '1'; }
+  const s = st.value || stores[0], locs = Object.values(A.locs).filter(l => INV.storeOfLoc(l.l) === s);
+  $('#ivn-locs').innerHTML = locs.map(l => `<label class="row note" style="gap:4px;width:auto"><input type="checkbox" data-ivn-loc="${esc(l.l)}" checked style="width:auto"> <b>${esc(l.l)}</b> ${esc(l.name)} · ${fmt(l.q)} ш</label>`).join('');
+  ivNewInfo();
+}
+function ivNewInfo(){
+  const A = IV.newA; if (!A) return; const sel = $$('input[data-ivn-loc]').filter(x => x.checked).map(x => x.dataset.ivnLoc);
+  const q = sel.reduce((a, l) => a + (A.locs[l] || {}).q, 0), n = sel.reduce((a, l) => a + (A.locs[l] || {}).lines, 0), z = ivNewZones();
+  $('#ivn-info').innerHTML = `Үлдэгдлийн огноо <b>${esc(A.date)}</b> · сонгосон ${sel.length} байршил · ${fmt(n)} код · <b>${fmt(q)} ш</b> · ${z.length} бүс${z.some(x => x.l && !sel.includes(x.l)) ? ' · <b style="color:var(--bad)">бүсийн байршил сонгоогүй байршилд байна</b>' : ''}`;
+  $('#ivn-save').disabled = !sel.length || !z.length;
+}
+function ivNewZones(){ return String($('#ivn-zones').value || '').split('\n').map(s => s.trim()).filter(Boolean).map(s => { const m = s.match(/^(.*?)=\s*([\w-]+)\s*$/); return m ? {z: m[1].trim(), l: m[2]} : {z: s, l: ''}; }); }
+async function ivCreate(){
+  const A = IV.newA; if (!A || !db) return; const s = $('#ivn-store').value, locs = $$('input[data-ivn-loc]').filter(x => x.checked).map(x => x.dataset.ivnLoc), zones = ivNewZones();
+  if (!locs.length || !zones.length) return; const name = $('#ivn-name').value.trim() || `${s} тооллого ${A.date}`;
+  const items = A.items.filter(x => INV.storeOfLoc(x.l) === s);     // the whole store: a piece found on another location is recognised
+  $('#ivn-save').disabled = true; const msg = t => $('#ivn-msg').textContent = t;
+  try{ const ref = db.collection('inv').doc(), id = ref.id, CH = 2000, parts = Math.ceil(items.length / CH);
+    for (let i = 0; i < parts; i++){ msg(`Хадгалж байна… ${i + 1}/${parts}`); await db.doc('invpart/' + id + '_' + i).set({inv: id, i, items: items.slice(i * CH, (i + 1) * CH)}); }
+    await ref.set({name, store: s, locs, zones, date: A.date, file: A.file || '', parts, nItems: items.length, bookQ: items.filter(x => locs.includes(x.l)).reduce((a, x) => a + x.q, 0), status: 'open', createdAt: new Date().toISOString(), by: me, sales: null, recount: []});
+    IV.active = id; try{ localStorage.setItem('vivi-iv-active', id); }catch(e){}
+    IV.newA = null; $('#ivn-file').value = ''; $('#ivn-name').value = ''; $('#ivn-zones').value = ''; $('#ivn-store').dataset.drawn = ''; ivNewRender(); $('#ivn-info').textContent = ''; msg('Үүсгэлээ — «Тоолох» хэсэгт бүсээ сонгоод эхэлнэ үү.');
+  }catch(err){ whErr(err); msg('Хадгалж чадсангүй.'); $('#ivn-save').disabled = false; }
+}
+
+// ---------- list, report ----------
+function renderIvList(){
+  const tb = $('#iv-list'); if (!tb) return; $('#iv-new-box').hidden = !ivAdm();
+  const L = IV.list.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  for (const x of L) if (x.status !== 'closed') ivSub(x.id);
+  tb.innerHTML = L.length ? L.map(x => { const Z = IV.zones[x.id] || {}, done = (x.zones || []).filter((z, i) => (Z[i] || {}).status === 'done').length, cnt = (x.zones || []).reduce((a, z, i) => a + zoneTot(x.id, String(i)), 0);
+    return `<tr><td><b>${esc(x.name)}</b><div class="note">${esc(fmtDT(x.createdAt))}</div></td><td>${esc(x.store)} · ${esc((x.locs || []).join(', '))}</td><td class="mono">${esc(x.date || '')}</td><td class="n">${fmt(x.bookQ || 0)}</td><td class="n">${IV.zones[x.id] ? fmt(cnt) : '…'}</td><td>${done}/${(x.zones || []).length}</td>
+      <td>${x.status === 'closed' ? '<span class="chip c-grey">Хаасан</span>' : '<span class="chip c-ok">Тоолж байна</span>'}</td>
+      <td style="white-space:nowrap"><button class="btn primary" data-iv-rep="${esc(x.id)}">📊 Тайлан</button>${ivAdm() ? (x.status === 'closed' ? `<button class="btn" data-iv-st="open" data-id="${esc(x.id)}">Нээх</button>` : `<button class="btn" data-iv-st="closed" data-id="${esc(x.id)}">Хаах</button>`) + `<button class="btn" data-iv-del="${esc(x.id)}" style="color:var(--bad)">🗑</button>` : ''}</td></tr>`; }).join('')
+    : '<tr><td colspan="8" class="empty">Тооллого алга.</td></tr>';
+}
+async function ivResult(id){
+  const I = ivOf(id); ivSub(id); const B = await ivBook(id), sold = await ivSales(id), {counts, re} = ivCounts(id);
+  return {I, res: INV.compute(I, B.items, counts, re, sold)};
+}
+const AGE = ['0-30', '31-60', '61-90', '91-120', '120+'];
+async function renderIvRep(){
+  const el = $('#iv-rep'); if (!el) return; const id = IV.rep; if (!id || !ivOf(id)){ el.innerHTML = ''; return; }
+  const {I, res} = await ivResult(id); IV.repRes = res; const Z = IV.zones[id] || {}, f = IV.repF;
+  const S = Object.values(res.sum), T = S.reduce((a, o) => { for (const k of ['b', 'cnt', 's', 'e', 'short', 'over', 'lines', 'ok', 'imp']) a[k] = (a[k] || 0) + o[k]; return a; }, {});
+  const zonesDone = (I.zones || []).every((z, i) => (Z[i] || {}).status === 'done');
+  const pick = {short: x => x.d < 0, over: x => x.d > 0, sold: x => x.e > 0, all: () => true, loc: x => !!x.other}[f] || (() => true);
+  const rows = res.lines.filter(pick).sort((a, b) => f === 'all' ? 0 : Math.abs(b.d) - Math.abs(a.d));
+  el.innerHTML = `<h2>Тайлан: ${esc(I.name)}</h2>
+    <div class="note">Smart үлдэгдэл ${esc(I.date)}-ний байдлаар · ${esc((I.locs || []).join(', '))} · бүс ${(I.zones || []).filter((z, i) => (Z[i] || {}).status === 'done').length}/${(I.zones || []).length} дууссан${zonesDone ? '' : ' — <b style="color:var(--warn)">бүх бүс дуусаагүй байна, тайлан урьдчилсан</b>'}</div>
+    <div class="tbl" style="margin-top:8px"><table><thead><tr><th>Байршил</th><th class="n">Smart үлдэгдэл</th><th class="n">Тоолсон</th><th class="n">Тооллогын үеийн борлуулалт</th><th class="n">Борлуулалтаар тайлбарласан</th><th class="n">Дутуу</th><th class="n">Илүү</th><th class="n">Тохирсон код</th><th></th></tr></thead><tbody>
+    ${S.map(o => `<tr><td><b>${esc(o.l)}</b></td><td class="n">${fmt(o.b)}</td><td class="n">${fmt(o.cnt)}</td><td class="n">${I.sales ? fmt(o.s) : '–'}</td><td class="n">${I.sales ? fmt(o.e) : '–'}</td><td class="n" style="color:var(--bad)"><b>${fmt(o.short)}</b> <span class="note">${o.shortN} код</span></td><td class="n"><b>${fmt(o.over)}</b> <span class="note">${o.overN} код</span></td><td class="n">${fmt(o.ok)}/${fmt(o.lines)}</td>
+      <td>${ivAdm() ? `<button class="btn" data-iv-count="${esc(o.l)}" title="Smart-д импортлох Count файл">📥 Count</button>` : ''}</td></tr>`).join('')}
+    <tr><td><b>Нийт</b></td><td class="n"><b>${fmt(T.b || 0)}</b></td><td class="n"><b>${fmt(T.cnt || 0)}</b></td><td class="n">${I.sales ? fmt(T.s || 0) : '–'}</td><td class="n">${I.sales ? fmt(T.e || 0) : '–'}</td><td class="n" style="color:var(--bad)"><b>${fmt(T.short || 0)}</b></td><td class="n"><b>${fmt(T.over || 0)}</b></td><td class="n">${fmt(T.ok || 0)}/${fmt(T.lines || 0)}</td><td></td></tr></tbody></table></div>
+    ${ivAdm() ? `<div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
+      <label class="btn" style="cursor:pointer">🧾 Тооллогын үеийн борлуулалт (Smart «Борлуулалтын жагсаалт»)<input type="file" id="iv-sales-file" accept=".xlsx,.xls" hidden></label>
+      <button class="btn" data-iv-mkre="${esc(id)}">🔁 Дахин тоолох жагсаалт үүсгэх</button>
+      <button class="btn primary" data-iv-x="${esc(id)}">📊 Тайлан Excel</button></div>
+      <div class="note" style="margin-top:4px">${I.sales ? `Борлуулалт: ${esc(I.sales.d0)} – ${esc(I.sales.d1)} · ${fmt(I.sales.lines)} мөр (${esc(I.sales.file || '')}).` : '<b style="color:var(--warn)">Тооллогын үеийн борлуулалт оруулаагүй</b> — дэлгүүр нээлттэй үед тоолсон бол заавал оруулна: тоолохоос өмнө зарагдсан бараа «дутуу» гэж харагдахгүй, Count файл одоогийн үлдэгдлээр гарна.'}
+      Count файлд байршлын <b>бүх</b> код орно (олдоогүй = 0) — байршлын бүх бүсийг дуусгаад, борлуулалтаа оруулсны дараа татна. Smart өртгийг өөрөө бөглөнө.${I.recount && I.recount.length ? ` Дахин тоолох жагсаалт: ${I.recount.length} код.` : ''}</div>` : ''}
+    <div class="filter chips" id="iv-rep-f" style="margin:10px 0 6px">${[['short', 'Дутуу'], ['over', 'Илүү'], ['sold', 'Борлуулалтаар тайлбарласан'], ['loc', 'Өөр байршилд бүртгэлтэй'], ['all', 'Бүх код']].map(([v, t]) => `<button data-f="${v}" aria-pressed="${f === v}">${t}</button>`).join('')}</div>
+    <div class="tbl" style="max-height:440px;overflow:auto"><table><thead><tr><th>Код</th><th>Бараа</th><th>Байршил</th><th class="n">Smart</th><th class="n">Тоолсон</th><th class="n">Борлуулалт</th><th class="n">Зөрүү</th><th class="n">Count-д</th><th>Нас</th></tr></thead><tbody>${rows.slice(0, 400).map(x => `<tr><td class="mono">${esc(x.c)}</td><td>${esc(x.n)}</td><td>${esc(x.l)}${x.other ? `<div class="note">мөн ${esc(x.other)}</div>` : ''}</td><td class="n">${fmt(x.b)}</td><td class="n">${fmt(x.cnt)}</td><td class="n">${x.s ? fmt(x.s) + (x.e ? ` <span class="note">(${x.e} тайлб.)</span>` : '') : '–'}</td><td class="n"><b style="color:${x.d < 0 ? 'var(--bad)' : x.d > 0 ? 'var(--warn)' : 'inherit'}">${x.d > 0 ? '+' : ''}${fmt(x.d)}</b></td><td class="n">${fmt(x.imp)}</td><td class="note">${x.ag && x.ag.length ? AGE.map((a, i) => x.ag[i] ? a + ':' + x.ag[i] : '').filter(Boolean).join(' ') : ''}</td></tr>`).join('') || '<tr><td colspan="9" class="empty">–</td></tr>'}</tbody></table></div>
+    ${rows.length > 400 ? `<div class="note">Эхний 400 мөр — бүгдийг Excel-ээр.</div>` : ''}
+    ${res.unknown.length ? `<div class="banner bad" style="margin-top:8px"><b>Smart-ын үлдэгдэлд байхгүй код (${res.unknown.length}):</b> ${res.unknown.slice(0, 40).map(u => `${esc(u.c)} ×${u.n}${u.zones ? ' (' + esc(u.zones) + ')' : ''}`).join(', ')} — Count файлд орохгүй, шалгана уу.</div>` : ''}
+    ${res.outside.length ? `<div class="banner" style="margin-top:8px"><b>Тооллогын бус байршилд бүртгэлтэй бараа (${res.outside.length} код, ${fmt(res.outside.reduce((a, o) => a + o.n, 0))} ш):</b> ${res.outside.slice(0, 30).map(o => `${esc(o.c)} ×${o.n} → ${esc(o.at)}`).join(', ')} — тэр байршлыг тоолоогүй тул Count-д орохгүй.</div>` : ''}`;
+  $$('#iv-rep-f button').forEach(b => b.addEventListener('click', () => { IV.repF = b.dataset.f; renderIvRep(); }));
+  const sf = $('#iv-sales-file'); if (sf) sf.addEventListener('change', e => { const file = e.target.files[0]; if (file) ivUploadSales(id, file); e.target.value = ''; });
+}
+async function ivUploadSales(id, file){
+  try{ const wb = XLSX.read(await file.arrayBuffer(), {type: 'array'}); let S = null;
+    for (const n of wb.SheetNames){ const r = INV.parseSales(XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null})); if (!r.error){ S = r; break; } }
+    if (!S){ alert('Борлуулалтын жагсаалт олдсонгүй («Барааны код», «Тоо хэмжээ», «Тасгийн код» баганатай Smart тайлан).'); return; }
+    const I = ivOf(id), keep = Object.entries(S.sold).filter(([k]) => (I.locs || []).includes(k.split('|')[0]));
+    if (S.d0 && I.date && S.d0 <= I.date && !confirm(`Борлуулалт ${S.d0}-өөс эхэлж байна, үлдэгдэл ${I.date}-ний эцсийнх. ${I.date} хүртэлх борлуулалт үлдэгдэлд аль хэдийн орсон — энэ файлд зөвхөн тооллогын өдрүүд (${I.date}-ээс хойш) байх ёстой. Үргэлжлүүлэх үү?`)) return;
+    const CH = 3000, parts = Math.ceil(keep.length / CH) || 1;
+    for (let i = 0; i < parts; i++) await db.doc('invsale/' + id + '_' + i).set({inv: id, i, sold: Object.fromEntries(keep.slice(i * CH, (i + 1) * CH).map(([k, n]) => [ek(k), n]))});
+    await db.doc('inv/' + id).update({sales: {lines: S.lines, d0: S.d0, d1: S.d1, codes: keep.length, parts, file: file.name, at: new Date().toISOString(), by: me}});
+    delete IV.sales[id];
+  }catch(err){ whErr(err); }
+}
+async function ivMakeRecount(id){
+  const {res} = await ivResult(id); const L = INV.recountList(res, 150).map(x => ({c: x.c, n: x.n, l: x.l, d: x.d}));
+  if (!L.length){ alert('Зөрүүтэй код алга.'); return; }
+  if (!confirm(`Хамгийн их зөрүүтэй ${L.length} кодыг дахин тоолох уу? «Тоолох» хэсэгт «🔁 Дахин тоололт» бүс гарч ирнэ — тэнд тоолсон тоо тухайн кодын нийт тоог орлоно.`)) return;
+  try{ await db.doc('inv/' + id).update({recount: L, recountAt: new Date().toISOString()}); }catch(err){ whErr(err); }
+}
+function ivCountFile(loc){
+  const res = IV.repRes, I = ivOf(IV.rep); if (!res || !I) return; const Z = IV.zones[I.id] || {};
+  const open = (I.zones || []).filter((z, i) => (!z.l || z.l === loc) && (Z[i] || {}).status !== 'done');
+  if (open.length && !confirm(`${open.length} бүс дуусаагүй байна (${open.map(z => z.z).join(', ')}). Count файлд олдоогүй код 0 гэж орно. Үргэлжлүүлэх үү?`)) return;
+  if (!I.sales && !confirm('Тооллогын үеийн борлуулалт оруулаагүй байна. Дэлгүүр нээлттэй үед тоолсон бол эхлээд оруулна уу. Үргэлжлүүлэх үү?')) return;
+  const L = res.lines.filter(x => x.l === loc); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(INV.countAoa(L)), 'Sheet1');
+  XLSX.writeFile(wb, `Count_${loc}_${I.date || ''}.xlsx`);
+}
+async function ivExcel(id){
+  const {I, res} = await ivResult(id); const Z = IV.zones[id] || {}, wb = XLSX.utils.book_new(), add = (n, aoa) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), n);
+  const S = Object.values(res.sum);
+  add('Хураангуй', [[I.name], [`Smart үлдэгдэл: ${I.date} · байршил: ${(I.locs || []).join(', ')}${I.sales ? ` · борлуулалт ${I.sales.d0} – ${I.sales.d1}` : ' · борлуулалт оруулаагүй'}`], [],
+    ['Байршил', 'Код', 'Smart үлдэгдэл', 'Тоолсон', 'Тооллогын үеийн борлуулалт', 'Борлуулалтаар тайлбарласан', 'Дутуу (ш)', 'Дутуу (код)', 'Илүү (ш)', 'Илүү (код)', 'Тохирсон код', 'Count-д (одоогийн)'],
+    ...S.map(o => [o.l, o.lines, o.b, o.cnt, o.s, o.e, o.short, o.shortN, o.over, o.overN, o.ok, o.imp])]);
+  const H = ['Код', 'Бараа', 'Байршил', 'Smart үлдэгдэл', 'Тоолсон', 'Борлуулалт', 'Борлуулалтаар тайлбарласан', 'Зөрүү', 'Count-д', ...AGE.map(a => 'Нас ' + a), 'Мөн бүртгэлтэй байршил'];
+  const row = x => [x.c, x.n, x.l, x.b, x.cnt, x.s, x.e, x.d, x.imp, ...AGE.map((a, i) => (x.ag || [])[i] || 0), x.other];
+  add('Дутуу', [H, ...res.lines.filter(x => x.d < 0).sort((a, b) => a.d - b.d).map(row)]);
+  add('Илүү', [H, ...res.lines.filter(x => x.d > 0).sort((a, b) => b.d - a.d).map(row)]);
+  add('Бүх код', [H, ...res.lines.map(row)]);
+  // shortages by age of the stock
+  const ag = AGE.map(() => 0), agB = AGE.map(() => 0); for (const x of res.lines){ const b = x.b || 0; if (!b) continue; AGE.forEach((a, i) => { const share = ((x.ag || [])[i] || 0) / b; agB[i] += (x.ag || [])[i] || 0; if (x.d < 0) ag[i] += -x.d * share; }); }
+  add('Насжилт', [['Нас (хоног)', 'Smart үлдэгдэл', 'Дутуу (ойролцоо)'], ...AGE.map((a, i) => [a, agB[i], Math.round(ag[i])])]);
+  add('Бүсүүд', [['Бүс', 'Байршил', 'Төлөв', 'Тоолсон (ш)', 'Код', 'Хэн (ш)'], ...(I.zones || []).map((z, i) => { const x = Z[i] || {}; return [z.z, z.l || 'Smart-ын байршлаар', x.status === 'done' ? 'дууссан' : 'тоолж байна', x.tot || 0, Object.keys(x.c || {}).length, Object.entries(x.by || {}).map(([u, n]) => dk(u) + ': ' + n).join(', ')]; })]);
+  add('Тодорхойгүй код', [['Код', 'Тоолсон', 'Бүс'], ...res.unknown.map(u => [u.c, u.n, u.zones])]);
+  add('Өөр байршил', [['Код', 'Бараа', 'Тоолсон', 'Smart-ын байршил'], ...res.outside.map(o => [o.c, o.name, o.n, o.at])]);
+  if (I.recount && I.recount.length){ const re = ivCounts(id).re; add('Дахин тоололт', [['Код', 'Бараа', 'Байршил', 'Анхны зөрүү', 'Дахин тоолсон'], ...I.recount.map(r => [r.c, r.n, r.l, r.d, re[r.c] != null ? re[r.c] : ''])]); }
+  XLSX.writeFile(wb, `Toollogo_${I.store}_${I.date || ''}.xlsx`);
+}
+async function ivDelete(id){
+  const I = ivOf(id); if (!I) return; const t = prompt(`«${I.name}» тооллогыг бүх скантай нь устгах уу? Сэргээх боломжгүй.\n\nБаталгаажуулахын тулд УСТГАХ гэж бичнэ үү:`); if ((t || '').trim().toUpperCase() !== 'УСТГАХ') return;
+  try{ const z = await db.collection('invz').where('inv', '==', id).get();
+    for (const d of z.docs) await db.doc('invz/' + d.id).delete();
+    for (let i = 0; i < (I.parts || 0); i++) await db.doc('invpart/' + id + '_' + i).delete();
+    for (let i = 0; i < ((I.sales || {}).parts || 0); i++) await db.doc('invsale/' + id + '_' + i).delete();
+    await db.doc('inv/' + id).delete(); if (IV.rep === id){ IV.rep = ''; renderIvRep(); } if (IV.subs[id]){ try{ IV.subs[id](); }catch(e){} delete IV.subs[id]; }
+  }catch(err){ whErr(err); }
+}
+
+// ---------- events ----------
+$$('#iv-mode button').forEach(b => b.addEventListener('click', () => { IV.mode = b.dataset.m; $$('#iv-mode button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderInv(); }));
+$('#iv-active').addEventListener('change', e => { IV.active = e.target.value; IV.zone = ''; try{ localStorage.setItem('vivi-iv-active', IV.active); }catch(x){} renderInv(); });
+$('#iv-zone').addEventListener('change', e => { IV.zone = e.target.value; renderInv(); $('#iv-input').focus(); });
+$('#iv-input').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); const v = e.target.value; e.target.value = ''; ivScan(v); } });
+$('#iv-manual').addEventListener('change', e => { $('#iv-qty').hidden = !e.target.checked; $('#iv-qty-note').hidden = !e.target.checked; if (e.target.checked) $('#iv-qty').select(); });
+$('#iv-qty').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); $('#iv-input').focus(); } });
+$('#iv-zone-done').addEventListener('click', () => ivZoneStatus('done'));
+$('#iv-zone-open').addEventListener('click', () => ivZoneStatus('open'));
+$('#ivn-file').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return; $('#ivn-info').textContent = 'Уншиж байна…';
+  try{ const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let A = null;
+    for (const n of wb.SheetNames){ const r = INV.parseAging(XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null})); if (!r.error && r.items.length){ A = r; break; } }
+    if (!A){ $('#ivn-info').textContent = 'Насжилтын тайлан олдсонгүй.'; IV.newA = null; ivNewRender(); return; }
+    A.file = f.name; IV.newA = A; $('#ivn-store').dataset.drawn = ''; ivNewRender();
+  }catch(err){ console.warn(err); $('#ivn-info').textContent = 'Уншиж чадсангүй.'; }
+});
+$('#ivn-store').addEventListener('change', ivNewRender);
+document.addEventListener('change', e => { if (e.target.closest('#ivn-locs')) ivNewInfo(); });
+$('#ivn-zones').addEventListener('input', ivNewInfo);
+$('#ivn-save').addEventListener('click', ivCreate);
+document.addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
+  if (d.ivUndo != null) return ivUndo(+d.ivUndo);
+  if (d.ivZero){ const id = IV.active; if (!id) return; try{ await db.doc(ivZoneDoc(id, 're')).set({inv: id, zi: 're', z: 'Дахин тоололт', status: 'open', c: {[ek(d.ivZero)]: 0}}, {merge: true}); }catch(err){ whErr(err); } return; }
+  if (d.ivRep){ IV.rep = IV.rep === d.ivRep && $('#iv-rep').innerHTML ? '' : d.ivRep; return renderIvRep(); }
+  if (d.ivSt){ try{ await db.doc('inv/' + d.id).update({status: d.ivSt, [d.ivSt === 'closed' ? 'closedAt' : 'openedAt']: new Date().toISOString()}); }catch(err){ whErr(err); } return; }
+  if (d.ivDel) return ivDelete(d.ivDel);
+  if (d.ivMkre) return ivMakeRecount(d.ivMkre);
+  if (d.ivX) return ivExcel(d.ivX);
+  if (d.ivCount) return ivCountFile(d.ivCount);
+});
+setInterval(() => { const a = document.activeElement, free = !a || a === document.body, inp = $('#iv-input');
+  if (free && inp && IV.mode === 'scan' && !$('section[data-panel="inv"]').hidden) inp.focus(); }, 700);
+
+let ivRepT = null;
+function renderInv(){
+  if (!$('section[data-panel="inv"]')) return;
+  $('#iv-scan-card').hidden = IV.mode !== 'scan'; $('#iv-list-card').hidden = IV.mode !== 'list';
+  renderIvScan(); renderIvList();
+  if (IV.rep && IV.mode === 'list'){ clearTimeout(ivRepT); ivRepT = setTimeout(renderIvRep, 400); }   // the report follows the live counts (throttled)
+}
 
 function payUsedLabel(t){                     // bank tab: salary transfers explained by an approved payroll list
   if (!PS.lists.length && !Object.keys(payExempt()).length) return null;
@@ -4629,9 +5047,9 @@ $('#rq-acc').addEventListener('change', () => { const b = PAYEES.get($('#rq-acc'
   if (n) n.textContent = `Сангаас: ${b.name}${b.group ? ' · ' + b.group : ''}${b.holder ? ' · эзэмшигч ' + b.holder : ''}`; });
 // ---------- settings (owner) ----------
 let ACCESS = {emails: [], perms: {}};
-const SECTIONS_WH = [['wh','Агуулах (LPP скан)'],['rcv_fc','Хүлээн авалт – Food City'],['rcv_dr','Хүлээн авалт – Драгон'],['rcv_ns','Хүлээн авалт – Нийслэл'],['rcv_ht','Хүлээн авалт – Бөөн']];
+const SECTIONS_WH = [['wh','Агуулах (LPP скан)'],['rcv_fc','Хүлээн авалт – Food City'],['rcv_dr','Хүлээн авалт – Драгон'],['rcv_ns','Хүлээн авалт – Нийслэл'],['rcv_ht','Хүлээн авалт – Бөөн'],['inv','Тооллого – тоолох'],['invadm','Тооллого – удирдах (үүсгэх, тайлан, Smart файл)']];
 const SECTIONS = [['req','Төлбөрийн хүсэлт'],['daily','Өдрийн тайлан'],['bank','Банкны гүйлгээ'],['rev','Орлого тулгалт'],['cash','Бэлэн мөнгө'],['bal','Дансны үлдэгдэл'],['pay','Цалин'],['pl','Дотоод тайлан']];
-const DEFAULT_PERMS = {daily:false, req:true, bank:true, rev:false, cash:true, bal:true, pay:false, pl:false, wh:false, rcv_fc:false, rcv_dr:false, rcv_ns:false, rcv_ht:false};
+const DEFAULT_PERMS = {daily:false, req:true, bank:true, rev:false, cash:true, bal:true, pay:false, pl:false, wh:false, rcv_fc:false, rcv_dr:false, rcv_ns:false, rcv_ht:false, inv:false, invadm:false};
 const permsOf = e => ({...DEFAULT_PERMS, ...((ACCESS.perms || {})[e] || {})});
 function renderAccess(){
   const ownRow = `<div class="acc-row" style="background:var(--ok-bg,#eef8f1)"><div class="row" style="justify-content:space-between"><b>${esc(user.email())}</b><span class="chip c-ok">Эзэмшигч — бүх эрх автоматаар</span></div>
@@ -4687,16 +5105,17 @@ else VIVIFB.start(async () => {
   $('#req-form-card').hidden = !canWrite;
   $('#tab-set').hidden = !isOwner;
   const onErr = e => console.warn('db', e);
-  let ALLOW = {daily:true, req:true, bank:true, rev:true, cash:true, bal:true, pay:true, pl:true, wh:true, rcv_fc:true, rcv_dr:true, rcv_ns:true, rcv_ht:true};
+  let ALLOW = {daily:true, req:true, bank:true, rev:true, cash:true, bal:true, pay:true, pl:true, wh:true, rcv_fc:true, rcv_dr:true, rcv_ns:true, rcv_ht:true, inv:true, invadm:true};
   if (!isOwner){
     try{ const a = await db.doc('config/access').get(); const x = a.exists ? a.data() : {}; ALLOW = {...DEFAULT_PERMS, ...((x.perms || {})[String(user.email()).toLowerCase()] || {})}; }catch(e){ console.warn(e); }
   }
-  ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); window.ALLOWX = ALLOW;
-  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
+  ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); ALLOW.inv = !!(ALLOW.inv || ALLOW.invadm); window.ALLOWX = ALLOW;
+  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv', inv:'inv'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
   for (const k in TABS){ const b = document.querySelector(`nav.tabs button[data-tab="${TABS[k]}"]`); if (b) b.hidden = !ALLOW[k]; if (KPI[k]) $(KPI[k]).closest('.kpi').hidden = !ALLOW[k]; }
   { const cur = document.querySelector('nav.tabs button[aria-selected="true"]'); if (!cur || cur.hidden){ const first = [...document.querySelectorAll('nav.tabs button')].find(b => !b.hidden); if (first) showTab(first.dataset.tab); } }
   if (!Object.values(ALLOW).some(Boolean)) gate('Танд харах хэсэг сонгогдоогүй байна. Эзэмшигчид хандана уу.', true);
   if (ALLOW.req) db.collection('requests').onSnapshot(s => { S.requests = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.requests.map(r => r.createdBy)); render(); }, onErr);
+  if (ALLOW.inv) db.collection('inv').onSnapshot(s => { IV.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.wh || ALLOW.rcv) db.doc('config/wh').onSnapshot(d => { WS.cfg = d.exists ? d.data() : null; render(); }, onErr);
   if (ALLOW.wh){
     db.collection('deliv').onSnapshot(s => { WS.delivs = s.docs.map(d => ({id: d.id, ...d.data()}));
