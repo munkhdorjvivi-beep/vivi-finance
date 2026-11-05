@@ -159,6 +159,7 @@ body{margin:0;background:var(--bg)}
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="req" aria-selected="true">Төлбөрийн хүсэлт<span class="n" id="t-req" hidden></span></button>
     <button role="tab" data-tab="daily" aria-selected="false">Өдрийн тайлан</button>
+    <button role="tab" data-tab="anal" aria-selected="false">Борлуулалтын шинжилгээ</button>
     <button role="tab" data-tab="bank" aria-selected="false">Банкны гүйлгээ<span class="n" id="t-bank" hidden></span></button>
     <button role="tab" data-tab="rev" aria-selected="false">Орлого тулгалт</button>
     <button role="tab" data-tab="cash" aria-selected="false">Бэлэн мөнгө<span class="n" id="t-cash" hidden></span></button>
@@ -457,6 +458,33 @@ body{margin:0;background:var(--bg)}
       <div class="tbl"><table><thead id="dr-paym-h"></thead><tbody id="dr-paym"></tbody></table></div>
       <p class="note" style="margin:6px 0 0">Шимтгэл: ХААН банк ПОС ба Голомт 0.5%, QPay 1%, бусад 0% (ойролцоо).</p>
     </div>
+  </section>
+
+  <!-- SALES ANALYSER: a period against a comparable one (same weekdays) and what made the difference -->
+  <section class="panel" data-panel="anal" hidden>
+    <div class="card">
+      <h2>Борлуулалтын шинжилгээ</h2>
+      <p class="note" style="margin:0 0 8px">Сонгосон өдөр / хугацааг <b>ижил гарагтай</b> өдрүүдтэй харьцуулна (Пүрэв — Пүрэвтэй, Бямба — Бямбатай). Өөрчлөлтийг худалдан авагчийн тоо, дундаж чек, барааны бүлэг, нийлүүлэгч, дэлгүүрээр задална. Өгөгдөл — «Өдрийн тайлан»-д оруулсан Smart тайлангууд.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <label class="f" style="min-width:0">Өдөр<span class="row" style="gap:4px"><button class="btn" id="an-prev" title="Өмнөх">◀</button><input type="date" id="an-date" style="width:auto"><button class="btn" id="an-next" title="Дараах">▶</button></span></label>
+        <label class="f" style="min-width:0">Хугацаа<select id="an-mode" style="width:auto"></select></label>
+        <span id="an-custom" class="row" hidden style="gap:4px;align-items:flex-end"><label class="f" style="min-width:0">Эхлэх<input type="date" id="an-from" style="width:auto"></label><label class="f" style="min-width:0">Дуусах<input type="date" id="an-to" style="width:auto"></label></span>
+        <label class="f" style="min-width:0">Юутай харьцуулах<select id="an-cmp" style="width:auto"></select></label>
+        <label class="f" style="min-width:0">Дэлгүүр<select id="an-unit" style="width:auto"></select></label>
+        <button class="btn" id="an-xlsx">📥 Excel</button>
+      </div>
+      <div class="filter chips" id="an-quick" style="margin-top:8px">
+        <button data-q="day|w1">Өчигдөр ↔ 7 хоногийн өмнөх ижил гараг</button><button data-q="week|w1">7 хоног ↔ өмнөх 7 хоног</button><button data-q="wtd|w1">Энэ долоо хоног ↔ өнгөрсөн</button><button data-q="mtd|w4">Сарын эхнээс ↔ 4 долоо хоногийн өмнө</button><button data-q="mtd|y1">Сарын эхнээс ↔ өнгөрсөн жил</button>
+      </div>
+      <div class="note" id="an-per" style="margin-top:8px"></div>
+      <div id="an-warn"></div>
+    </div>
+    <div class="kpis" id="an-kpis"></div>
+    <div class="card"><h2>Яагаад өөрчлөгдсөн бэ</h2><div id="an-story" style="line-height:1.6"></div></div>
+    <div class="card"><h2>Өдөр өдрөөр</h2><div id="an-chart"></div><div class="tbl" style="margin-top:8px"><table><thead><tr><th>Гараг</th><th>Одоо</th><th class="n">Борлуулалт</th><th>Тэр үед</th><th class="n">Борлуулалт</th><th class="n">Зөрүү</th><th class="n">%</th></tr></thead><tbody id="an-days"></tbody></table></div></div>
+    <div class="card"><h2>Барааны бүлгээр</h2><div class="tbl" style="max-height:460px;overflow:auto"><table><thead><tr><th>Бүлэг</th><th class="n">Одоо</th><th class="n">Тэр үед</th><th class="n">Зөрүү</th><th class="n">%</th><th class="n">Ширхэг</th><th class="n">Ашиг %</th><th class="n">Нийт өөрчлөлтөд</th></tr></thead><tbody id="an-grp"></tbody></table></div></div>
+    <div class="card"><h2>Нийлүүлэгчээр</h2><div class="tbl" style="max-height:460px;overflow:auto"><table><thead><tr><th>Нийлүүлэгч</th><th class="n">Одоо</th><th class="n">Тэр үед</th><th class="n">Зөрүү</th><th class="n">%</th><th class="n">Ширхэг</th><th class="n">Ашиг %</th><th class="n">Нийт өөрчлөлтөд</th></tr></thead><tbody id="an-sup"></tbody></table></div></div>
+    <div class="card"><h2>Дэлгүүрээр</h2><div class="tbl"><table><thead><tr><th>Дэлгүүр</th><th class="n">Одоо</th><th class="n">Тэр үед</th><th class="n">Зөрүү</th><th class="n">%</th><th class="n">Ширхэг</th><th class="n">Ашиг %</th><th class="n">Нийт өөрчлөлтөд</th></tr></thead><tbody id="an-units"></tbody></table></div></div>
   </section>
 
   <!-- PAYROLL -->
@@ -2122,6 +2150,103 @@ const DAILY = (() => {
   return R;
 })();
 
+// ===== VIVI sales analyser: a period against a comparable one (same weekdays), and what made the difference =====
+const ANAL = (() => {
+  const pad = n => String(n).padStart(2, '0');
+  const isoU = t => { const d = new Date(t); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+  const addD = (s, n) => isoU(Date.parse(s + 'T00:00:00Z') + n * 86400e3);
+  const wd = s => new Date(s + 'T00:00:00Z').getUTCDay();   // 0 = Sunday
+  const WD = ['Ня', 'Да', 'Мя', 'Лх', 'Пү', 'Ба', 'Бя'];
+  const span = (a, z) => { const L = []; for (let d = a; d <= z; d = addD(d, 1)) L.push(d); return L; };
+  const monthBack = (s, k) => { const [y, m, d] = s.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1 - k, 1)); const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate(); return isoU(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), Math.min(d, last))); };
+  const MODES = {day: 'Өдөр', week: '7 хоног (сүүлийн 7 өдөр)', wtd: 'Энэ долоо хоног (Даваагаас)', mtd: 'Сарын эхнээс', month: 'Бүтэн сар', custom: 'Хугацаа сонгох'};
+  const CMPS = {w1: '1 долоо хоногийн өмнө (ижил гараг)', w4: '4 долоо хоногийн өмнө (ижил гараг)', y1: 'Өнгөрсөн жил (ижил гараг, 52 долоо хоног)', m1: 'Өмнөх сар (огноогоор)', y1d: 'Өнгөрсөн жил (огноогоор)', prev: 'Өмнөх ижил урт хугацаа'};
+  // the period being looked at
+  function period(mode, d, from, to){
+    if (mode === 'day') return [d, d];
+    if (mode === 'week') return [addD(d, -6), d];
+    if (mode === 'wtd') return [addD(d, -((wd(d) + 6) % 7)), d];
+    if (mode === 'mtd') return [d.slice(0, 8) + '01', d];
+    if (mode === 'month'){ const a = d.slice(0, 8) + '01'; return [a, addD(monthBack(a, -1), -1)]; }
+    return [from || d, to || d];
+  }
+  // the period it is compared with
+  function compare(cmp, a, z){
+    const n = span(a, z).length;
+    if (cmp === 'w1') return [addD(a, -7), addD(z, -7)];
+    if (cmp === 'w4') return [addD(a, -28), addD(z, -28)];
+    if (cmp === 'y1') return [addD(a, -364), addD(z, -364)];
+    if (cmp === 'm1') return [monthBack(a, 1), monthBack(z, 1)];
+    if (cmp === 'y1d') return [String(+a.slice(0, 4) - 1) + a.slice(4), String(+z.slice(0, 4) - 1) + z.slice(4)];
+    return [addD(a, -n), addD(a, -1)];
+  }
+  // sums of the daily docs over the days (one shop or all)
+  function agg(days, a, z, unit){
+    const o = {s: 0, c: 0, q: 0, n: 0, units: {}, grp: {}, sup: {}, daily: [], miss: [], have: 0, wds: [0, 0, 0, 0, 0, 0, 0]};
+    for (const d of span(a, z)){ const D = days[d]; o.wds[wd(d)]++;
+      if (!D || !D.stores){ o.miss.push(d); o.daily.push({d, s: 0, n: 0, miss: true}); continue; } o.have++;
+      let ds = 0, dn = 0;
+      for (const [u, S] of Object.entries(D.stores)){ if (unit && u !== unit) continue;
+        const n = D.pay && D.pay[u] ? Object.values(D.pay[u]).reduce((x, F) => x + (F.n || 0), 0) : 0;
+        const U = o.units[u] = o.units[u] || {s: 0, c: 0, q: 0, n: 0}; U.s += S.s || 0; U.c += S.c || 0; U.q += S.q || 0; U.n += n;
+        o.s += S.s || 0; o.c += S.c || 0; o.q += S.q || 0; o.n += n; ds += S.s || 0; dn += n; }
+      for (const [u, SU] of Object.entries(D.sup || {})){ if (unit && u !== unit) continue;
+        for (const [sp, X] of Object.entries(SU)){ const P = o.sup[sp] = o.sup[sp] || {s: 0, c: 0, q: 0}; P.s += X.s || 0; P.c += X.c || 0; P.q += X.q || 0;
+          for (const [g, G] of Object.entries(X.g || {})){ const k = g.replace(/\d+$/, '').trim() || '–'; const R = o.grp[k] = o.grp[k] || {s: 0, c: 0, q: 0}; R.s += G.s || 0; R.c += G.c || 0; R.q += G.q || 0; } } }
+      o.daily.push({d, s: ds, n: dn}); }
+    return o;
+  }
+  // the two periods side by side: totals, why, and who contributed
+  function analyse(days, opt){
+    const [a, z] = period(opt.mode, opt.date, opt.from, opt.to), [a0, z0] = compare(opt.cmp, a, z);
+    const A = agg(days, a, z, opt.unit), B = agg(days, a0, z0, opt.unit);
+    const pct = (x, y) => y ? (x - y) / Math.abs(y) * 100 : null;
+    const tk = o => o.n ? o.s / o.n : 0, ipr = o => o.n ? o.q / o.n : 0, gm = o => o.s ? (o.s - o.c) / o.s * 100 : 0;
+    const kpi = {
+      s: {a: A.s, b: B.s, p: pct(A.s, B.s)}, gp: {a: A.s - A.c, b: B.s - B.c, p: pct(A.s - A.c, B.s - B.c)}, gm: {a: gm(A), b: gm(B), pp: gm(A) - gm(B)},
+      q: {a: A.q, b: B.q, p: pct(A.q, B.q)}, n: {a: A.n, b: B.n, p: pct(A.n, B.n)}, t: {a: tk(A), b: tk(B), p: pct(tk(A), tk(B))}, ipr: {a: ipr(A), b: ipr(B), p: pct(ipr(A), ipr(B))}};
+    // sales change = more/fewer payments × old average ticket + ticket change × new count
+    const dS = A.s - B.s, traffic = A.n && B.n ? (A.n - B.n) * tk(B) : 0, ticket = A.n && B.n ? (tk(A) - tk(B)) * A.n : 0;
+    const contrib = (X, Y) => [...new Set([...Object.keys(X), ...Object.keys(Y)])].map(k => { const x = X[k] || {s: 0, c: 0, q: 0}, y = Y[k] || {s: 0, c: 0, q: 0};
+      return {k, a: x.s, b: y.s, d: x.s - y.s, p: pct(x.s, y.s), qa: x.q, qb: y.q, gma: x.s ? (x.s - x.c) / x.s * 100 : null, gmb: y.s ? (y.s - y.c) / y.s * 100 : null, share: dS ? (x.s - y.s) / Math.abs(dS) * 100 : null}; })
+      .filter(r => Math.abs(r.a) + Math.abs(r.b) > 0).sort((p, q) => Math.abs(q.d) - Math.abs(p.d));
+    const units = contrib(A.units, B.units), grp = contrib(A.grp, B.grp), sup = contrib(A.sup, B.sup);
+    // like for like: shops that sold in both periods
+    const POP = /поп-ап|түр цэг|дархан|сандэй|эцсийн хэрэглэгч/i, pops = units.filter(u => POP.test(u.k));
+    const lfl = units.filter(u => u.a > 0 && u.b > 0 && !POP.test(u.k)), lflA = lfl.reduce((x, u) => x + u.a, 0), lflB = lfl.reduce((x, u) => x + u.b, 0);
+    const newU = units.filter(u => u.a > 0 && !(u.b > 0) && !POP.test(u.k)).map(u => u.k), goneU = units.filter(u => u.b > 0 && !(u.a > 0) && !POP.test(u.k)).map(u => u.k);
+    // warnings: missing days, different weekday mix
+    const warn = [];
+    if (A.miss.length) warn.push(`Сонгосон хугацаанд ${A.miss.length} өдрийн тайлан алга: ${A.miss.slice(0, 8).join(', ')}${A.miss.length > 8 ? '…' : ''}`);
+    if (B.miss.length) warn.push(`Харьцуулах хугацаанд ${B.miss.length} өдрийн тайлан алга${B.miss.length === span(a0, z0).length ? ' (бүхэлдээ) — тэр үеийн «Өдрийн тайлан»-г оруулна уу' : ': ' + B.miss.slice(0, 8).join(', ')}`);
+    const wkA = A.wds[0] + A.wds[6], wkB = B.wds[0] + B.wds[6];
+    if (wkA !== wkB) warn.push(`Амралтын өдрийн тоо өөр: одоо ${wkA}, харьцуулах үед ${wkB} — «огноогоор» биш «ижил гараг»-аар харьцуулбал илүү зөв`);
+    if (!A.n || !B.n) warn.push('Төлбөрийн тайлан (төлбөрийн тоо) дутуу тул дундаж чек тооцогдоогүй.');
+    // the story in words
+    const F = v => Math.round(v).toLocaleString('ru-RU').replace(/,/g, ' '), P1 = v => v == null ? '–' : (v > 0 ? '+' : '') + v.toFixed(1) + '%', S = v => (v > 0 ? '+' : '') + F(v);
+    const story = [];
+    if (!A.have) story.push('Сонгосон хугацаанд «Өдрийн тайлан» алга — өдрөө солих эсвэл тайлангаа оруулна уу.');
+    else if (!B.have) story.push('Харьцуулах хугацааны «Өдрийн тайлан» алга — өөр харьцуулалт сонгох эсвэл тэр үеийн Smart тайланг «Өдрийн тайлан»-д оруулна уу.');
+    if (B.have && A.have){
+      story.push(`Борлуулалт ${F(A.s)}₮ — харьцуулах үеэс ${S(dS)}₮ (${P1(kpi.s.p)}).`);
+      if (A.n && B.n) story.push(`Төлбөрийн тоо (≈ худалдан авагч) ${P1(kpi.n.p)} → ${S(traffic)}₮; дундаж чек ${F(tk(B))} → ${F(tk(A))}₮ (${P1(kpi.t.p)}) → ${S(ticket)}₮. ${Math.abs(traffic) > Math.abs(ticket) ? 'Гол шалтгаан — худалдан авагчийн тоо.' : 'Гол шалтгаан — нэг худалдан авагчийн худалдан авалт.'}`);
+      if (Math.abs(kpi.gm.pp) >= 1) story.push(`Бохир ашгийн хувь ${kpi.gm.b.toFixed(1)}% → ${kpi.gm.a.toFixed(1)}% (${kpi.gm.pp > 0 ? '+' : ''}${kpi.gm.pp.toFixed(1)} пп)${kpi.gm.pp < -2 ? ' — хямдрал / урамшуулал их байсан эсвэл өртөг өндөр бараа их зарагдсан' : ''}.`);
+      const up = grp.filter(r => r.d > 0).slice(0, 3), dn = grp.filter(r => r.d < 0).slice(0, 3);
+      if (up.length) story.push('Өсөлт: ' + up.map(r => `${r.k} ${S(r.d)}₮ (${P1(r.p)})`).join(', ') + '.');
+      if (dn.length) story.push('Бууралт: ' + dn.map(r => `${r.k} ${S(r.d)}₮ (${P1(r.p)})`).join(', ') + '.');
+      const su = sup.filter(r => r.d > 0).slice(0, 2), sd = sup.filter(r => r.d < 0).slice(0, 2);
+      if (su.length || sd.length) story.push('Нийлүүлэгчээр: ' + [...su, ...sd].map(r => `${r.k} ${S(r.d)}₮`).join(', ') + '.');
+      const pd2 = pops.filter(u => Math.abs(u.d) >= 1000);
+      if (pd2.length) story.push('Поп-ап / түр цэг: ' + pd2.map(u => `${u.k} ${S(u.d)}₮ (одоо ${F(u.a)}, тэр үед ${F(u.b)})`).join(', ') + '.');
+      if (newU.length || goneU.length || pd2.length) story.push(`${newU.length || goneU.length ? `Дэлгүүрийн бүрэлдэхүүн өөр (${[...newU.map(u => '+' + u), ...goneU.map(u => '−' + u)].join(', ')}). ` : ''}Байнгын, хоёр үед хоёуланд нь ажилласан дэлгүүрүүдээр (LFL): ${F(lflB)} → ${F(lflA)}₮ (${P1(pct(lflA, lflB))}).`);
+    }
+    return {a, z, a0, z0, A, B, kpi, dS, traffic, ticket, units, grp, sup, lfl: {a: lflA, b: lflB, p: pct(lflA, lflB), newU, goneU, pops: pops.map(u => u.k)}, warn, story, wdName: WD};
+  }
+  const R = {MODES, CMPS, period, compare, agg, analyse, addD, wd, WD};
+  if (typeof module !== 'undefined') module.exports = R;
+  return R;
+})();
+
 // LPP item names (Kazakh / Russian) → Mongolian: audience + item nouns (generated from kzt/tr.py)
 const WHTR = (() => {
   const AUD = [["СӘБИ|МЛАДЕН|НОВОРОЖ|НЯРАЙ", "Нярайн"], ["ҚЫЗ БАЛА|ҚЫЗДАР|ҚЫЗҒА|ҚЫЗДЫҢ|ДЕВОЧ|ҚЫЗ ", "Охины"], ["ҰЛ БАЛА|ҰЛДАР|ҰЛҒА|МАЛЬЧ|ҰЛ ", "Хүүгийн"], ["БАЛАЛАР|БАЛАҒА|ДЕТСК|ДЕТЕЙ|ДЛЯ ДЕТ", "Хүүхдийн"], ["ӘЙЕЛ|ХАНЫМ|ЖЕНСК|ЖЕНЩ|ДАМСК", "Эмэгтэй"], ["ЕРЛЕР|ЕРКЕК|МУЖСК|МУЖЧ|ЕР АДАМ", "Эрэгтэй"]].map(([p, m]) => [new RegExp(p, 'u'), m]);
@@ -2720,6 +2845,7 @@ function renderInner(){
   // balances
   renderBal();
   try{ renderPay(); }catch(e){ console.warn('pay', e); }
+  try{ renderAnal(); }catch(e){ console.warn('anal', e); }
   try{ renderPL(); }catch(e){ console.warn('pl', e); }
   try{ renderWh(); renderWhSettings(); }catch(e){ console.warn('wh', e); }
   try{ renderInv(); }catch(e){ console.warn('inv', e); }
@@ -5565,6 +5691,81 @@ document.addEventListener('click', async e => {
     const cat = [...$('#rq-cat').options].find(o => /зээл/i.test(o.text)); if (cat) $('#rq-cat').value = cat.value;
     $('#rq-note').value = `${c.kind || 'Зээл'}ийн төлбөр: ${c.name}${c.no ? ' №' + c.no : ''} · ${s.next.d}`; $('#rq-msg').textContent = 'Гэрээнээс бөглөсөн — шалгаад илгээнэ үү.'; }
 });
+// ---------- sales analyser (Борлуулалтын шинжилгээ) ----------
+const AN = {date: '', mode: 'day', cmp: 'w1', unit: '', from: '', to: '', last: null, init: false};
+const anPct = v => v == null || !isFinite(v) ? '–' : (v > 0 ? '+' : '') + v.toFixed(1) + '%';
+const anCls = v => v == null ? '' : v > 0.5 ? 'c-ok' : v < -0.5 ? 'c-bad' : 'c-grey';
+function anInit(){
+  if (AN.init) return; AN.init = true;
+  $('#an-mode').innerHTML = Object.entries(ANAL.MODES).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
+  $('#an-cmp').innerHTML = Object.entries(ANAL.CMPS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
+  try{ const s = JSON.parse(localStorage.getItem('vivi-anal') || '{}'); if (s.mode) AN.mode = s.mode; if (s.cmp) AN.cmp = s.cmp; }catch(e){}
+  const sync = () => { try{ localStorage.setItem('vivi-anal', JSON.stringify({mode: AN.mode, cmp: AN.cmp})); }catch(e){} renderAnal(); };
+  $('#an-date').addEventListener('change', e => { AN.auto = false; AN.date = e.target.value; renderAnal(); });
+  $('#an-prev').addEventListener('click', () => { AN.auto = false; AN.date = ANAL.addD(AN.date, -1); renderAnal(); });
+  $('#an-next').addEventListener('click', () => { AN.auto = false; AN.date = ANAL.addD(AN.date, 1); renderAnal(); });
+  $('#an-mode').addEventListener('change', e => { AN.mode = e.target.value; sync(); });
+  $('#an-cmp').addEventListener('change', e => { AN.cmp = e.target.value; sync(); });
+  $('#an-unit').addEventListener('change', e => { AN.unit = e.target.value; renderAnal(); });
+  $('#an-from').addEventListener('change', e => { AN.from = e.target.value; renderAnal(); });
+  $('#an-to').addEventListener('change', e => { AN.to = e.target.value; renderAnal(); });
+  $('#an-quick').addEventListener('click', e => { const b = e.target.closest('button[data-q]'); if (!b) return; const [m, c] = b.dataset.q.split('|'); AN.mode = m; AN.cmp = c;
+    if (m === 'day'){ const L = anDays(); const y = ANAL.addD(isoU(Date.now() + 8 * 3600e3), -1); AN.date = L.includes(y) ? y : (L.at(-1) || y); AN.auto = false; } sync(); });
+  $('#an-xlsx').addEventListener('click', anExcel);
+}
+const anDays = () => Object.keys(DR.days || {}).filter(d => DR.days[d] && DR.days[d].stores).sort();
+function renderAnal(){
+  if (!$('#an-kpis') || typeof DR === 'undefined') return; anInit();
+  const L = anDays(); if (!AN.date || AN.auto !== false) AN.date = L.at(-1) || isoU(Date.now());   // the last day with a report, until the user picks one
+  $('#an-date').value = AN.date; $('#an-mode').value = AN.mode; $('#an-cmp').value = AN.cmp; $('#an-custom').hidden = AN.mode !== 'custom';
+  if (AN.mode === 'custom'){ if (!AN.from) AN.from = ANAL.addD(AN.date, -6); if (!AN.to) AN.to = AN.date; $('#an-from').value = AN.from; $('#an-to').value = AN.to; }
+  const units = [...new Set(L.slice(-120).flatMap(d => Object.keys(DR.days[d].stores || {})))].sort();
+  $('#an-unit').innerHTML = '<option value="">Бүх дэлгүүр</option>' + units.map(u => `<option ${u === AN.unit ? 'selected' : ''}>${esc(u)}</option>`).join('');
+  $$('#an-quick button').forEach(b => b.setAttribute('aria-pressed', b.dataset.q === AN.mode + '|' + AN.cmp ? 'true' : 'false'));
+  if (!L.length){ $('#an-kpis').innerHTML = ''; $('#an-story').innerHTML = '<div class="empty">«Өдрийн тайлан»-д өгөгдөл алга.</div>'; return; }
+  const r = AN.last = ANAL.analyse(DR.days, {mode: AN.mode, date: AN.date, from: AN.from, to: AN.to, cmp: AN.cmp, unit: AN.unit});
+  const lab = (a, z) => a === z ? `${a} (${ANAL.WD[ANAL.wd(a)]})` : `${a} (${ANAL.WD[ANAL.wd(a)]}) – ${z} (${ANAL.WD[ANAL.wd(z)]})`;
+  $('#an-per').innerHTML = `<b>Одоо:</b> ${esc(lab(r.a, r.z))} &nbsp;·&nbsp; <b>Харьцуулах:</b> ${esc(lab(r.a0, r.z0))}${AN.unit ? ' · ' + esc(AN.unit) : ''}`;
+  $('#an-warn').innerHTML = r.warn.map(w => `<div class="note" style="color:var(--warn);margin-top:4px">⚠ ${esc(w)}</div>`).join('');
+  const K = r.kpi, tile = (l, a, b, p, f) => `<div class="kpi"><div class="l">${l}</div><div class="v">${f(a)}</div><div class="s">тэр үед ${f(b)} · <span class="chip ${anCls(p)}">${anPct(p)}</span></div></div>`;
+  const fx = v => fmt(Math.round(v)), f1 = v => (v || 0).toFixed(2).replace('.', ',');
+  $('#an-kpis').innerHTML = tile('Борлуулалт ₮', K.s.a, K.s.b, K.s.p, fx) + tile('Бохир ашиг ₮', K.gp.a, K.gp.b, K.gp.p, fx)
+    + `<div class="kpi"><div class="l">Бохир ашгийн хувь</div><div class="v">${K.gm.a.toFixed(1)}%</div><div class="s">тэр үед ${K.gm.b.toFixed(1)}% · <span class="chip ${anCls(K.gm.pp)}">${K.gm.pp > 0 ? '+' : ''}${K.gm.pp.toFixed(1)} пп</span></div></div>`
+    + tile('Төлбөрийн тоо (≈ чек)', K.n.a, K.n.b, K.n.p, fx) + tile('Дундаж чек ₮', K.t.a, K.t.b, K.t.p, fx) + tile('Ширхэг', K.q.a, K.q.b, K.q.p, fx) + tile('Нэг чекэнд ширхэг', K.ipr.a, K.ipr.b, K.ipr.p, f1)
+    + `<div class="kpi"><div class="l">Ижил дэлгүүрүүдээр (LFL)</div><div class="v">${anPct(r.lfl.p)}</div><div class="s">${fx(r.lfl.b)} → ${fx(r.lfl.a)}</div></div>`;
+  $('#an-story').innerHTML = r.story.length ? r.story.map(t => `<div>• ${esc(t)}</div>`).join('') : '<div class="empty">Харьцуулах өгөгдөл алга.</div>';
+  // day by day, the matching weekdays side by side
+  const n = Math.max(r.A.daily.length, r.B.daily.length), rows = [];
+  for (let i = 0; i < n; i++){ const x = r.A.daily[i], y = r.B.daily[i]; const p = x && y && y.s ? (x.s - y.s) / y.s * 100 : null;
+    rows.push(`<tr><td>${x ? ANAL.WD[ANAL.wd(x.d)] : ''}</td><td class="mono">${x ? esc(x.d.slice(5)) : ''}</td><td class="n">${x ? (x.miss ? '<span class="note">тайлангүй</span>' : fmt(Math.round(x.s))) : ''}</td><td class="mono">${y ? esc(y.d.slice(5)) + (y.d.slice(0, 4) !== (x || y).d.slice(0, 4) ? ' ' + y.d.slice(0, 4) : '') : ''}</td><td class="n">${y ? (y.miss ? '<span class="note">тайлангүй</span>' : fmt(Math.round(y.s))) : ''}</td><td class="n">${x && y && !x.miss && !y.miss ? sgn(Math.round(x.s - y.s)) : ''}</td><td class="n">${p == null || x.miss || y.miss ? '' : `<span class="chip ${anCls(p)}">${anPct(p)}</span>`}</td></tr>`); }
+  $('#an-days').innerHTML = rows.join('');
+  $('#an-chart').innerHTML = n > 1 ? anChart(r) : '';
+  const tbl = (L2, lim) => L2.slice(0, lim).map(x => `<tr><td>${esc(x.k)}</td><td class="n">${fmt(Math.round(x.a))}</td><td class="n">${fmt(Math.round(x.b))}</td><td class="n"><b>${sgn(Math.round(x.d))}</b></td><td class="n"><span class="chip ${anCls(x.p)}">${anPct(x.p)}</span></td><td class="n">${fmt(Math.round(x.qa))} / ${fmt(Math.round(x.qb))}</td><td class="n">${x.gma == null ? '–' : x.gma.toFixed(0) + '%'}</td><td class="n">${x.share == null ? '' : x.share.toFixed(0) + '%'}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">–</td></tr>';
+  $('#an-grp').innerHTML = tbl(r.grp, 40); $('#an-sup').innerHTML = tbl(r.sup, 40); $('#an-units').innerHTML = tbl(r.units, 20);
+}
+// two lines: now and then, matched by position (same weekday)
+function anChart(r){
+  const W = 760, H = 180, P = 34, A = r.A.daily, B = r.B.daily, n = Math.max(A.length, B.length), mx = Math.max(1, ...A.map(x => x.s), ...B.map(x => x.s));
+  const X = i => P + (n === 1 ? 0 : i * (W - P * 2) / (n - 1)), Y = v => H - 22 - v / mx * (H - 40);
+  const line = (L, cls) => { const pts = L.map((x, i) => x.miss ? null : `${X(i).toFixed(1)},${Y(x.s).toFixed(1)}`).filter(Boolean); return pts.length ? `<polyline points="${pts.join(' ')}" fill="none" stroke="${cls}" stroke-width="2"/>` + L.map((x, i) => x.miss ? '' : `<circle cx="${X(i).toFixed(1)}" cy="${Y(x.s).toFixed(1)}" r="2.5" fill="${cls}"><title>${x.d}: ${fmt(Math.round(x.s))} ₮</title></circle>`).join('') : ''; };
+  const lbl = A.map((x, i) => (n <= 14 || i % Math.ceil(n / 14) === 0) ? `<text x="${X(i).toFixed(1)}" y="${H - 6}" font-size="10" text-anchor="middle" fill="currentColor" opacity=".6">${ANAL.WD[ANAL.wd(x.d)]} ${x.d.slice(8)}</text>` : '').join('');
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;max-height:220px" role="img" aria-label="Өдөр өдрийн борлуулалт">${lbl}${line(B, '#9aa3ad')}${line(A, 'var(--accent, #1f5f8b)')}</svg>
+    <div class="note"><span style="color:var(--accent,#1f5f8b)">━</span> одоо &nbsp; <span style="color:#9aa3ad">━</span> харьцуулах үе</div>`;
+}
+async function anExcel(){
+  const r = AN.last; if (!r || typeof XLSX === 'undefined') return;
+  const head = ['', 'Одоо', 'Тэр үед', 'Зөрүү', '%', 'Ширхэг одоо', 'Ширхэг тэр үед', 'Ашиг % одоо', 'Ашиг % тэр үед', 'Нийт өөрчлөлтөд %'];
+  const T = L => [head].concat(L.map(x => [x.k, Math.round(x.a), Math.round(x.b), Math.round(x.d), x.p == null ? '' : +x.p.toFixed(1), Math.round(x.qa), Math.round(x.qb), x.gma == null ? '' : +x.gma.toFixed(1), x.gmb == null ? '' : +x.gmb.toFixed(1), x.share == null ? '' : +x.share.toFixed(1)]));
+  const K = r.kpi, sum = [['Борлуулалтын шинжилгээ'], ['Одоо', r.a + ' – ' + r.z], ['Харьцуулах', r.a0 + ' – ' + r.z0], ['Дэлгүүр', AN.unit || 'Бүгд'], [],
+    ['Үзүүлэлт', 'Одоо', 'Тэр үед', '%'], ['Борлуулалт', Math.round(K.s.a), Math.round(K.s.b), K.s.p == null ? '' : +K.s.p.toFixed(1)], ['Бохир ашиг', Math.round(K.gp.a), Math.round(K.gp.b), K.gp.p == null ? '' : +K.gp.p.toFixed(1)],
+    ['Бохир ашгийн хувь', +K.gm.a.toFixed(1), +K.gm.b.toFixed(1), +K.gm.pp.toFixed(1) + ' пп'], ['Төлбөрийн тоо', K.n.a, K.n.b, K.n.p == null ? '' : +K.n.p.toFixed(1)], ['Дундаж чек', Math.round(K.t.a), Math.round(K.t.b), K.t.p == null ? '' : +K.t.p.toFixed(1)],
+    ['Ширхэг', Math.round(K.q.a), Math.round(K.q.b), K.q.p == null ? '' : +K.q.p.toFixed(1)], ['LFL', Math.round(r.lfl.a), Math.round(r.lfl.b), r.lfl.p == null ? '' : +r.lfl.p.toFixed(1)], [], ['Яагаад'], ...r.story.map(t => [t]), [], ...r.warn.map(w => ['⚠ ' + w])];
+  const days = [['Гараг', 'Одоо', 'Борлуулалт', 'Гараг', 'Тэр үед', 'Борлуулалт', 'Зөрүү']]; for (let i = 0; i < Math.max(r.A.daily.length, r.B.daily.length); i++){ const x = r.A.daily[i], y = r.B.daily[i];
+    days.push([x ? ANAL.WD[ANAL.wd(x.d)] : '', x ? x.d : '', x && !x.miss ? Math.round(x.s) : '', y ? ANAL.WD[ANAL.wd(y.d)] : '', y ? y.d : '', y && !y.miss ? Math.round(y.s) : '', x && y && !x.miss && !y.miss ? Math.round(x.s - y.s) : '']); }
+  const wb = XLSX.utils.book_new(); const add = (n, a, w) => { const ws = XLSX.utils.aoa_to_sheet(a); ws['!cols'] = w.map(x => ({wch: x})); XLSX.utils.book_append_sheet(wb, ws, n); };
+  add('Хураангуй', sum, [24, 18, 18, 12]); add('Өдрөөр', days, [8, 12, 14, 8, 12, 14, 14]); add('Барааны бүлэг', T(r.grp), [28, 14, 14, 14, 8, 10, 10, 10, 10, 12]); add('Нийлүүлэгч', T(r.sup), [32, 14, 14, 14, 8, 10, 10, 10, 10, 12]); add('Дэлгүүр', T(r.units), [24, 14, 14, 14, 8, 10, 10, 10, 10, 12]);
+  XLSX.writeFile(wb, `Shinjilgee_${r.a}_${r.z}_vs_${r.a0}.xlsx`);
+}
 // ===================== chat: one-to-one, groups, a thread under each payment request =====================
 // chats/{cid}: type dm|group|req, name, members [uid], last {t, at, by}, n, read {uid: iso}, reqId
 // msgs/{mid}: cid, members (copy, for the rules), by, at, t (text), files [{id, type, name}], au {id, type, dur}, notified
@@ -5742,7 +5943,7 @@ document.addEventListener('visibilitychange', chMarkRead);
 // a chat button under every payment request (count of messages, ● when unread)
 function chatBtn(r){ const c = CH.chats.find(x => x.id === 'req_' + r.id); return `<button class="btn" data-chat-req="${esc(r.id)}" title="Энэ хүсэлтийн чат">💬${c && c.n ? ' ' + c.n : ''}${c && chUnread(c) ? ' <span style="color:var(--bad)">●</span>' : ''}</button>`; }
 // ===================== two-level menu: groups on top, the group's tabs below (wrapping, no sideways scroll) =====================
-const NAV_GROUPS = [['fin', '💰 Санхүү', ['req', 'rqs', 'bank', 'rev', 'cash', 'bal', 'pay', 'contr']], ['rep', '📊 Тайлан', ['daily', 'pl']],
+const NAV_GROUPS = [['fin', '💰 Санхүү', ['req', 'rqs', 'bank', 'rev', 'cash', 'bal', 'pay', 'contr']], ['rep', '📊 Тайлан', ['daily', 'anal', 'pl']],
   ['wh', '📦 Агуулах, дэлгүүр', ['wh', 'rcv', 'inv']], ['chat', '💬 Чат', ['chat']], ['set', '⚙ Тохиргоо', ['set']]];
 const navGrpOf = t => (NAV_GROUPS.find(g => g[2].includes(t)) || NAV_GROUPS[0])[0];
 let NAV_G = '';
@@ -5861,9 +6062,9 @@ else VIVIFB.start(async () => {
   if (!isOwner){
     try{ const a = await db.doc('config/access').get(); const x = a.exists ? a.data() : {}; ALLOW = {...DEFAULT_PERMS, ...((x.perms || {})[String(user.email()).toLowerCase()] || {})}; }catch(e){ console.warn(e); }
   }
-  ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); ALLOW.inv = !!(ALLOW.inv || ALLOW.invadm); ALLOW.chat = true; if (ALLOW.req) ALLOW.reqsub = false;   // an accountant makes real requests; the employee form is only for people without «Төлбөрийн хүсэлт»
+  ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); ALLOW.inv = !!(ALLOW.inv || ALLOW.invadm); ALLOW.chat = true; ALLOW.anal = !!ALLOW.daily; if (ALLOW.req) ALLOW.reqsub = false;   // an accountant makes real requests; the employee form is only for people without «Төлбөрийн хүсэлт»
   window.ALLOWX = ALLOW; if (!isOwner && !ALLOW.req && !ALLOW.rev) $('#role').textContent = 'Ажилтан · ' + user.email();
-  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv', inv:'inv', reqsub:'rqs', contr:'contr', chat:'chat'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
+  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv', inv:'inv', reqsub:'rqs', contr:'contr', chat:'chat', anal:'anal'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
   for (const k in TABS){ const b = document.querySelector(`nav.tabs button[data-tab="${TABS[k]}"]`); if (b) b.hidden = !ALLOW[k]; if (KPI[k]) $(KPI[k]).closest('.kpi').hidden = !ALLOW[k]; }
   { const cur = document.querySelector('nav.tabs button[aria-selected="true"]'); if (!cur || cur.hidden){ const first = [...document.querySelectorAll('nav.tabs button')].find(b => !b.hidden); if (first) showTab(first.dataset.tab); } }
   if (!Object.values(ALLOW).some(Boolean)) gate('Танд харах хэсэг сонгогдоогүй байна. Эзэмшигчид хандана уу.', true);
