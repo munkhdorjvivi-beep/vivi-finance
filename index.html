@@ -183,6 +183,14 @@ body{margin:0;background:var(--bg)}
         <button class="btn" id="rday-all">Бүх өдөр</button>
       </div>
       <div class="daysum" id="rday-sum"></div>
+      <details id="rx-box" style="margin:0 0 12px"><summary class="note" style="cursor:pointer"><b>📥 Шилжүүлсэн гүйлгээний тайлан (Excel)</b> — дурын хугацаагаар</summary>
+        <div class="row" style="margin-top:8px;gap:6px;align-items:center">
+          <input type="date" id="rx-a" style="width:auto"> – <input type="date" id="rx-z" style="width:auto">
+          <button class="btn" data-rx="y">Өчигдөр</button><button class="btn" data-rx="t">Өнөөдөр</button><button class="btn" data-rx="m">Энэ сар</button><button class="btn" data-rx="pm">Өмнөх сар</button>
+          <button class="btn primary" id="rx-xlsx">Excel татах</button><span class="note" id="rx-msg"></span>
+        </div>
+        <p class="note" style="margin:6px 0 0">Зөвшөөрсөн бөгөөд шилжсэн хүсэлтүүд: банкны гүйлгээтэй тулгагдсан эсвэл «Шилжүүлсэн» гэж тэмдэглэсэн. Огноо = банкны гүйлгээний огноо (байхгүй бол тэмдэглэсэн огноо).</p>
+      </details>
       <div id="req-list"><div class="empty">Хүсэлт алга. Дээрх маягтаар эхний хүсэлтээ илгээнэ үү.</div></div>
     </div>
     <div class="card" id="recur-card">
@@ -1966,6 +1974,7 @@ function reqCard(r, matches){
   if (canWrite && !isOwner && s === 'hold') acts += `<button class="btn primary" data-act="resend" data-id="${esc(r.id)}">↻ Дахин илгээх</button>`;
   if (canWrite && s === 'approved') acts += `<button class="btn primary" data-act="paid" data-id="${esc(r.id)}">Шилжүүлсэн гэж тэмдэглэх</button>`;
   if (s === 'approved' || s === 'paid') acts += `<button class="btn" data-act="print" data-id="${esc(r.id)}">🖨 Зарлагын баримт</button>`;
+  if (canWrite && s !== 'rejected' && s !== 'pending' && s !== 'hold') acts += `<label class="btn" style="cursor:pointer">📎 Баримт нэмэх<input type="file" multiple accept="image/*,application/pdf" hidden data-attach="${esc(r.id)}"></label>`;
   if (canWrite && (s === 'pending' || s === 'hold') && (r.createdBy === me || isOwner)) acts += `<button class="btn" data-act="edit" data-id="${esc(r.id)}">✎ Засах</button>`;
   if (canWrite && (s === 'pending' || s === 'hold') && r.createdBy === me) acts += `<button class="btn" data-act="cancel" data-id="${esc(r.id)}">Цуцлах</button>`;
   // bank links: matched transfers in full, «amount differs» ones folded into one chip
@@ -1980,6 +1989,7 @@ function reqCard(r, matches){
       <div class="note">${esc(r.category||'')}${r.store ? ' · ' + esc(String(r.store).split(',').join(', ')) + (String(r.store).includes(',') ? ' (' + (ALLOC_LABEL[r.alloc || 'sales'] || '') + ')' : '') : ''} · ${esc(nameOf(r.createdBy))} · ${esc(fmtDT(r.createdAt))}${S.approvals[r.id] && S.approvals[r.id].at && localDay(S.approvals[r.id].at) !== localDay(r.createdAt) ? ' · шийдвэрлэсэн ' + esc(fmtDT(S.approvals[r.id].at)) : ''}</div>
       ${a && a.comment ? `<div class="note">Эзэмшигчийн тайлбар: ${esc(a.comment)}</div>` : ''}
       ${s === 'hold' ? `<div class="note" style="color:#5b3b8c">⏸ Хүлээлгэсэн ${esc(fmtDT(r.holdAt))}${r.holdNote ? ' · ' + esc(r.holdNote) : ''}${r.remindAt ? ' · ⏰ сануулга ' + esc(fmtDT(r.remindAt)) : ''}</div>` : ''}
+      ${(r.attachAdds || []).length ? `<div class="note">📎 Дараа нь нэмсэн баримт: ${r.attachAdds.map(x => `${x.n} · ${esc(fmtDT(x.at))} · ${esc(nameOf(x.by))}`).join('; ')}</div>` : ''}
       ${r.editCount ? `<div class="note">✎ Засварласан ${r.editCount} удаа · сүүлд ${esc(fmtDT(r.editedAt))}${(r.edits || []).length ? ' · өмнө: ' + esc((r.edits.at(-1).payee || '') + ' ' + fmt(r.edits.at(-1).amount) + ' ₮') : ''}</div>` : ''}
       ${r.resendCount ? `<div class="note">↻ Дахин илгээсэн ${r.resendCount} удаа${r.resentAt ? ' · сүүлд ' + esc(fmtDT(r.resentAt)) : ''}</div>` : ''}
       ${attList(r).map(x => `<a href="#" data-file="${esc(x.id)}">${/pdf/.test(x.type||'') ? 'Баримт (PDF) нээх' : `<img class="thumb" data-file-img="${esc(x.id)}" alt="Баримт">`}</a>`).join(' ')}
@@ -2146,6 +2156,60 @@ document.addEventListener('click', e => { const b = e.target.closest('#rq-stores
   $('#rq-store').value = cur.join(','); syncStoreChips(); });
 $('#req-form').addEventListener('reset', () => setTimeout(() => { if ($('#rq-store')) $('#rq-store').value = ''; syncStoreChips(); }, 0));
 setTimeout(syncStoreChips, 0);
+// ----- report of paid requests for any period -----
+const rxSet = (a, z) => { $('#rx-a').value = a; $('#rx-z').value = z; };
+rxSet(shiftDay(today(), -1), shiftDay(today(), -1));
+document.addEventListener('click', e => { const b = e.target.closest('button[data-rx]'); if (!b) return; const t = today(), y = shiftDay(t, -1), m0 = t.slice(0, 8) + '01';
+  if (b.dataset.rx === 'y') rxSet(y, y); if (b.dataset.rx === 't') rxSet(t, t); if (b.dataset.rx === 'm') rxSet(m0, t);
+  if (b.dataset.rx === 'pm'){ const pe = shiftDay(m0, -1); rxSet(pe.slice(0, 8) + '01', pe); } });
+function paidRows(a, z){
+  const mt = matchBank(), txOf = {}; for (const t of S.banktx){ const m = mt[t.id]; if (m && m.req && m.st === 'ok' && !txOf[m.req]) txOf[m.req] = t; }
+  const out = [];
+  for (const r of S.requests){
+    const ap = S.approvals[r.id]; if (!ap || ap.decision !== 'approved') continue;
+    const tx = txOf[r.id]; if (!tx && !r.paidAt) continue;
+    const when = tx ? String(tx.dt).replace('T', ' ').slice(0, 16) : fmtDT(r.paidAt), d = when.slice(0, 10);
+    if (d < a || d > z) continue;
+    out.push({r, ap, tx, when, d, no: (localDay(ap.at || r.createdAt) || '').replace(/-/g, '') + '-' + String(r.id).slice(-4).toUpperCase()});
+  }
+  return out.sort((x, y) => x.when.localeCompare(y.when));
+}
+$('#rx-xlsx').addEventListener('click', async () => {
+  const a = $('#rx-a').value, z = $('#rx-z').value; if (!a || !z || a > z){ $('#rx-msg').textContent = 'Хугацаагаа сонгоно уу.'; return; }
+  if (typeof XLSX === 'undefined') return;
+  $('#rx-msg').textContent = 'Бэлтгэж байна…';
+  if (loadBankRange){ loadBankRange(shiftDay(a, -3), z); await new Promise(res => setTimeout(res, 1500)); }   // older bank days are loaded on demand
+  const L = paidRows(a, z); if (!L.length){ $('#rx-msg').textContent = 'Энэ хугацаанд шилжүүлсэн хүсэлт алга.'; return; }
+  await resolveNames([...new Set(L.flatMap(x => [x.r.createdBy, x.ap.by]))]).catch(() => {});
+  const nm = id => (id && S.names[id]) || nameOf(id) || '';
+  const head = ['№', 'Шилжсэн огноо', 'Баримтын №', 'Хүлээн авагч', 'Данс', 'Банк', 'Дүн', 'Данснаас', 'Ангилал', 'Салбар', 'Гүйлгээний утга', 'Хүсэлт гаргасан', 'Хүсэлтийн огноо', 'Зөвшөөрсөн', 'Банкны гүйлгээ', 'Баримт'];
+  const rows = L.map((x, i) => [i + 1, x.when, x.no, x.r.payee || '', x.r.payeeAcc || '', x.r.payeeBank || '', +x.r.amount || 0, ACC_LABEL[x.r.fromAcc] || x.r.fromAcc || '', x.r.category || '', String(x.r.store || '').split(',').join(', '), x.r.note || '',
+    nm(x.r.createdBy), fmtDT(x.r.createdAt), fmtDT(x.ap.at), x.tx ? `${String(x.tx.dt).replace('T', ' ').slice(0, 16)} · ${fmt(x.tx.amount)} · ${x.tx.desc || ''}` : 'гараар тэмдэглэсэн', attList(x.r).length ? attList(x.r).length + ' хуудас' : '']);
+  const tot = L.reduce((s2, x) => s2 + (+x.r.amount || 0), 0);
+  const ws = XLSX.utils.aoa_to_sheet([[`Шилжүүлсэн гүйлгээ · ${a === z ? a : a + ' – ' + z}`], [], head, ...rows, ['', '', '', 'НИЙТ', '', '', tot]]);
+  ws['!cols'] = [4, 16, 15, 24, 14, 10, 13, 26, 18, 22, 34, 16, 16, 16, 40, 9].map(w => ({wch: w}));
+  for (let R2 = 3; R2 <= rows.length + 3; R2++){ const ref = XLSX.utils.encode_cell({r: R2, c: 6}); if (ws[ref]) ws[ref].z = '#,##0'; }
+  // summary: by category, by account, by day
+  const grp = f => { const o = {}; for (const x of L){ const k = f(x) || '—'; o[k] = (o[k] || [0, 0]); o[k][0]++; o[k][1] += +x.r.amount || 0; } return Object.entries(o).sort((p, q) => q[1][1] - p[1][1]); };
+  const sum = [['Ангиллаар', 'Тоо', 'Дүн'], ...grp(x => x.r.category).map(([k, v]) => [k, ...v]), [], ['Данснаас', 'Тоо', 'Дүн'], ...grp(x => ACC_LABEL[x.r.fromAcc] || x.r.fromAcc).map(([k, v]) => [k, ...v]), [], ['Өдрөөр', 'Тоо', 'Дүн'], ...grp(x => x.d).sort((p, q) => p[0].localeCompare(q[0])).map(([k, v]) => [k, ...v]), [], ['НИЙТ', L.length, tot]];
+  const ws2 = XLSX.utils.aoa_to_sheet(sum); ws2['!cols'] = [{wch: 32}, {wch: 8}, {wch: 16}];
+  for (let R2 = 0; R2 < sum.length; R2++){ const ref = XLSX.utils.encode_cell({r: R2, c: 2}); if (ws2[ref] && typeof ws2[ref].v === 'number') ws2[ref].z = '#,##0'; }
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Шилжүүлсэн'); XLSX.utils.book_append_sheet(wb, ws2, 'Хураангуй');
+  XLSX.writeFile(wb, `VIVI_shiljuulsen_${a}${a === z ? '' : '_' + z}.xlsx`);
+  $('#rx-msg').textContent = `${L.length} гүйлгээ · ${fmt(tot)} ₮`;
+});
+// add invoices / receipts to a request after it was approved or paid (the invoice often comes later)
+document.addEventListener('change', async e => {
+  const inp = e.target.closest('input[data-attach]'); if (!inp || !db) return;
+  const r = S.requests.find(x => x.id === inp.dataset.attach), files = [...inp.files]; if (!r || !files.length) return;
+  if (!assets){ alert('Баримт оруулах эрх алга.'); return; }
+  const lab = inp.closest('label'); if (lab) lab.firstChild.textContent = '⏳ Оруулж байна… ';
+  try{
+    const ups = []; for (const f of files){ const up = await assets.upload(f); ups.push({id: up.id, type: up.contentType}); }
+    const attachments = attList(r).concat(ups), now = new Date().toISOString();
+    await db.doc('requests/' + r.id).update({attachments, attachId: attachments[0].id, attachType: attachments[0].type, attachAdds: (r.attachAdds || []).concat([{at: now, by: me, n: ups.length}]).slice(-20)});
+  }catch(err){ alertMsg(err); }
+});
 let editingReq = null;
 function setReqEdit(r){
   editingReq = r ? r.id : null;
