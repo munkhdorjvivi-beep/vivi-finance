@@ -250,6 +250,7 @@ body{margin:0;background:var(--bg)}
         <button class="btn" id="day-next" title="Дараагийн өдөр">▶</button>
         <button class="btn" id="day-today">Өнөөдөр</button>
         <button class="btn" id="day-all">Бүх өдөр</button>
+        <button class="btn" id="bank-xlsx" title="Дэлгэцэнд харагдаж буй гүйлгээг (хугацаа, шүүлтүүрээр) Excel-ээр татах">📥 Excel</button>
         <div class="filter chips" id="bank-range"><button data-f="day" aria-pressed="true">Өдөр</button><button data-f="5" aria-pressed="false">Сүүлийн 5 хоног</button><button data-f="7" aria-pressed="false">7 хоног</button><button data-f="month" aria-pressed="false">Энэ сар</button><button data-f="pmonth" aria-pressed="false">Өмнөх сар</button><button data-f="custom" aria-pressed="false">Хугацаа…</button></div>
         <span id="bank-custom" class="row" hidden><input type="date" id="bank-from" style="width:auto"> – <input type="date" id="bank-to" style="width:auto"></span>
       </div>
@@ -301,6 +302,13 @@ body{margin:0;background:var(--bg)}
       </div>
       <div class="tbl"><table><thead><tr><th>Өдөр</th><th>Дэлгүүр</th><th>Хэлбэр</th><th class="n">Smart</th><th class="n">Банк</th><th class="n">Зөрүү</th></tr></thead><tbody id="rev-days"><tr><td colspan="6" class="empty">–</td></tr></tbody></table></div>
       <p class="note" style="margin:8px 0 0">Бэлэн мөнгийг тушаасан өдрөөр, картыг хаалтын өдрөөр, QPay/шилжүүлгийг орсон өдрөөр харуулна. Бэлэн мөнгө хэд хоногоор нийлж тушаагддаг тул бэлэн мөнгөний дэлгэрэнгүйг «Бэлэн мөнгө» хэсгээс харна.</p>
+    </div>
+    <div class="card" id="rev-kas-card">
+      <h2>Кассчин — буруу төлбөрийн хэлбэр</h2>
+      <p class="note" style="margin:0 0 8px">Тухайн өдөр карт (POS) банкинд X илүү, QPay X дутуу орсон (эсвэл эсрэгээр) бол нэг төлбөрийг буруу хэлбэрээр бүртгэсэн байна. Smart-д ≈X дүнтэй төлбөр оруулсан кассчин: <b>тодорхой</b> = ганц тохирох төлбөр, <b>магадгүй</b> = хэд хэдэн хувилбар эсвэл 2 төлбөр. Дэлгэрэнгүйг Excel-ийн «Кассчин», «Буруу хэлбэр» хуудаснаас.</p>
+      <div class="tbl"><table><thead><tr><th>Дэлгүүр</th><th>Кассчин</th><th class="n">Төлбөр</th><th class="n">Өдөр</th><th class="n">Тодорхой</th><th class="n">Магадгүй</th><th class="n">Алдааны дүн</th><th class="n">1000 төлбөрт</th></tr></thead><tbody id="rev-kas"><tr><td colspan="8" class="empty">–</td></tr></tbody></table></div>
+      <h3 style="margin:12px 0 6px;font-size:14px">Буруу бүртгэсэн төлбөрүүд</h3>
+      <div class="tbl" style="max-height:420px;overflow:auto"><table><thead><tr><th>Өдөр</th><th>Дэлгүүр</th><th>Кассчин</th><th>Цаг</th><th class="n">Дүн</th><th>Smart-д</th><th>Бодитоор</th><th>Итгэл</th></tr></thead><tbody id="rev-kas-err"><tr><td colspan="8" class="empty">–</td></tr></tbody></table></div>
     </div>
   </section>
 
@@ -778,7 +786,8 @@ const VIVI = (() => {
       for (const r of rows.slice(h+1)){
         const dt = toDT(r[ix('Огноо')]); let st = str(r[ix('Дэлгүүр')]); if (st === 'Дархан Үзэсгэлэн' || st === 'Сандэй плаза') st = 'Дархан / Сандэй плаза';   // one shop, one bank account (5403962454)
         if (!dt || !st) continue;
-        out.push({d: iso(dt), store: st, kas: str(r[ix('Касс')]), form: str(r[ix('Төлбөрийн хэлбэр')]), bank: str(r[ix('Банкны нэр')]) || str(r[ix('Төлбөрийн хэлбэр')]), amt: num(r[ix('Дүн')])});
+        const sv = ix('Хадгалсан огноо') >= 0 ? toDT(r[ix('Хадгалсан огноо')]) : null;
+        out.push({d: iso(dt), store: st, kas: str(r[ix('Касс')]), form: str(r[ix('Төлбөрийн хэлбэр')]), bank: str(r[ix('Банкны нэр')]) || str(r[ix('Төлбөрийн хэлбэр')]), amt: num(r[ix('Дүн')]), t: sv ? `${pad(sv.getUTCHours())}:${pad(sv.getUTCMinutes())}` : ''});
       }
       return {type:'smart', label:'Smart – төлбөрийн хэлбэр', rows: out};
     }
@@ -971,6 +980,34 @@ const VIVI = (() => {
 
   const SMART_CH = {'ХААН банк ПОС':'pos','Голомт банк':'pos','Худалдаа хөгжлийн банк':'pos','QPay':'qpay','Social Pay':'qpay','Хаан шилжүүлэг':'qpay'};
   const smartCh = r => r.form === 'Бэлнээр' ? 'cash' : (SMART_CH[r.bank] || 'credit');
+  // ---------- cashiers: a payment entered with the wrong form ----------
+  // a day where card money in the bank is X more than Smart card AND QPay is about X less (or the other way round) =
+  // one payment entered as the wrong form; the Smart payment of ≈X in the over-recorded form names the cashier
+  const CH_NAME = {pos: 'Карт (POS)', qpay: 'QPay / шилжүүлэг', cash: 'Бэлэн'};
+  function kasCheck(smart, forms){
+    const idx = {}, act = {};
+    for (const r of smart){ const c = smartCh(r); (idx[r.store + '|' + r.d + '|' + c] = idx[r.store + '|' + r.d + '|' + c] || []).push(r);
+      if (!r.kas) continue; const k = r.store + '|' + r.kas, o = act[k] = act[k] || {store: r.store, kas: r.kas, n: 0, sum: 0, days: new Set(), ch: {}}; o.n++; o.sum += r.amt; o.days.add(r.d); o.ch[c] = (o.ch[c] || 0) + 1; }
+    const D = {}; for (const f of forms){ if (f.ch === 'pos' || f.ch === 'qpay') (D[f.store + '|' + f.d] = D[f.store + '|' + f.d] || {})[f.ch] = f; }
+    const thr = x => Math.max(3000, x * 0.004), tol = a => Math.max(300, a * 0.012), errors = [], unres = [];
+    for (const [k, o] of Object.entries(D)){ const [store, d] = k.split('|'); if (!o.pos || !o.qpay || store === '?') continue;
+      const dd = {pos: o.pos.bank - o.pos.smart, qpay: o.qpay.bank - o.qpay.smart};
+      for (const [A, B] of [['pos', 'qpay'], ['qpay', 'pos']]){
+        if (!(dd[A] > thr(o[A].smart) && dd[B] < -thr(o[B].smart))) continue;
+        const x = Math.min(dd[A], -dd[B]); if (Math.abs(dd[A] + dd[B]) > Math.max(5000, 0.25 * x)) continue;   // the two differences must cancel out (else: missing statement, not a wrong form)
+        const L = idx[store + '|' + d + '|' + B] || [];
+        const one = L.filter(r => Math.abs(r.amt - x) <= tol(x)).sort((a, b) => Math.abs(a.amt - x) - Math.abs(b.amt - x));
+        const base = {store, d, real: CH_NAME[A], dReal: Math.round(dd[A]), dRec: Math.round(dd[B])};
+        if (one.length){ const r = one[0]; errors.push({...base, kas: r.kas, t: r.t, amt: r.amt, rec: r.form === 'Бэлнээр' ? 'Бэлэн' : r.bank, sure: one.length === 1, alt: one.slice(1, 4).map(z => z.kas + ' ' + Math.round(z.amt) + (z.t ? ' ' + z.t : ''))}); continue; }
+        let two = null; for (let i = 0; i < L.length && !two && L.length < 2500; i++) for (let j = i + 1; j < L.length; j++) if (L[i].kas === L[j].kas && Math.abs(L[i].amt + L[j].amt - x) <= Math.max(200, x * 0.006)){ two = [L[i], L[j]]; break; }
+        if (two){ errors.push({...base, kas: two[0].kas, t: two.map(z => z.t).filter(Boolean).join(' + '), amt: two[0].amt + two[1].amt, rec: two[0].form === 'Бэлнээр' ? 'Бэлэн' : two[0].bank, sure: false, alt: ['2 төлбөр: ' + two.map(z => Math.round(z.amt)).join(' + ')]}); continue; }
+        unres.push({...base, kas: [...new Set(L.map(r => r.kas).filter(Boolean))].join(', ')}); } }
+    const cashiers = Object.values(act).map(o => { const E = errors.filter(e => e.store === o.store && e.kas === o.kas);
+      return {store: o.store, kas: o.kas, n: o.n, sum: Math.round(o.sum), days: o.days.size, sure: E.filter(e => e.sure).length, maybe: E.filter(e => !e.sure).length, errAmt: Math.round(E.reduce((a, e) => a + e.amt, 0)), per1000: o.n ? +(E.length / o.n * 1000).toFixed(2) : 0}; })
+      .sort((a, b) => (b.sure + b.maybe) - (a.sure + a.maybe) || b.n - a.n);
+    errors.sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : a.store.localeCompare(b.store));
+    return {errors, unres, cashiers};
+  }
   // ---------- model ----------
   function build(files, opts){ opts = opts || {};
     const smart = files.filter(f=>f.type==='smart').flatMap(f=>f.rows);
@@ -1020,7 +1057,8 @@ const VIVI = (() => {
     for (const [st, ps] of Object.entries(deposits)) for (const p of ps) fAdd(st, p.d, 'cash', 'bank', p.cr);
     const forms = Object.values(F).filter(o => Math.abs(o.smart) + Math.abs(o.bank) > 0).map(o => ({...o, smart:Math.round(o.smart), bank:Math.round(o.bank)})).sort((a,b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
     for (const k in W){ W[k].smart = Math.round(W[k].smart); W[k].bank = Math.round(W[k].bank); }
-    return {d0, d1, summary, cash, noncash, deposits: allDeps, totals, forms, waterfall: W, nSmart: smart.length, nBank: bank.length};
+    const kas = kasCheck(smart.filter(r => inWin(r.d)), forms);
+    return {d0, d1, summary, cash, noncash, deposits: allDeps, totals, forms, waterfall: W, kas, nSmart: smart.length, nBank: bank.length};
   }
   // ---------- bank e-mail parser (Khan / Golomt / TDB transfer receipts) ----------
   // returns: null = not a completed outgoing transfer (skip); {doc} = parsed; {doc, unparsed:true} = looks like a transfer but failed
@@ -1149,6 +1187,25 @@ const VIVI = (() => {
       cum[o.store] = (cum[o.store] || 0) + o.cs - o.cb;
       daily.push([o.store, o.d, wdOf(o.d), R(o.ns), R(o.nb), R(o.nb - o.ns), o.ns ? +((o.nb - o.ns) / o.ns).toFixed(4) : '', R(o.cs), R(o.cb), R(cum[o.store])]); });
     sheets.push({name:'Дэлгүүр өдрөөр', aoa: daily, widths:[24,12,8,16,16,14,8,14,14,18]});
+    // --- 2b. the same day differences as on the screen: store × day × form
+    const KF = {}; for (const e of m.kas.errors) KF[e.store + '|' + e.d] = (KF[e.store + '|' + e.d] || []).concat(e);
+    const CHD = {cash: 'Бэлэн / Gotówka', pos: 'Карт / Karta', qpay: 'QPay + шилжүүлэг'}, why = (f, dd) => { const t = Math.max(3000, f.smart * 0.004); if (Math.abs(dd) <= t) return 'Тохирсон / OK';
+      const e = (KF[f.store + '|' + f.d] || []).find(x => x.real === CH_NAME[f.ch] || x.rec && smartCh({form: x.rec === 'Бэлэн' ? 'Бэлнээр' : '', bank: x.rec}) === f.ch);
+      if (e) return `Буруу хэлбэр: ${e.kas} ${Math.round(e.amt)}₮ «${e.rec}» → ${e.real}${e.sure ? '' : ' (магадгүй)'}`;
+      return f.ch === 'cash' ? 'Тушаалтын өдрөөр (бэлэн)' : dd < 0 ? 'Банкинд дутуу орсон / mniej w banku' : 'Банкинд илүү орсон / więcej w banku'; };
+    const dForm = [['Огноо / Data', 'Гараг', 'Дэлгүүр / Sklep', 'Хэлбэр / Forma', 'Smart', 'Банк / Bank', 'Зөрүү / Różnica', '%', 'Тайлбар / Wyjaśnienie']];
+    for (const f of m.forms.filter(f => f.store !== '?').slice().sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : a.store.localeCompare(b.store) || a.ch.localeCompare(b.ch))){ const dd = f.bank - f.smart;
+      dForm.push([f.d, wdOf(f.d), f.store, CHD[f.ch] || f.ch, R(f.smart), R(f.bank), R(dd), f.smart ? +(dd / f.smart).toFixed(4) : '', why(f, dd)]); }
+    sheets.push({name:'Өдрийн зөрүү (хэлбэрээр)', aoa: dForm, widths:[12,8,22,18,14,14,14,8,60]});
+    // --- 2c. cashiers: payments probably entered with the wrong form
+    const K = m.kas, kH = [['Дэлгүүр / Sklep', 'Кассчин / Kasjer', 'Төлбөр (тоо) / Płatności', 'Дүн / Kwota', 'Ажилласан өдөр / Dni', 'Буруу хэлбэр — тодорхой / Pewne', 'Буруу хэлбэр — магадгүй / Możliwe', 'Алдааны дүн / Kwota błędów', '1000 төлбөрт / na 1000']];
+    for (const c of K.cashiers) kH.push([c.store, c.kas, c.n, c.sum, c.days, c.sure, c.maybe, c.errAmt, c.per1000]);
+    kH.push([], ['Аргачлал / Metoda: тухайн өдөр карт (POS) банкинд X илүү, QPay X дутуу (эсвэл эсрэгээр) орсон бол нэг төлбөр буруу хэлбэрээр бүртгэгдсэн. Smart-д ≈X дүнтэй төлбөр бүртгэсэн кассчин = «тодорхой» (ганц тохирох төлбөр) эсвэл «магадгүй» (хэд хэдэн хувилбар / 2 төлбөр).']);
+    sheets.push({name:'Кассчин', aoa: kH, widths:[22,22,12,14,10,14,14,14,10]});
+    sheets.push({name:'Буруу хэлбэр', aoa: [['Огноо / Data', 'Гараг', 'Дэлгүүр / Sklep', 'Кассчин / Kasjer', 'Цаг / Godz.', 'Дүн / Kwota', 'Smart-д бүртгэсэн / Wpisano', 'Бодитоор / Faktycznie', 'Зөрүү бодит хэлбэрт', 'Зөрүү бүртгэсэн хэлбэрт', 'Итгэл / Pewność', 'Өөр хувилбар / Inne']]
+      .concat(K.errors.map(e => [e.d, wdOf(e.d), e.store, e.kas, e.t || '', R(e.amt), e.rec, e.real, e.dReal, e.dRec, e.sure ? 'тодорхой' : 'магадгүй', (e.alt || []).join('; ')]))
+      .concat([[], ['Тайлбаргүй зөрүү (нэг төлбөрөөр тайлбарлагдаагүй) / Niewyjaśnione'], ['Огноо', 'Гараг', 'Дэлгүүр', 'Тэр өдрийн кассчид', '', '', '', 'Илүү орсон хэлбэр', 'Зөрүү', 'Зөрүү (нөгөө)']])
+      .concat(K.unres.map(u => [u.d, wdOf(u.d), u.store, u.kas, '', '', '', u.real, u.dReal, u.dRec])), widths:[12,8,22,20,10,12,20,18,14,14,12,40]});
     // --- 3/4. cash rows (with cash registers)
     const kas = {}; for (const r of smart) if (r.form === 'Бэлнээр'){ const k = r.store + '|' + r.d; (kas[k] = kas[k] || {}); kas[k][r.kas || '?'] = (kas[k][r.kas || '?'] || 0) + r.amt; }
     const cashHead = ['Дэлгүүр / Sklep','Борлуулалтын огноо / Data(y)','Гараг / Dzień','Smart бэлэн / Gotówka Smart','Тушаасан / Wpłacono','Тушаасан огноо / Data wpłaty','Зөрүү / Brakuje','Төлөв / Status','Касс (бэлэн) / Kasy','Тушаалтын утга / Opis wpłaty','Тайлбар / Wyjaśnienie'];
@@ -1243,7 +1300,7 @@ const VIVI = (() => {
     return wb;
   }
 
-  return {parseRows, build, parseDates, matchCash, classifyCredit, iso, OWN, norm, parseMail, mailLocal, report, outCat, setBase, toWorkbook};
+  return {kasCheck, parseRows, build, parseDates, matchCash, classifyCredit, iso, OWN, norm, parseMail, mailLocal, report, outCat, setBase, toWorkbook};
 })();
 
 
@@ -1705,6 +1762,14 @@ const DAILY = (() => {
     return days;
   }
 
+  // every non-cash payment of a day, compact, for the cashier check of «Орлого тулгалт»: {date: {unit: 'form|amount|cashier|hh:mm;…'}}
+  function payList(rows, unitOf){
+    const days = {}, cl = v => String(v == null ? '' : v).replace(/[|;]/g, ' ').trim();
+    for (const r of rows){ if (!r.d || /бэлэн|бэлн|зээл/i.test(r.form || '')) continue; const unit = unitOf(String(r.store || '').trim()), f = formOf(r);
+      const D = days[r.d] = days[r.d] || {}; D[unit] = (D[unit] ? D[unit] + ';' : '') + [cl(f), r2(+r.amt || 0), cl(r.kas), cl(r.t)].join('|'); }
+    return days;
+  }
+  const parseList = s => String(s || '').split(';').filter(Boolean).map(x => { const [f, a, kas, t] = x.split('|'); return {f, a: +a || 0, kas: kas || '', t: t || ''}; });
   // ORION cost rule: false = Smart cost (0 → 6 500 ₮/ш); true = every ORION item 6 500 ₮/ш (as the accountant counts it)
   function orionFlat(D){
     const out = {...D, stores: {}, sup: {}};
@@ -1794,7 +1859,7 @@ const DAILY = (() => {
     }
     return {creditBy, rows, tot: Object.fromEntries(Object.entries(tot).map(([k, v]) => [k, r2(v)])), cats: Object.values(cats).map(c => ({...c, a: r2(c.a)})).sort((x, y) => y.a - x.a), exp, checks};
   }
-  const R = {flow, FEES, setNorm, salesDays, payDays, sum, supplierTable, storeTable, payTable};
+  const R = {flow, FEES, setNorm, salesDays, payDays, payList, parseList, sum, supplierTable, storeTable, payTable};
   if (typeof module !== 'undefined') module.exports = R;
   return R;
 })();
@@ -2281,6 +2346,7 @@ function renderInner(){
       + (bad.length ? ` · <span style="color:var(--bad)">зөвшөөрөлгүй ${bad.length} (${fmt(bad.reduce((s,t)=>s+(+t.amount||0),0))} ₮)</span>` : '');
     $('#day-next').disabled = !bankDay || bankDay >= today(); $('#day-today').disabled = bankRange === 'day' && bankDay === today(); $('#day-all').disabled = !AB; }
   const rows = dayRows.filter(t => bankFilter === 'all' || (mt[t.id] && mt[t.id].st === bankFilter)).sort((a,b) => String(b.dt).localeCompare(String(a.dt)));
+  BANK_X = {rows, mt, AB, catOf};
   $('#bank-body').innerHTML = rows.length ? rows.map(t => { const m = mt[t.id] || {}; const sev = m.st === 'none' ? 'sev-bad' : m.st === 'warn' ? 'sev-warn' : m.st === 'ok' ? 'sev-ok' : '';
     return `<tr class="${sev}"><td class="mono">${esc(bankDayMode ? String(t.dt).slice(11,16) : String(t.dt).replace('T',' ').slice(0,16))}</td><td>${esc(ACC_LABEL[normAcc(t.fromAcc)] || t.fromAcc)}<div class="note">${esc(t.fromName||'')}</div></td><td>${esc(t.toName||'')}${(b => b ? `<div><span class="chip c-acc" title="Харилцагчийн сан">${esc(b.name)}${b.group ? ' · ' + esc(b.group) : ''}</span></div>` : '')(PAYEES.get(t.toAcc))}<div class="note mono">${esc(t.toAcc||'')} · ${esc(t.toBank||'')}</div></td><td class="n">${fmt(t.amount)}</td><td>${esc(t.desc||'')}</td><td><span class="chip ${m.cls||'c-grey'}">${esc(m.label||'')}</span></td></tr>`; }).join('')
     : `<tr><td colspan="6" class="empty">${AB && !dayRows.length ? 'Энэ хугацаанд гүйлгээ алга.' : S.banktx.length ? 'Энэ шүүлтүүрт гүйлгээ алга.' : 'Банкны гүйлгээ хараахан ороогүй байна.'}</td></tr>`;
@@ -2407,7 +2473,39 @@ function renderRev(){
     return `<tr class="${c==='c-bad'?'sev-bad':''}"><td class="mono">${esc(f.d)}</td><td>${esc(f.store)}</td><td>${CH_SHORT[f.ch]||f.ch}</td><td class="n">${fmt(f.smart)}</td><td class="n">${fmt(f.bank)}</td><td class="n">${c ? `<span class="chip ${c}">${sgn(d)}</span>` : sgn(d)}</td></tr>`; }).join('')
     + (rows.length > lim.length ? `<tr><td colspan="6" class="empty">… өөр ${rows.length - lim.length} мөр. Дэлгүүр эсвэл хэлбэрээр шүүнэ үү.</td></tr>` : '')
     : '<tr><td colspan="6" class="empty">Зөрүүтэй өдөр алга.</td></tr>';
+  { const K = run.kas, st = revStore;
+    if (!K){ $('#rev-kas').innerHTML = '<tr><td colspan="8" class="empty">Энэ хяналтад кассчны шинжилгээ алга — Smart тайлан, хуулгаа дахин оруулж хадгална уу.</td></tr>'; $('#rev-kas-err').innerHTML = ''; }
+    else {
+ const C = K.cashiers.filter(c => (!st || c.store === st) && c.store !== '?' && c.n >= 5);
+      $('#rev-kas').innerHTML = !K.cashiers.length ? '<tr><td colspan="8" class="empty">Кассчны мэдээлэл алга: энэ хугацааны «Өдрийн тайлан»-д төлбөрийн хэлбэрийн Smart тайланг (кассчинтай) дахин оруулах, эсвэл Smart «төлбөрийн хэлбэрээр» тайланг энд хуулгатай хамт оруулна уу.</td></tr>' : C.length ? C.map(c => `<tr class="${c.sure >= 2 ? 'sev-bad' : c.sure + c.maybe ? 'sev-warn' : ''}"><td>${esc(c.store)}</td><td><b>${esc(c.kas)}</b></td><td class="n">${fmt(c.n)}</td><td class="n">${c.days}</td><td class="n">${c.sure ? `<b style="color:var(--bad)">${c.sure}</b>` : '–'}</td><td class="n">${c.maybe || '–'}</td><td class="n">${c.errAmt ? fmt(c.errAmt) : '–'}</td><td class="n">${c.sure + c.maybe ? c.per1000 : '–'}</td></tr>`).join('') : '<tr><td colspan="8" class="empty">–</td></tr>';
+      const E = K.errors.filter(e => !st || e.store === st).slice().reverse();
+      $('#rev-kas-err').innerHTML = E.length ? E.map(e => `<tr><td class="mono">${esc(e.d)}</td><td>${esc(e.store)}</td><td><b>${esc(e.kas)}</b></td><td class="mono">${esc(e.t || '')}</td><td class="n">${fmt(e.amt)}</td><td>${esc(e.rec)}</td><td>${esc(e.real)}</td><td><span class="chip ${e.sure ? 'c-bad' : 'c-warn'}" title="${esc((e.alt || []).join('; '))}">${e.sure ? 'тодорхой' : 'магадгүй'}</span></td></tr>`).join('') : '<tr><td colspan="8" class="empty">Буруу хэлбэрээр бүртгэсэн төлбөр олдсонгүй.</td></tr>';
+    } }
 }
+// bank: what is on the screen (period, category, status filter) as Excel — list + summaries
+var BANK_X = null;
+$('#bank-xlsx').addEventListener('click', () => {
+  const XS = window.XLSX; if (!XS || !BANK_X) return; const {rows, mt, AB, catOf} = BANK_X;
+  if (!rows.length){ alert('Энэ хугацаа, шүүлтүүрт гүйлгээ алга.'); return; }
+  const cl = t => BANK_CAT[catOf(t)] || catOf(t), lab = t => (mt[t.id] || {}).label || '', from = t => ACC_LABEL[normAcc(t.fromAcc)] || t.fromAcc || '';
+  const L = rows.slice().sort((a, b) => String(a.dt).localeCompare(String(b.dt)));
+  const per = AB ? (AB[0] === AB[1] ? AB[0] : AB[0] + ' – ' + AB[1]) : 'сүүлийн 45 хоног';
+  const main = [['Банкны зарлагын гүйлгээ', per], ['Огноо', 'Цаг', 'Данснаас', 'Илгээгч', 'Хүлээн авагч', 'Хүлээн авагчийн данс', 'Банк', 'Дүн (₮)', 'Гүйлгээний утга', 'Ангилал', 'Төлөв']];
+  for (const t of L) main.push([String(t.dt).slice(0, 10), String(t.dt).slice(11, 16), from(t), t.fromName || '', t.toName || '', t.toAcc || '', t.toBank || '', +t.amount || 0, t.desc || '', cl(t), lab(t)]);
+  main.push([], ['', '', '', '', '', '', 'Нийт', L.reduce((a, t) => a + (+t.amount || 0), 0)]);
+  const grp = f => { const g = {}; for (const t of L){ const k = f(t); const o = g[k] = g[k] || [0, 0]; o[0]++; o[1] += +t.amount || 0; } return Object.entries(g).sort((a, b) => b[1][1] - a[1][1]); };
+  const sum = [['Хураангуй', per], [], ['Өдрөөр', 'Тоо', 'Дүн']]; for (const [k, v] of grp(t => String(t.dt).slice(0, 10)).sort((a, b) => a[0].localeCompare(b[0]))) sum.push([k, v[0], v[1]]);
+  sum.push([], ['Данснаас', 'Тоо', 'Дүн']); for (const [k, v] of grp(from)) sum.push([k, v[0], v[1]]);
+  sum.push([], ['Ангилал', 'Тоо', 'Дүн']); for (const [k, v] of grp(cl)) sum.push([k, v[0], v[1]]);
+  sum.push([], ['Төлөв', 'Тоо', 'Дүн']); for (const [k, v] of grp(lab)) sum.push([k || '—', v[0], v[1]]);
+  sum.push([], ['Хүлээн авагч (топ 30)', 'Тоо', 'Дүн']); for (const [k, v] of grp(t => (t.toName || '') + ' · ' + (t.toAcc || '')).slice(0, 30)) sum.push([k, v[0], v[1]]);
+  const ws = XS.utils.aoa_to_sheet(main); ws['!cols'] = [{wch: 11}, {wch: 6}, {wch: 34}, {wch: 20}, {wch: 26}, {wch: 24}, {wch: 14}, {wch: 14}, {wch: 40}, {wch: 18}, {wch: 24}];
+  for (let r = 2; r < main.length; r++){ const c = ws[XS.utils.encode_cell({r, c: 7})]; if (c) c.z = '#,##0'; }
+  const ws2 = XS.utils.aoa_to_sheet(sum); ws2['!cols'] = [{wch: 40}, {wch: 8}, {wch: 16}];
+  for (let r = 0; r < sum.length; r++){ const c = ws2[XS.utils.encode_cell({r, c: 2})]; if (c && typeof c.v === 'number') c.z = '#,##0'; }
+  const wb = XS.utils.book_new(); XS.utils.book_append_sheet(wb, ws, 'Гүйлгээ'); XS.utils.book_append_sheet(wb, ws2, 'Хураангуй');
+  XS.writeFile(wb, `VIVI_bank_${AB ? AB[0] + '_' + AB[1] : 'recent'}.xlsx`);
+});
 function renderCash(){
   const run = pendingRun || S.cash;
   $('#cash-title').textContent = run ? `Бэлэн мөнгөний тушаалт · ${run.d0} – ${run.d1}${pendingRun ? ' (хадгалаагүй)' : ''}` : 'Бэлэн мөнгөний тушаалт';
@@ -2615,9 +2713,10 @@ function revDefaults(){
   $('#rev-d0').value = a; $('#rev-d1').value = z < a ? a : z;
 }
 ['#rev-d0', '#rev-d1'].forEach(s => $(s).addEventListener('change', () => { revPerTouched = true; runRev(); }));
-function runRev(){
+async function runRev(){
   if (!parsedFiles.length) return;
   const d0 = $('#rev-d0').value, d1 = $('#rev-d1').value, r = stmtRange();
+  if (!parsedFiles.some(f => f.type === 'smart')) await loadKas(d0, d1);
   $('#rev-per-note').innerHTML = r ? `Хуулга: ${r[0]} – ${r[1]}. ${r[1] <= d1 ? `<span style="color:var(--bad)">Хуулга ${addD(d1, 1)}-ний өдрийг агуулаагүй — ${d1}-ний карт, QPay, бэлэн мөнгө банкинд дутуу харагдана.</span>` : 'Карт, QPay, бэлэн мөнгө дараа өдөр нь банкинд ордог тул хуулга хяналтын сүүлийн өдрөөс нэг өдөр илүү байна.'}` : '';
   lastFiles = parsedFiles.slice();
   // Smart side: an uploaded payment-form report wins; otherwise take it from the saved daily reports («Өдрийн тайлан»)
@@ -2626,12 +2725,18 @@ function runRev(){
   if (fromDaily){ lastFiles.push(fromDaily); $('#cash-filelist').insertAdjacentHTML('beforeend', `<div class="auto"><span class="chip c-ok">✓</span> ${esc(fromDaily.label)} · ${fromDaily.rows.length} мөр</div>`); }
   const m = VIVI.build(lastFiles, {d0, d1});
   if (m.error){ $('#cash-msg').textContent = parsedFiles.some(f => f.type === 'bank') ? (window.REV_DAILY === false ? 'Smart «Борлуулалтын жагсаалт /төлбөрийн хэлбэрээр/» тайланг хуулгатай хамт оруулна уу.' : 'Хуулгын хугацаанд «Өдрийн тайлан»-д төлбөрийн хэлбэрийн өгөгдөл алга — тухайн өдрүүдийн Smart тайланг «Өдрийн тайлан»-д оруулна уу.') : 'Банкны хуулгаа оруулна уу.'; return; }
-  pendingRun = {d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
+  pendingRun = {d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, kas: m.kas ? {cashiers: m.kas.cashiers, errors: m.kas.errors.slice(0, 400), unres: m.kas.unres.slice(0, 200)} : null, accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
   $('#cash-save').disabled = false; $('#cash-msg').textContent = 'Тооцоолсон. Хадгалбал нягтлан тайлбар бичих боломжтой болно.';
   render();
 }
 // daily docs (pay[unit][form] = {a, n, k}) → rows in the shape of core's Smart payment-form parser
 const UNIT_CORE = {'Фүүд сити':'Food city', 'Е-март Баянгол':'Е март баянгол-3 давхар', 'Эрдэнэт':'Эрдэнэт салбар'};
+// cashier-level payments of the saved daily reports (dailykas/{date}), loaded only for the period being checked
+async function loadKas(a, z){
+  if (typeof DR === 'undefined' || !db || !a || !z) return; DR.kas = DR.kas || {};
+  const need = []; for (let t = new Date(a + 'T00:00:00Z'); isoU(+t) <= z; t.setUTCDate(t.getUTCDate() + 1)){ const d = isoU(+t); if (!(d in DR.kas)) need.push(d); }
+  await Promise.all(need.map(d => db.doc('dailykas/' + d).get().then(x => { DR.kas[d] = x.exists ? x.data().u : null; }).catch(() => { DR.kas[d] = null; })));
+}
 function dailySmartFile(files, a0, z0){
   if (typeof DR === 'undefined') return null;
   const dts = files.filter(f => f.type === 'bank').flatMap(f => f.rows.map(t => +t.dt)).filter(x => x > 0);
@@ -2640,9 +2745,14 @@ function dailySmartFile(files, a0, z0){
   const a = a0 || isoD(Math.min(...dts)), z = z0 || isoD(Math.max(...dts)), rows = [], days = [], miss = [];
   for (let t = new Date(a+'T00:00:00Z'); isoD(+t) <= z; t.setUTCDate(t.getUTCDate()+1)){ const d = isoD(+t), D = DR.days[d];
     if (!D || !D.pay){ miss.push(d); continue; } days.push(d);
-    for (const [u, U] of Object.entries(D.pay)) for (const [f, F] of Object.entries(U)){
-      const k = F.k || (/бэлэн|бэлн/i.test(f) ? 'cash' : /^зээл/i.test(f) ? 'credit' : 'bank');
-      rows.push({d, store: UNIT_CORE[u] || u, kas: '', form: k === 'cash' ? 'Бэлнээр' : k === 'credit' ? 'Зээлээр' : 'Банкаар', bank: f, amt: +F.a || 0}); } }
+    const KD = (DR.kas || {})[d] || null;
+    for (const [u, U] of Object.entries(D.pay)){ const KL = KD && KD[u] ? DAILY.parseList(KD[u]) : [];
+      for (const [f, F] of Object.entries(U)){
+        const k = F.k || (/бэлэн|бэлн/i.test(f) ? 'cash' : /^зээл/i.test(f) ? 'credit' : 'bank'), form = k === 'cash' ? 'Бэлнээр' : k === 'credit' ? 'Зээлээр' : 'Банкаар', store = UNIT_CORE[u] || u;
+        const one = k === 'bank' ? KL.filter(x => x.f === f) : [];
+        if (one.length){ let s2 = 0; for (const x of one){ rows.push({d, store, kas: x.kas, form, bank: f, amt: x.a, t: x.t}); s2 += x.a; }
+          if (Math.abs((+F.a || 0) - s2) > 1) rows.push({d, store, kas: '', form, bank: f, amt: (+F.a || 0) - s2}); }   // the day total stays exact
+        else rows.push({d, store, kas: '', form, bank: f, amt: +F.a || 0}); } } }
   if (!rows.length) return null;
   return {type: 'smart', label: `Smart – «Өдрийн тайлан»-аас (${days.length} өдөр${miss.length ? `, дутуу: ${miss.join(', ')}` : ''})`, rows, file: 'Өдрийн тайлан', auto: true};
 }
@@ -2752,7 +2862,7 @@ $('#rev-xlsx').addEventListener('click', async () => {
   const sr = selectedRun();
   if (!files && sr && sr.rawN){
     try{ files = await loadRaw(sr.rawN, sr.id); d0 = sr.d0; d1 = sr.d1;
-      if (!files.some(f => f.type === 'smart')){ const sm = dailySmartFile(files, d0, d1); if (sm) files.push(sm); } }
+      if (!files.some(f => f.type === 'smart')){ await loadKas(d0, d1); const sm = dailySmartFile(files, d0, d1); if (sm) files.push(sm); } }
     catch(err){ console.warn(err); alert('Хадгалсан хуулгыг уншиж чадсангүй: ' + (err.message || err)); btn.disabled = false; btn.textContent = '📥 Excel тайлан татах'; return; }
   }
   if (!files){ btn.disabled = false; btn.textContent = '📥 Excel тайлан татах'; return; }
@@ -3463,7 +3573,7 @@ $('#dr-files').addEventListener('change', async e => {
         for (const k of s.skipped) P.info.push(`<div><span class="chip c-warn">Алгассан</span> ${k.d} · ${esc(k.loc)} · ${esc(k.name)} — тоо хэмжээ ${fmt(k.qty)} (Smart-д алдаатай бичигдсэн, өртөг ${fmt(k.cost)} ₮). Smart дээр засуулна уу.</div>`);
         continue; }
       const p = VIVI.parseRows(rows, f.name);
-      if (p.type === 'smart' && p.rows.length){ P.pay = DAILY.payDays(p.rows, PAY.unitOf); P.info.push(`<div><span class="chip c-ok">✓</span> Төлбөрийн хэлбэрээр · ${drDaysLabel(Object.keys(P.pay))} · ${fmt(p.rows.length)} гүйлгээ · ${esc(f.name)}</div>`); continue; }
+      if (p.type === 'smart' && p.rows.length){ P.pay = DAILY.payDays(p.rows, PAY.unitOf); P.kas = DAILY.payList(p.rows, PAY.unitOf); P.info.push(`<div><span class="chip c-ok">✓</span> Төлбөрийн хэлбэрээр · ${drDaysLabel(Object.keys(P.pay))} · ${fmt(p.rows.length)} гүйлгээ · ${esc(f.name)}</div>`); continue; }
       P.info.push(`<div><span class="chip c-bad">?</span> Танигдсангүй · ${esc(f.name)}</div>`);
     }catch(err){ console.warn(err); P.info.push(`<div><span class="chip c-bad">?</span> Уншиж чадсангүй · ${esc(f.name)}</div>`); }
   }
@@ -3491,6 +3601,7 @@ $('#dr-save').addEventListener('click', async () => {
       const doc = {date: d, stores: S ? S.stores : (old.stores || {}), sup: S ? S.sup : (old.sup || {}), lines: S ? S.lines : (old.lines || 0), adjN: S ? S.adjN : (old.adjN || 0),
         pay: P.pay && P.pay[d] ? P.pay[d] : (old.pay || null), by: me, at: new Date().toISOString(), ownerNotified: isOwner || P.dates.length > 3};
       await db.doc('daily/' + d).set(doc);
+      if (P.kas && P.kas[d]){ try{ await db.doc('dailykas/' + d).set({date: d, u: P.kas[d], by: me, at: doc.at}); (DR.kas = DR.kas || {})[d] = P.kas[d]; }catch(e){ console.warn('dailykas', d, e); } }
     }
     DR.day = P.dates[P.dates.length - 1]; DR.range = P.dates.length > 1 ? 'custom' : 'day'; DR.from = P.dates[0]; DR.to = DR.day; drSyncBar();
     $('#dr-msg').textContent = `${P.dates.length} өдөр хадгаллаа.`; DR.parsed = null; $('#dr-files').value = ''; $('#dr-filelist').innerHTML = '';
