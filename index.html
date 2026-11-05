@@ -567,6 +567,7 @@ body{margin:0;background:var(--bg)}
       <div class="row" style="margin-top:10px"><button class="btn primary" id="wd-save" disabled>Хадгалж скан эхлүүлэх</button><span class="note" id="wd-msg"></span></div>
       <h2 style="margin-top:18px">Хүргэлтүүд</h2>
       <div class="tbl"><table><thead><tr><th>Нэр</th><th>Огноо</th><th class="n">Ширхэг</th><th>Хувь</th><th class="n">Скан</th><th>Төлөв</th><th></th></tr></thead><tbody id="wd-list"></tbody></table></div>
+      <div id="wd-rep" style="margin-top:14px"></div>
     </div>
   </section>
 
@@ -3796,6 +3797,9 @@ async function loadParts(id){
   const items = {}, plan = {}, eans = {};
   for (let i = 0; i < (D.parts || 0); i++){ const s = await db.doc('delivpart/' + id + '_' + i).get(); if (!s.exists) continue; const x = s.data();
     Object.assign(items, x.items || {}); Object.assign(plan, x.plan || {}); }
+  // items found during scanning that were not on the LPP list (added by «Жагсаалт шинэчлэх»)
+  for (let i = 0; i < (D.xparts || 0); i++){ const s = await db.doc('delivpart/' + id + '_x' + i).get(); if (!s.exists) continue;
+    for (const [k, it] of Object.entries(s.data().items || {})) if (!items[k] || items[k].x) items[k] = {...it, x: 1}; }
   for (const it of Object.values(items)) eans[it.e] = it.k;
   WS.parts[id] = {items, plan, eans}; return WS.parts[id];
 }
@@ -3850,7 +3854,8 @@ async function onScan(raw){
   if (!id){ showResult('bad', 'Хүргэлт сонгоогүй', 'Дээрээс идэвхтэй хүргэлтээ сонгоно уу.'); return; }
   const P = await loadParts(id); if (!P){ showResult('bad', 'Хүргэлт ачаалж чадсангүй', ''); return; }
   let k = P.eans[e], it = k ? P.items[k] : null, st, kind = 'ok';
-  if (it){ st = WH.pick(k, P.plan[k], cntK(id, k), whCfg()); if (st === whCfg().over.key) kind = 'over'; addPend(id, 'c|' + k, st, 1); }
+  if (it && it.x){ st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1); }
+  else if (it){ st = WH.pick(k, P.plan[k], cntK(id, k), whCfg()); if (st === whCfg().over.key) kind = 'over'; addPend(id, 'c|' + k, st, 1); }
   else {
     const M = await loadMaster(), m = M && M[e];
     if (!m){ addPend(id, 'u|' + e, '_', 1); showResult('bad', 'ТӨЛӨВЛӨГӨӨНД БАЙХГҮЙ', `${e} — мастер файлд ч байхгүй. Тусад нь тавиад, дараа шалгана.`); beep('bad'); pushLast({e, n: '—', s: '', st: '', kind: 'bad'}); return; }
@@ -4070,20 +4075,84 @@ async function wdSave(){
     WD = null; $('#wd-file').value = ''; $('#wd-name').value = ''; wdPreview(); $('#wd-msg').textContent = 'Хадгаллаа — «Скан» хэсэгт сканнердаж эхэлнэ үү.';
   }catch(err){ alertMsg(err); $('#wd-msg').textContent = 'Хадгалж чадсангүй.'; $('#wd-save').disabled = false; }
 }
+// ---------- delivery report: list vs really scanned ----------
+function sumSt(o){ return Object.values(o || {}).reduce((a, b) => a + (+b || 0), 0); }
+let K2E = null;   // model|size → barcode from the master
+function k2e(M){ if (!K2E && M){ K2E = {}; for (const [e, m] of Object.entries(M)) K2E[WH.keyOf(m[0], m[1])] = e; } return K2E || {}; }
+async function deliveryRecon(id){
+  const D = WS.delivs.find(d => d.id === id); WS.parts[id] = null; const P = await loadParts(id); const C = WS.cnt[id] || {}, M = await loadMaster(), KE = k2e(M);
+  const c = decMap(C.c), x = decMap(C.x), u = decMap(C.u), rows = {};
+  for (const [k, it] of Object.entries(P.items)) rows[k] = {k, e: it.e, n: it.n, m: it.m, s: it.s, c: it.c, p: it.p, list: it.x ? 0 : it.q, scan: 0, extra: !!it.x};
+  for (const [k, o] of [...Object.entries(c), ...Object.entries(x)]){ let r = rows[k];
+    if (!r){ const e = KE[k], m = M && M[e]; const [mm, ss] = k.split('|'); r = rows[k] = {k, e: e || '', n: m ? m[2] : '', m: mm, s: ss, c: m ? m[5] : '', p: m ? +m[6] || 0 : 0, list: 0, scan: 0, extra: true}; }
+    r.scan += sumSt(o); }
+  const L = Object.values(rows), unk = Object.entries(u).filter(([, n]) => n > 0).map(([e, n]) => ({e, n}));
+  const S = {list: L.reduce((a, r) => a + r.list, 0), scan: L.reduce((a, r) => a + r.scan, 0), onList: L.filter(r => !r.extra).reduce((a, r) => a + Math.min(r.list, r.scan), 0),
+    miss: L.filter(r => !r.extra).reduce((a, r) => a + Math.max(0, r.list - r.scan), 0), over: L.filter(r => !r.extra).reduce((a, r) => a + Math.max(0, r.scan - r.list), 0),
+    extra: L.filter(r => r.extra).reduce((a, r) => a + r.scan, 0), extraLines: L.filter(r => r.extra && r.scan > 0).length, unk: unk.reduce((a, r) => a + r.n, 0),
+    pending: L.filter(r => r.extra && r.scan > 0 && !(P.items[r.k] && P.items[r.k].x && P.items[r.k].q === r.scan)).length};
+  return {D, P, L, unk, S};
+}
+async function renderRecon(id){
+  const el = $('#wd-rep'); WS.repId = id; if (!id){ el.innerHTML = ''; return; } el.innerHTML = '<div class="note">Тооцоолж байна…</div>';
+  const R2 = await deliveryRecon(id), {D, S} = R2; WS.rep = R2; const f = WS.repF || 'extra';
+  const pick = {extra: r => r.extra && r.scan > 0, miss: r => !r.extra && r.scan < r.list, over: r => !r.extra && r.scan > r.list, list: r => !r.extra}[f] || (() => true);
+  const rows = R2.L.filter(pick).sort((a, b) => a.m.localeCompare(b.m) || a.s.localeCompare(b.s));
+  el.innerHTML = `<h2>Тайлан: ${esc(D.name)}</h2>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">
+      <div class="banner"><div class="note">LPP жагсаалт</div><b style="font-size:20px">${fmt(S.list)} ш</b></div>
+      <div class="banner"><div class="note">Нийт скан (бодит ирсэн)</div><b style="font-size:20px">${fmt(S.scan)} ш</b><div class="note">${S.list ? Math.round(S.scan / S.list * 100) : 0}% жагсаалтаас</div></div>
+      <div class="banner"><div class="note">Жагсаалтаас ирсэн</div><b style="font-size:20px">${fmt(S.onList)} ш</b></div>
+      <div class="banner ${S.extra ? 'warn' : ''}"><div class="note">Жагсаалтгүй (мастерт байгаа)</div><b style="font-size:20px">${fmt(S.extra)} ш</b><div class="note">${fmt(S.extraLines)} баркод</div></div>
+      <div class="banner"><div class="note">Жагсаалтаас илүү</div><b style="font-size:20px">${fmt(S.over)} ш</b></div>
+      <div class="banner"><div class="note">Ирээгүй / скан хийгдээгүй</div><b style="font-size:20px">${fmt(S.miss)} ш</b></div>
+      <div class="banner ${S.unk ? 'bad' : ''}"><div class="note">Мастерт ч байхгүй</div><b style="font-size:20px">${fmt(S.unk)} ш</b></div>
+    </div>
+    <div class="row" style="margin-top:10px;gap:6px">
+      <button class="btn primary" data-wd-upd="${esc(id)}" ${S.pending ? '' : 'disabled'}>🔄 Жагсаалт шинэчлэх${S.pending ? ` (${fmt(S.pending)} мөр)` : ' — шинэчлэгдсэн'}</button>
+      <button class="btn" data-wd-purchase="${esc(id)}" data-mode="list">📥 Purchase — шинэчилсэн жагсаалтаар</button>
+      <button class="btn" data-wd-purchase="${esc(id)}" data-mode="scan">📥 Purchase — бодит скан</button>
+      <button class="btn" data-wd-repx="${esc(id)}">📊 Тайлан Excel</button></div>
+    <p class="note">«Шинэчлэх» нь жагсаалтгүй ирсэн барааг (мастер файлын нэр, ангилал, үнэтэй) энэ хүргэлтийн жагсаалтад скан хийсэн тоогоор нэмнэ — Purchase, хуваарилалтын жагсаалт, үнэ шалгах бүгд шинэчлэгдэнэ. Хүргэлтийг «Хаах» үед автоматаар шинэчлэгдэнэ. «Бодит скан» Purchase: зөвхөн үнэхээр скан хийсэн тоо (ирээгүй бараа орохгүй).</p>
+    <div class="filter chips" id="wd-rep-f" style="margin:8px 0">${[['extra', 'Жагсаалтгүй'], ['over', 'Илүү'], ['miss', 'Ирээгүй'], ['list', 'Жагсаалтын бүх бараа']].map(([v, t]) => `<button data-f="${v}" aria-pressed="${f === v}">${t}</button>`).join('')}</div>
+    <div class="tbl" style="max-height:420px;overflow:auto"><table><thead><tr><th>Баркод</th><th>Бараа</th><th>Загвар · хэмжээ</th><th class="n">Үнэ</th><th class="n">Жагсаалт</th><th class="n">Скан</th><th class="n">Зөрүү</th></tr></thead><tbody>${rows.slice(0, 500).map(r => `<tr><td class="mono">${esc(r.e)}</td><td>${esc(r.n)}</td><td class="mono">${esc(r.m)} · ${esc(r.s)}</td><td class="n">${r.p ? fmt(r.p) : ''}</td><td class="n">${fmt(r.list)}</td><td class="n">${fmt(r.scan)}</td><td class="n"><b>${r.scan - r.list > 0 ? '+' : ''}${fmt(r.scan - r.list)}</b></td></tr>`).join('') || '<tr><td colspan="7" class="empty">–</td></tr>'}</tbody></table></div>
+    ${rows.length > 500 ? `<div class="note">Эхний 500 мөр — бүгдийг Excel-ээр.</div>` : ''}
+    ${R2.unk.length ? `<div class="banner bad" style="margin-top:8px"><b>Мастерт байхгүй баркод:</b> ${R2.unk.map(r => esc(r.e) + (r.n > 1 ? ' ×' + r.n : '')).join(', ')} — Smart-д орохгүй; нэр, үнийг тодруулаад мастер файлд нэмнэ.</div>` : ''}`;
+  $$('#wd-rep-f button').forEach(b => b.addEventListener('click', () => { WS.repF = b.dataset.f; renderRecon(id); }));
+}
+async function updateList(id, silent){
+  const R2 = await deliveryRecon(id), add = {};
+  for (const r of R2.L) if (r.extra && r.scan > 0) add[r.k] = {k: r.k, m: r.m, s: r.s, e: r.e, q: r.scan, n: r.n, c: r.c, p: r.p, l: WH.suffixOf({c: r.c, n: r.n}, whCfg()), x: 1};
+  const keys = Object.keys(add), CH = 800, n = Math.ceil(keys.length / CH);
+  for (let i = 0; i < n; i++){ const items = {}; for (const k of keys.slice(i * CH, (i + 1) * CH)) items[k] = add[k]; await db.doc('delivpart/' + id + '_x' + i).set({deliv: id, i, items}); }
+  const S = R2.S; await db.doc('deliv/' + id).update({xparts: n, extraQ: S.extra, extraLines: keys.length, scanQ: S.scan, missQ: S.miss, unkQ: S.unk, updatedAt: new Date().toISOString(), updatedBy: me});
+  WS.parts[id] = null; if (!silent) alert(`Жагсаалт шинэчлэгдлээ: ${fmt(keys.length)} жагсаалтгүй бараа (${fmt(S.extra)} ш) нэмэгдсэн.`);
+}
+async function reconFile(id){
+  const R2 = WS.rep && WS.rep.D.id === id ? WS.rep : await deliveryRecon(id), {D, S} = R2; const wb = XLSX.utils.book_new();
+  const H = ['Баркод', 'Барааны нэр', 'Загвар', 'Хэмжээ', 'Ангилал', 'Үнэ (₮)', 'Жагсаалт', 'Скан', 'Зөрүү'], row = r => [r.e, r.n, r.m, r.s, (WHTR.CAT_MN || {})[r.c] || r.c, r.p || '', r.list, r.scan, r.scan - r.list];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([[D.name], ['LPP жагсаалт', S.list], ['Нийт скан', S.scan], ['Жагсаалтаас ирсэн', S.onList], ['Жагсаалтгүй (мастерт байгаа)', S.extra], ['Жагсаалтаас илүү', S.over], ['Ирээгүй / скан хийгдээгүй', S.miss], ['Мастерт байхгүй', S.unk]]), 'Хураангуй');
+  const add = (name, f) => XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([H, ...R2.L.filter(f).sort((a, b) => a.m.localeCompare(b.m) || a.s.localeCompare(b.s)).map(row)]), name);
+  add('Жагсаалтгүй', r => r.extra && r.scan > 0); add('Илүү', r => !r.extra && r.scan > r.list); add('Ирээгүй', r => !r.extra && r.scan < r.list); add('Жагсаалтын бүгд', r => !r.extra);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Баркод', 'Тоо'], ...R2.unk.map(r => [r.e, r.n])]), 'Мастерт байхгүй');
+  XLSX.writeFile(wb, `Tailan_${D.name.replace(/[^\wА-Яа-яӨөҮү-]+/g, '_')}.xlsx`);
+}
 function renderWhDelivs(){
   const tb = $('#wd-list'); if (!tb) return; const L = WS.delivs.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   tb.innerHTML = L.length ? L.map(d => { const t = totOf(d.id), sc = Object.values(t).reduce((a, b) => a + b, 0);
     return `<tr><td><b>${esc(d.name)}</b></td><td class="note">${esc(fmtDT(d.createdAt))}</td><td class="n">${fmt(d.total)}</td><td class="note">${Object.entries(d.pct || {}).filter(([, p]) => p).map(([k, p]) => `${esc(storeName(k))} ${p}%`).join(' · ')}</td>
       <td class="n">${WS.cnt[d.id] ? fmt(sc) : '…'}</td><td>${d.status === 'closed' ? '<span class="chip c-grey">Хаасан</span>' : '<span class="chip c-ok">Идэвхтэй</span>'}</td>
-      <td style="white-space:nowrap"><button class="btn" data-wd-purchase="${esc(d.id)}">📥 Purchase (Smart)</button>${d.status === 'closed' ? `<button class="btn" data-wd-open="${esc(d.id)}">Нээх</button>` : `<button class="btn" data-wd-close="${esc(d.id)}">Хаах</button>`}</td></tr>`; }).join('')
+      <td style="white-space:nowrap"><button class="btn primary" data-wd-rep="${esc(d.id)}">📊 Тайлан / Purchase</button>${d.extraQ ? `<div class="note">+${fmt(d.extraQ)} ш жагсаалтгүй нэмэгдсэн</div>` : ''}${d.status === 'closed' ? `<button class="btn" data-wd-open="${esc(d.id)}">Нээх</button>` : `<button class="btn" data-wd-close="${esc(d.id)}">Хаах</button>`}</td></tr>`; }).join('')
     : '<tr><td colspan="7" class="empty">Хүргэлт алга.</td></tr>';
 }
-async function purchaseFile(id){
-  const D = WS.delivs.find(d => d.id === id), P = await loadParts(id); if (!D || !P || typeof XLSX === 'undefined') return;
-  const lines = Object.values(P.items).map(it => ({e: it.e, n: it.n, q: it.q})).sort((a, b) => a.e.localeCompare(b.e));
+async function purchaseFile(id, mode){
+  const D = WS.delivs.find(d => d.id === id); if (!D || typeof XLSX === 'undefined') return;
+  const R2 = await deliveryRecon(id);
+  if (mode !== 'scan' && R2.S.pending && confirm(`${R2.S.pending} жагсаалтгүй бараа жагсаалтад нэмэгдээгүй байна. Эхлээд шинэчлэх үү?`)){ await updateList(id, true); return purchaseFile(id, mode); }
+  const lines = R2.L.map(r => ({e: r.e, n: r.n, q: mode === 'scan' ? r.scan : (r.extra ? r.scan : r.list)})).filter(l => l.q > 0 && l.e).sort((a, b) => a.e.localeCompare(b.e));
   const aoa = WH.purchaseAoa(lines, {date: localDay(D.createdAt), no: '0', desc: (whCfg().purchase.desc || 'Татан авалт') + ' · ' + D.name}, whCfg());
   for (let r = 9; r < aoa.length; r++) aoa[r][4] = {f: `C${r + 1}*D${r + 1}`, v: aoa[r][2]};
-  const ws = XLSX.utils.aoa_to_sheet(aoa), wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Purchase'); XLSX.writeFile(wb, `Purchase_${D.name.replace(/[^\wА-Яа-яӨөҮү-]+/g, '_')}.xlsx`);
+  const ws = XLSX.utils.aoa_to_sheet(aoa), wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Purchase'); XLSX.writeFile(wb, `Purchase_${mode === 'scan' ? 'scan_' : ''}${D.name.replace(/[^\wА-Яа-яӨөҮү-]+/g, '_')}.xlsx`);
 }
 
 // ---------- store receiving (blind count) ----------
@@ -4158,8 +4227,11 @@ document.addEventListener('click', async e => {
   if (d.whDet){ WS.detail = WS.detail === d.whDet ? '' : d.whDet; return renderShipDetail(); }
   if (d.whSmart) return smartFile(d.whSmart);
   if (d.whResolve) return resolveShip(d.whResolve);
-  if (d.wdPurchase) return purchaseFile(d.wdPurchase);
-  if (d.wdClose){ if (confirm('Энэ хүргэлтийг хаах уу? (Скан хийхээ больсон үед)')) await db.doc('deliv/' + d.wdClose).update({status: 'closed', closedAt: new Date().toISOString()}); return; }
+  if (d.wdPurchase) return purchaseFile(d.wdPurchase, d.mode || 'list');
+  if (d.wdRep) return renderRecon(WS.repId === d.wdRep && $('#wd-rep').innerHTML ? '' : d.wdRep);
+  if (d.wdRepx) return reconFile(d.wdRepx);
+  if (d.wdUpd){ b.disabled = true; try{ await updateList(d.wdUpd); }catch(err){ alertMsg(err); } return renderRecon(d.wdUpd); }
+  if (d.wdClose){ if (confirm('Энэ хүргэлтийг хаах уу? (Скан хийхээ больсон үед) Жагсаалтгүй ирсэн бараа жагсаалтад автоматаар нэмэгдэнэ.')){ await flush(); try{ await updateList(d.wdClose, true); }catch(err){ console.warn(err); } await db.doc('deliv/' + d.wdClose).update({status: 'closed', closedAt: new Date().toISOString()}); } return; }
   if (d.wdOpen){ await db.doc('deliv/' + d.wdOpen).update({status: 'active'}); return; }
   if (d.rcOpen || d.rcView){ await rcFlush(); WS.rc = {ship: d.rcOpen || d.rcView, pend: {}, last: []}; $('#rc-msg').textContent = ''; renderRcvCount(); if (d.rcOpen) $('#rc-input').focus(); return; }
   if (d.rcUndo != null){ const x = WS.rc.last[+d.rcUndo]; if (x && !x.undone){ x.undone = true; WS.rc.pend[x.e] = (WS.rc.pend[x.e] || 0) - 1; renderRcvCount(); } return; }
