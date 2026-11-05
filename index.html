@@ -2629,9 +2629,10 @@ function renderInner(){
 }
 function reqCard(r, matches){
   const s = reqStatus(r), a = S.approvals[r.id];
-  const chip = {pending:[r.resendCount ? 'Дахин ирсэн' : 'Хүлээгдэж буй','c-warn'], hold:['⏸ Хүлээлгэсэн','c-hold'], approved:['Зөвшөөрсөн','c-ok'], paid:['Шилжүүлсэн','c-acc'], rejected:['Татгалзсан','c-bad']}[s];
+  const chip = {pending:[r.reopenedAt ? '↺ Дахин нээсэн' : r.resendCount ? 'Дахин ирсэн' : 'Хүлээгдэж буй','c-warn'], hold:['⏸ Хүлээлгэсэн','c-hold'], approved:['Зөвшөөрсөн','c-ok'], paid:['Шилжүүлсэн','c-acc'], rejected:['Татгалзсан','c-bad']}[s];
   let acts = '';
   if (isOwner && (s === 'pending' || s === 'hold')) acts += `<input id="cm-${esc(r.id)}" placeholder="Тайлбар (заавал биш)"><button class="btn ok" data-act="approve" data-id="${esc(r.id)}">Зөвшөөрөх</button>${s === 'pending' ? `<select id="rm-${esc(r.id)}" class="rm-sel" title="Хүлээлгэвэл хэзээ дахин сануулах"><option value="">Сануулахгүй</option><option value="2h">2 цагийн дараа</option><option value="eve">Өнөөдөр 18:00</option><option value="tom">Маргааш 09:00</option><option value="2d">Нөгөөдөр 09:00</option><option value="custom">Огноо, цаг сонгох…</option></select><input type="datetime-local" id="rmc-${esc(r.id)}" class="rm-custom" hidden><button class="btn hold" data-act="hold" data-id="${esc(r.id)}">⏸ Хүлээлгэх</button>` : ''}<button class="btn bad" data-act="reject" data-id="${esc(r.id)}">Татгалзах</button>`;
+  if (isOwner && s === 'rejected') acts += `<button class="btn primary" data-act="reopen" data-id="${esc(r.id)}" title="Татгалзсан шийдвэрээ буцааж, хүсэлтийг дахин шийдвэрлэх">↺ Дахин нээх</button>`;
   if (canWrite && !isOwner && s === 'hold') acts += `<button class="btn primary" data-act="resend" data-id="${esc(r.id)}">↻ Дахин илгээх</button>`;
   if (canWrite && s === 'approved') acts += `<button class="btn primary" data-act="paid" data-id="${esc(r.id)}">Шилжүүлсэн гэж тэмдэглэх</button>`;
   if (s === 'approved' || s === 'paid') acts += `<button class="btn" data-act="print" data-id="${esc(r.id)}">🖨 Зарлагын баримт</button>`;
@@ -2819,6 +2820,14 @@ document.addEventListener('click', async e => {
       const cm = ($('#cm-'+CSS.escape(id)) || {}).value || '';
       await db.doc('approvals/'+id).set({decision: act === 'approve' ? 'approved' : 'rejected', amount: +r.amount, payeeAcc: r.payeeAcc, comment: cm, at: new Date().toISOString(), by: me, to: r.createdBy || null, payee: r.payee || '', notified: false});
       if (typeof rsSync === 'function') rsSync(r, act === 'approve' ? 'approved' : 'rejected', cm);
+    } else if (act === 'reopen'){
+      const a = S.approvals[id] || {};
+      if (!confirm('«' + (r.payee || '') + '» ' + fmt(r.amount) + ' ₮ — татгалзсан шийдвэрээ буцааж, хүсэлтийг дахин «Хүлээгдэж буй» болгох уу?')) return;
+      const now = new Date().toISOString();
+      await db.doc('requests/'+id).update({reopenedAt: now, reopenedBy: me, reopenCount: (r.reopenCount || 0) + 1, holdAt: null, remindAt: null,
+        reopenLog: firebase.firestore.FieldValue.arrayUnion({at: now, by: me, rejectedAt: a.at || '', note: a.comment || ''})});
+      await db.doc('approvals/'+id).delete();
+      if (typeof rsSync === 'function') rsSync(r, 'taken', 'захирал дахин нээсэн');
     } else if (act === 'edit'){
       setReqEdit(r);
     } else if (act === 'print'){
