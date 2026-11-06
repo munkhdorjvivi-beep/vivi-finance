@@ -113,6 +113,10 @@ section[data-panel="req"]:not([data-mode="rec"]) #recur-card{display:none}
 .chat-day{text-align:center;font-size:11px;color:var(--muted,#888);margin:6px 0}
 .chat-compose{border-top:1px solid var(--line,#ddd);padding-top:8px}.chat-back{display:none}
 @media (max-width:760px){.chat-wrap{grid-template-columns:1fr}.chat-back{display:inline-block}.chat-wrap.mobile-list .chat-main{display:none}.chat-wrap:not(.mobile-list) .chat-side{display:none}.chat-main{height:80vh}}
+.duty{margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--line);line-height:1.7}.duty.warn{background:rgba(183,121,31,.10);border-color:rgba(183,121,31,.4)}.duty.bad{background:rgba(192,57,43,.10);border-color:rgba(192,57,43,.45)}.duty.ok{background:rgba(31,157,107,.08);border-color:rgba(31,157,107,.35)}
+.ds-cal{border-collapse:separate;border-spacing:2px}.ds-cal th,.ds-cal td{padding:0}.ds-h{font-size:11px;text-align:center;min-width:22px;font-weight:600}.ds-h span{font-weight:400;opacity:.6}.ds-h.we{color:var(--bad)}.ds-l{text-align:left;font-weight:500;padding:2px 8px 2px 0!important;white-space:nowrap;font-size:13px}
+.ds-c{width:22px;height:22px;border-radius:5px}.ds-ok{background:#2e9e6b}.ds-part{background:#e0a526}.ds-miss{background:#d9534f}.ds-f{background:var(--surface-2,#ececec)}.ds-key{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle}
+tr.dim td{opacity:.5}
 .an-ab{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}.an-ab>div{display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);border-radius:12px;padding:8px 12px;min-width:0}.an-ab b{font-size:16px}.an-a{background:rgba(31,95,139,.07)}.an-b{background:rgba(120,120,120,.07)}.an-ab .an-vs{border:0;justify-content:center;font-size:20px;padding:0 2px}.an-d b.pos{color:var(--ok)}.an-d b.neg{color:var(--bad)}
 .rs-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.rs-tile{font:inherit;text-align:left;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface-2,#f3f4f0);cursor:pointer}.rs-tile.on{outline:2px solid var(--accent)}
 .rs-steps{margin-top:10px;display:flex;flex-direction:column;gap:8px}.rs-step{display:flex;gap:10px;align-items:flex-start}.rs-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;background:var(--surface-2,#eee);flex:none}
@@ -157,6 +161,7 @@ body{margin:0;background:var(--bg)}
     <div class="kpi"><div class="l">Сүүлийн дансны үлдэгдэл</div><div class="v" id="k-bal">–</div><div class="s" id="k-bal-s">&nbsp;</div></div>
   </section>
 
+  <div id="duty-banner" class="duty" hidden></div>
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="req" aria-selected="true">Төлбөрийн хүсэлт<span class="n" id="t-req" hidden></span></button>
     <button role="tab" data-tab="daily" aria-selected="false">Өдрийн тайлан</button>
@@ -175,6 +180,7 @@ body{margin:0;background:var(--bg)}
     <button role="tab" data-tab="contr" aria-selected="false">Гэрээ<span class="n" id="t-ct" hidden></span></button>
     <button role="tab" data-tab="chat" aria-selected="false">💬 Чат<span class="n" id="t-chat" hidden></span></button>
     <button role="tab" data-tab="set" aria-selected="false" id="tab-set" hidden>Тохиргоо</button>
+    <button role="tab" data-tab="data" aria-selected="false">Өгөгдлийн төлөв</button>
   </nav>
 
   <!-- REQUESTS -->
@@ -742,6 +748,19 @@ body{margin:0;background:var(--bg)}
     </div>
   </section>
 
+  <!-- DATA STATUS: which reports are in, which are missing, who uploads what, history with undo, month close -->
+  <section class="panel" data-panel="data" hidden>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><h2 style="margin:0">Өгөгдлийн төлөв</h2>
+        <span class="row" style="gap:4px"><button class="btn" id="ds-prev">◀</button><input type="month" id="ds-month" style="width:auto"><button class="btn" id="ds-next">▶</button></span></div>
+      <p class="note" style="margin:6px 0 8px">Өдөр бүр ямар тайлан орсон бэ: <span class="ds-key ds-ok"></span> бүрэн · <span class="ds-key ds-part"></span> дутуу (борлуулалт ≠ төлбөр) · <span class="ds-key ds-miss"></span> ороогүй · <span class="ds-key ds-f"></span> хараахан болоогүй. Нүдэн дээр хулганаа барьвал тайлбар гарна.</p>
+      <div class="tbl" style="overflow:auto"><table class="ds-cal" id="ds-cal"></table></div>
+    </div>
+    <div class="card"><h2>Сарын хаалт</h2><div id="ds-check" style="line-height:1.8"></div><button class="btn primary" id="ds-close" style="margin-top:8px" hidden>🔒 Сарыг хаах</button></div>
+    <div class="card"><h2>Хариуцагч ба хугацаа</h2><p class="note" style="margin:0 0 8px">Хариуцагч бүр апп-д орохдоо «өнөөдөр юу оруулах»-аа дээд хэсэгт харна. Даваа–Баасан хугацаанд орохгүй бол хариуцагч болон эзэмшигчид мэдэгдэл очно (Даваа гарагт Баасан, Бямба, Ням гаригийн тайлан).</p><div class="grid" id="ds-cfg"></div></div>
+    <div class="card"><h2>Оруулсан файлууд</h2><div class="tbl" style="max-height:520px;overflow:auto"><table><thead><tr><th>Хэзээ</th><th>Хэн</th><th>Төрөл</th><th>Файл</th><th>Өдрүүд</th><th class="n">Мөр</th><th>Юу болсон</th><th></th></tr></thead><tbody id="ds-log"></tbody></table></div></div>
+  </section>
+
   <!-- PAYMENT REQUEST FROM AN EMPLOYEE (buyer, online, marketing…) → the accountant completes it -->
   <section class="panel" data-panel="rqs" hidden>
     <div class="card">
@@ -1250,7 +1269,9 @@ const VIVI = (() => {
   }
   // ---------- model ----------
   function build(files, opts){ opts = opts || {};
-    const smart = files.filter(f=>f.type==='smart').flatMap(f=>f.rows);
+    // several Smart files may overlap (e.g. 01–30 and 01–05): every day is taken from ONE file — the last one that has it
+    const smF = files.filter(f=>f.type==='smart'), dayF = {}; smF.forEach((f, i) => { for (const r of f.rows) dayF[r.d] = i; });
+    const smart = smF.flatMap((f, i) => f.rows.filter(r => dayF[r.d] === i));
     const seen = new Set(), bank = [];
     for (const f of files.filter(f=>f.type==='bank')) for (const t of f.rows){
       const key = `${t.acc}|${+t.dt}|${t.cr}|${t.dr}|${t.desc}`; if (seen.has(key)) continue; seen.add(key); bank.push(t);
@@ -1665,7 +1686,7 @@ const VIVI = (() => {
     return wb;
   }
 
-  return {kasCheck, parseRows, build, parseDates, matchCash, classifyCredit, iso, OWN, norm, parseMail, mailLocal, report, outCat, setBase, toWorkbook};
+  return {kasCheck, parseRows, build, parseDates, matchCash, classifyCredit, iso, OWN, norm, parseMail, mailLocal, report, outCat, setBase, toWorkbook, ACC_NAME};
 })();
 
 
@@ -3038,6 +3059,7 @@ function renderInner(){
   try{ renderPay(); }catch(e){ console.warn('pay', e); }
   try{ renderAnal(); }catch(e){ console.warn('anal', e); }
   try{ renderRot(); }catch(e){ console.warn('rot', e); }
+  try{ renderData(); }catch(e){ console.warn('data', e); }
   try{ renderPL(); }catch(e){ console.warn('pl', e); }
   try{ renderWh(); renderWhSettings(); }catch(e){ console.warn('wh', e); }
   try{ renderInv(); }catch(e){ console.warn('inv', e); }
@@ -3403,9 +3425,11 @@ async function handleFiles(fl){
     try{ const buf = await f.arrayBuffer(); const wb = XLSX.read(buf, {type:'array', cellDates:false}); let best = {type:'unknown', label:'Танигдаагүй файл', rows:[]};
       for (const sn of wb.SheetNames){ const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, raw:true, defval:null}); const p = VIVI.parseRows(rows, f.name); if (p.type !== 'unknown'){ best = p; break; } }
       parsedFiles.push({...best, file: f.name});
+      // statements: which days of which account are now in (the data status calendar)
+      if (best.type === 'bank' && typeof regStmt === 'function'){ const h = await fileHash(buf), dup = await dupUpload(h); if (dup) best.dupNote = `өмнө ${nameOf(dup.by) || dup.email || ''} ${fmtDT(dup.at)}-нд оруулсан`; regStmt(best, f.name, h); }
     }catch(err){ parsedFiles.push({type:'unknown', label:'Уншиж чадсангүй', rows:[], file:f.name}); }
   }
-  $('#cash-filelist').innerHTML = parsedFiles.map(p => `<div>${p.type==='unknown'?'<span class="chip c-bad">?</span>':'<span class="chip c-ok">✓</span>'} ${esc(p.label)} · ${p.rows.length} мөр · ${esc(p.file)}</div>`).join('');
+  $('#cash-filelist').innerHTML = parsedFiles.map(p => `<div>${p.type==='unknown'?'<span class="chip c-bad">?</span>':'<span class="chip c-ok">✓</span>'} ${esc(p.label)} · ${p.rows.length} мөр · ${esc(p.file)}${p.dupNote ? ' <span class="chip c-warn">' + esc(p.dupNote) + '</span>' : ''}</div>`).join('');
   revDefaults(); runRev();
 }
 // control period: by default the statements' first day … one day before their last day
@@ -3794,6 +3818,7 @@ $('#pay-stmt').addEventListener('change', async e => {
       const wb = XLSX.read(await f.arrayBuffer(), {type: 'array', cellDates: false}); let got = null;
       for (const sn of wb.SheetNames){ const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header: 1, raw: true, defval: null}); const p = VIVI.parseRows(rows, f.name); if (p.type === 'bank'){ got = p; break; } }
       if (!got) continue;
+      if (typeof regStmt === 'function') regStmt(got, f.name, '');
       for (const r of got.rows){ if (!(r.dr > 0)) continue;
         const to = PAY.accShort(r.cp), from = PAY.accShort(r.acc || got.acc);
         const dsc = String(r.desc || '').toUpperCase();
@@ -4099,15 +4124,20 @@ $('#pl-save').addEventListener('click', async () => {
   if (!db) return; $('#pl-save').disabled = true;
   try{
     const byMonth = {};
+    const seenK = new Set();
     for (const f of plFiles.stmt.filter(x => x.type === 'bank')) for (const r of f.rows){
-      const d = typeof r.dt === 'string' ? r.dt : new Date(r.dt).toISOString(); const per = d.slice(0, 7);
-      const M = byMonth[per] = byMonth[per] || {accs: new Set(), tx: []}; M.accs.add(String(r.acc || f.acc));
+      const d = typeof r.dt === 'string' ? r.dt : new Date(r.dt).toISOString(); const per = d.slice(0, 7), acc = String(r.acc || f.acc);
+      const M = byMonth[per] = byMonth[per] || {accs: new Set(), tx: [], span: {}}; M.accs.add(acc);
+      // which days of this account the new statements cover (only those days are replaced)
+      const sp = M.span[acc] = M.span[acc] || [d.slice(0, 10), d.slice(0, 10)]; if (d.slice(0, 10) < sp[0]) sp[0] = d.slice(0, 10); if (d.slice(0, 10) > sp[1]) sp[1] = d.slice(0, 10);
       if (!(r.dr > 0)) continue; const cat = VIVI.outCat(r); if (cat === 'internal') continue;
+      const key = acc + '|' + d.slice(0, 16) + '|' + r.dr + '|' + String(r.desc || '').slice(0, 60); if (seenK.has(key)) continue; seenK.add(key);
       M.tx.push({dt: d.slice(0, 16), acc: String(r.acc || f.acc), cp: VIVI.norm(r.cp), name: String(r.cpName || '').slice(0, 60), desc: String(r.desc || '').slice(0, 100), amount: Math.round(r.dr * 100) / 100, cat, src: 'stmt'}); }
     let n = 0;
     for (const [per, M] of Object.entries(byMonth)){ const old = PLS.months[per] || {};
-      const keep = (old.stmtTx || []).filter(t => !M.accs.has(String(t.acc)));
+      const keep = (old.stmtTx || []).filter(t => { const sp = M.span[String(t.acc)]; return !sp || String(t.dt).slice(0, 10) < sp[0] || String(t.dt).slice(0, 10) > sp[1]; });
       await db.doc('pl/' + per).set({per, stmtAccs: [...new Set([...(old.stmtAccs || []), ...M.accs])], stmtTx: keep.concat(M.tx), manual: old.manual || [], at: new Date().toISOString(), by: me}, {merge: true}); n += M.tx.length; }
+    for (const f of plFiles.stmt) if (f.type === 'bank' && typeof regStmt === 'function') await regStmt(f, f.file, '');
     plFiles = {stmt: []}; $('#pl-files').innerHTML = ''; $('#pl-msg').textContent = `Хуулга хадгаллаа: ${Object.keys(byMonth).sort().join(', ')} · ${n} зарлагын гүйлгээ.`;
   }catch(err){ console.warn(err); $('#pl-msg').textContent = 'Хадгалж чадсангүй: ' + (err.code || err.message || ''); $('#pl-save').disabled = false; }
 });
@@ -4318,22 +4348,43 @@ const drDaysLabel = ds => { ds = ds.slice().sort(); return ds.length > 3 ? `${ds
 // ----- upload -----
 $('#dr-files').addEventListener('change', async e => {
   const fl = [...e.target.files]; if (!fl.length) return; $('#dr-msg').textContent = 'Уншиж байна…';
-  const P = {sales: null, pay: null, info: []};
+  const P = {sales: null, pay: null, info: [], files: []};
   for (const f of fl){
     try{
-      const wb = XLSX.read(await f.arrayBuffer(), {type: 'array', cellDates: false});
+      const buf = await f.arrayBuffer(), hash = typeof fileHash === 'function' ? await fileHash(buf) : '', dup = typeof dupUpload === 'function' ? await dupUpload(hash) : null;
+      if (dup) P.info.push(dupNote(dup, f.name));
+      const wb = XLSX.read(buf, {type: 'array', cellDates: false});
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1, raw: true, defval: null});
       const s = DAILY.salesDays(rows, PAY.unitOf);
-      if (!s.error){ P.sales = s; P.info.push(`<div><span class="chip c-ok">✓</span> Бараагаар · ${drDaysLabel(Object.keys(s.days))} · ${fmt(s.lines)} мөр${s.adjN ? ` · ORION өртөггүй ${s.adjN} мөр → 6 500 ₮/ш` : ''} · ${esc(f.name)}</div>`);
+      if (!s.error){ const ks = Object.keys(s.days).sort(); P.files.push({kind: 'sales', file: f.name, hash, a: ks[0], z: ks[ks.length - 1], n: s.lines});
+        if (P.sales){ const dup = Object.keys(s.days).filter(d => P.sales.days[d]); if (dup.length) P.info.push(`<div><span class="chip c-warn">Давхардсан</span> ${drDaysLabel(dup)} — хоёр файлд байна; дэлгүүр бүрээр «${esc(f.name)}»-ийнхийг авна</div>`);
+          for (const [d, D] of Object.entries(s.days)){ const O = P.sales.days[d]; if (!O){ P.sales.days[d] = D; continue; } Object.assign(O.stores, D.stores); Object.assign(O.sup, D.sup); O.lines += D.lines; O.adjN += D.adjN; }
+          for (const [d, I] of Object.entries(s.items)) P.sales.items[d] = Object.assign(P.sales.items[d] || {}, I); Object.assign(P.sales.codes, s.codes); P.sales.lines += s.lines; P.sales.adjN += s.adjN; P.sales.skipped = P.sales.skipped.concat(s.skipped); } else P.sales = s;
+        P.info.push(`<div><span class="chip c-ok">✓</span> Бараагаар · ${drDaysLabel(Object.keys(s.days))} · ${fmt(s.lines)} мөр${s.adjN ? ` · ORION өртөггүй ${s.adjN} мөр → 6 500 ₮/ш` : ''} · ${esc(f.name)}</div>`);
         for (const k of s.skipped) P.info.push(`<div><span class="chip c-warn">Алгассан</span> ${k.d} · ${esc(k.loc)} · ${esc(k.name)} — тоо хэмжээ ${fmt(k.qty)} (Smart-д алдаатай бичигдсэн, өртөг ${fmt(k.cost)} ₮). Smart дээр засуулна уу.</div>`);
         continue; }
       const p = VIVI.parseRows(rows, f.name);
-      if (p.type === 'smart' && p.rows.length){ P.pay = DAILY.payDays(p.rows, PAY.unitOf); P.kas = DAILY.payList(p.rows, PAY.unitOf); P.info.push(`<div><span class="chip c-ok">✓</span> Төлбөрийн хэлбэрээр · ${drDaysLabel(Object.keys(P.pay))} · ${fmt(p.rows.length)} гүйлгээ · ${esc(f.name)}</div>`); continue; }
+      if (p.type === 'smart' && p.rows.length){ const pd = DAILY.payDays(p.rows, PAY.unitOf), kl = DAILY.payList(p.rows, PAY.unitOf), kp = Object.keys(pd).sort(); P.files.push({kind: 'pay', file: f.name, hash, a: kp[0], z: kp[kp.length - 1], n: p.rows.length});
+        if (P.pay){ const dup = Object.keys(pd).filter(d => P.pay[d]); if (dup.length) P.info.push(`<div><span class="chip c-warn">Давхардсан</span> ${drDaysLabel(dup)} — төлбөрийн хоёр файлд байна; дэлгүүр бүрээр «${esc(f.name)}»-ийнхийг авна</div>`); }
+        P.pay = P.pay || {}; for (const [d, U] of Object.entries(pd)) P.pay[d] = Object.assign(P.pay[d] || {}, U);
+        P.kas = P.kas || {}; for (const [d, U] of Object.entries(kl)) P.kas[d] = Object.assign(P.kas[d] || {}, U); P.info.push(`<div><span class="chip c-ok">✓</span> Төлбөрийн хэлбэрээр · ${drDaysLabel(Object.keys(P.pay))} · ${fmt(p.rows.length)} гүйлгээ · ${esc(f.name)}</div>`); continue; }
       P.info.push(`<div><span class="chip c-bad">?</span> Танигдсангүй · ${esc(f.name)}</div>`);
     }catch(err){ console.warn(err); P.info.push(`<div><span class="chip c-bad">?</span> Уншиж чадсангүй · ${esc(f.name)}</div>`); }
   }
   // check: sales = payments per day; long uploads get a summary + per-store difference instead of one line per day
   const dates = [...new Set([...Object.keys((P.sales || {}).days || {}), ...Object.keys(P.pay || {})])].sort();
+  if (dates.length && typeof drEnsure === 'function'){ $('#dr-msg').textContent = 'Өмнө хадгалсантай тулгаж байна…'; await drEnsure(dates[0], dates[dates.length - 1]); }
+  // already saved days: what changes, and shops that would get LESS than before (a part-day or one-shop export?)
+  { let same = 0, chg = 0, oldS = 0, newS = 0; const less = [], kept = new Set();
+    for (const d of dates){ const O = DR.days[d], SD = P.sales && P.sales.days[d]; if (!O || !O.stores || !SD) continue;
+      const o = Object.keys(SD.stores).reduce((a, u) => a + ((O.stores[u] || {}).s || 0), 0), n = Object.values(SD.stores).reduce((a, x) => a + (x.s || 0), 0);   // only the shops in the file
+      for (const u of Object.keys(O.stores)) if (!SD.stores[u] && (O.stores[u].s || 0) > 0) kept.add(u);
+      for (const [u, X] of Object.entries(SD.stores)){ const ou = (O.stores[u] || {}).s || 0; if (ou - (X.s || 0) > Math.max(1000, ou * 0.01)) less.push(`${d} ${u}: ${fmt(ou)} → ${fmt(X.s)} ₮`); }
+      if (Math.abs(o - n) <= 1) same++; else { chg++; oldS += o; newS += n; } }
+    P.cmp = same || chg ? `${same + chg} өдөр өмнө байсан: ${same} ижил, ${chg} шинэчлэгдсэн${less.length ? ', ' + less.length + ' дэлгүүр/өдөр буурсан' : ''}${kept.size ? '; хэвээр: ' + [...kept].join(', ') : ''}` : 'шинэ өдрүүд';
+    if (same || chg) P.info.push(`<div><span class="chip c-acc">Өмнө хадгалсан</span> ${same + chg} өдөр аль хэдийн байгаа: ${same} өдөр ижил${chg ? `, ${chg} өдөр шинэчлэгдэнэ (файлд байгаа дэлгүүрүүд: ${fmt(oldS)} → ${fmt(newS)} ₮)` : ''}. Файлд байгаа дэлгүүрийн өгөгдөл солигдоно, бусад нь хэвээр үлдэнэ.</div>`);
+    if (kept.size) P.info.push(`<div><span class="chip c-grey">Хэвээр</span> ${[...kept].map(esc).join(', ')} — энэ файлд алга, өмнөх өгөгдөл нь үлдэнэ.</div>`);
+    if (less.length) P.info.push(`<div><span class="chip c-bad">Анхаар — буурна</span> ${less.length} өдөр/дэлгүүрт шинэ файлын дүн өмнөхөөс БАГА. Өдрийн дундах эсвэл шүүлттэй (хэсэгчилсэн) тайлан биш эсэхийг шалгана уу:<br>${less.slice(0, 8).map(esc).join('<br>')}${less.length > 8 ? '<br>…' : ''}</div>`); }
   const okD = [], badD = [], missD = [], diffU = {};
   for (const d of dates){ const SD = P.sales && P.sales.days[d], PD = P.pay && P.pay[d];
     if (!SD || !PD){ missD.push(`${d}: ${!SD ? 'бараагаар тайлан' : 'төлбөрийн тайлан'} алга${DR.days[d] ? ' — өмнө хадгалсныг ашиглана' : ''}`); continue; }
@@ -4349,22 +4400,33 @@ $('#dr-files').addEventListener('change', async e => {
   $('#dr-filelist').innerHTML = P.info.join(''); $('#dr-save').disabled = !DR.parsed; $('#dr-msg').textContent = '';
 });
 $('#dr-save').addEventListener('click', async () => {
-  const P = DR.parsed; if (!P || !db) return; $('#dr-save').disabled = true; $('#dr-msg').textContent = 'Хадгалж байна…';
+  const P = DR.parsed; if (!P || !db) return;
+  const closed = [...new Set(P.dates.map(d => d.slice(0, 7)))].filter(m => typeof DS !== 'undefined' && DS.closed[m]);
+  if (closed.length && !isOwner){ $('#dr-msg').textContent = `${closed.join(', ')} сар хаагдсан — зөвхөн эзэмшигч өөрчилнө.`; return; }
+  if (closed.length && !confirm(`${closed.join(', ')} сар хаагдсан байна. Өөрчлөх үү?`)) return;
+  $('#dr-save').disabled = true; $('#dr-msg').textContent = 'Хадгалж байна…';
   try{
+    const prevB = typeof dsSnapshotDays === 'function' ? await dsSnapshotDays(P.dates) : null;
     for (const d of P.dates){
       const old = DR.days[d] || {}, S = P.sales && P.sales.days[d];
-      const doc = {date: d, stores: S ? S.stores : (old.stores || {}), sup: S ? S.sup : (old.sup || {}), lines: S ? S.lines : (old.lines || 0), adjN: S ? S.adjN : (old.adjN || 0),
-        pay: P.pay && P.pay[d] ? P.pay[d] : (old.pay || null), by: me, at: new Date().toISOString(), ownerNotified: isOwner || P.dates.length > 3};
-      await db.doc('daily/' + d).set(doc);
-      if (P.kas && P.kas[d]){ try{ await db.doc('dailykas/' + d).set({date: d, u: P.kas[d], by: me, at: doc.at}); (DR.kas = DR.kas || {})[d] = P.kas[d]; }catch(e){ console.warn('dailykas', d, e); } }
+      // only what this upload carries is replaced — an older day (not loaded here) keeps its other part, e.g. the payments
+      const doc = {date: d, by: me, at: new Date().toISOString(), ownerNotified: isOwner || P.dates.length > 3};
+      if (S){ doc.stores = Object.assign({}, old.stores || {}, S.stores); doc.sup = Object.assign({}, old.sup || {}, S.sup); doc.lines = S.lines; doc.adjN = S.adjN; }
+      if (P.pay && P.pay[d]) doc.pay = Object.assign({}, old.pay || {}, P.pay[d]);
+      await db.doc('daily/' + d).set(doc, {mergeFields: Object.keys(doc)});
+      DR.days[d] = Object.assign({}, old, doc);
+      if (P.kas && P.kas[d]){ try{ const ok = await db.doc('dailykas/' + d).get(); await db.doc('dailykas/' + d).set({date: d, u: Object.assign({}, ok.exists ? ok.data().u || {} : {}, P.kas[d]), by: me, at: doc.at}); (DR.kas = DR.kas || {})[d] = P.kas[d]; }catch(e){ console.warn('dailykas', d, e); } }
     }
     // sold quantity per item and shop, one doc per day (rotation / re-ordering)
-    if (P.sales && P.sales.items) for (const d of P.dates){ const it = P.sales.items[d]; if (!it) continue; try{ await db.doc('itemday/' + d).set({date: d, t: ROT.packDay(it), by: me, at: new Date().toISOString()}); }catch(e){ console.warn('itemday', d, e); } }
+    if (P.sales && P.sales.items) for (const d of P.dates){ const it = P.sales.items[d]; if (!it) continue; try{ const od = await db.doc('itemday/' + d).get(); const prev = od.exists ? (od.data().t != null ? ROT.unpackDay(od.data().t) : (od.data().u || {})) : {};
+        await db.doc('itemday/' + d).set({date: d, t: ROT.packDay(Object.assign(prev, it)), by: me, at: new Date().toISOString()}); }catch(e){ console.warn('itemday', d, e); } }
     // item code → group|supplier (for the stock snapshots), merged into one doc per month
     if (P.sales && P.sales.codes && Object.keys(P.sales.codes).length){ try{ const known = await anItemMap(), add = {};
         for (const [c, v] of Object.entries(P.sales.codes)) if (known[c] !== v) add[c] = v;
         const parts = ROT.chunkText(ROT.packMap(add)); for (let i = 0; i < parts.length; i++) await db.doc('itemmap/n_' + P.dates[0] + '_' + Date.now().toString(36) + '_' + i).set({t: parts[i], by: me, at: new Date().toISOString()});
         Object.assign(known, add); }catch(e){ console.warn('itemmap', e); } }
+    // history: one line per file; the first one keeps the «before» picture for undo
+    if (typeof upLog === 'function'){ let first = true; for (const F of P.files){ const id = await upLog({...F, note: P.cmp || ''}); if (first && id && prevB){ await dsSavePrev(id, prevB); first = false; } } }
     DR.day = P.dates[P.dates.length - 1]; DR.range = P.dates.length > 1 ? 'custom' : 'day'; DR.from = P.dates[0]; DR.to = DR.day; drSyncBar();
     $('#dr-msg').textContent = `${P.dates.length} өдөр хадгаллаа.`; DR.parsed = null; $('#dr-files').value = ''; $('#dr-filelist').innerHTML = '';
   }catch(err){ console.warn(err); $('#dr-msg').textContent = 'Хадгалж чадсангүй: ' + (err.code || err.message || ''); $('#dr-save').disabled = false; }
@@ -5998,8 +6060,13 @@ async function anSnapUpload(e){
       const ag = INV.parseAging(rows); if (ag.error){ out.push(f.name + ': ' + ag.error); continue; }
       const date = ag.date || prompt('«' + f.name + '» — тайлангийн огноо (YYYY-MM-DD)?', isoU(Date.now() + 8 * 3600e3)); if (!date) continue; ag.date = date;
       const S = ANAL.snapOf(ag, map, PAY.unitOf), tot = Object.values(S.units).reduce((x, U) => x + U.q, 0), unk = Object.values(S.units).reduce((x, U) => x + U.unk, 0);
+      // a report filtered to one location would look like the other shops emptied out
+      const prevD = Object.keys(AN.snaps).filter(x => x !== date).sort().pop(), prevU = prevD ? Object.keys(AN.snaps[prevD].units || {}).filter(u => (AN.snaps[prevD].units[u].q || 0) > 0) : [], miss = prevU.filter(u => !S.units[u]);
+      if (miss.length && !confirm(`«${f.name}» (${date}): ${miss.join(', ')} байршил энэ тайланд алга (${prevD}-ний агшинд байсан).\nБүх байршлаар гаргасан тайлан мөн үү? «OK» — хадгалах, «Cancel» — алгасах.`)){ out.push(date + ': алгассан'); continue; }
+      if (AN.snaps[date]) out.push(date + ': өмнөх агшныг сольсон');
       await db.doc('stocksnap/' + date).set({...S, by: me, at: new Date().toISOString(), file: f.name}); AN.snaps[date] = S;
       await rotSaveStock(ag, date);
+      if (typeof upLog === 'function') await upLog({kind: 'aging', file: f.name, hash: await fileHash(await f.arrayBuffer()), a: date, z: date, n: ag.items.length, note: fmt(Math.round(tot)) + ' ш'});
       out.push(`${date}: ${fmt(Math.round(tot))} ш${unk ? ` (бүлэг тодорхойгүй ${Math.round(unk / tot * 100)}%)` : ''}`); }
     msg.textContent = 'Хадгаллаа: ' + out.join(' · '); renderAnal();
   }catch(err){ console.warn(err); msg.textContent = 'Алдаа: ' + (err.code || err.message || err); }
@@ -6106,6 +6173,141 @@ function rotExcel(){
   add('Нийлүүлэгч', [['Нийлүүлэгч', 'Борлуулалт ₮', 'Зарсан ш', 'Үлдэгдэл ш', 'Хүрэлцэх (7 хоног)', 'Борлуулалтын хувь %', 'Зарагдаагүй код']].concat(P.bySup.map(b => [b.sup, Math.round(b.s), b.q, b.st, b.cover == null ? '' : +b.cover.toFixed(1), +b.thru.toFixed(1), b.sold0])), [30, 16, 10, 10, 12, 12, 12]);
   XLSX.writeFile(wb, `Ergelt_${today()}.xlsx`);
 }
+// ---------- data status: what was uploaded, what is missing, who does what, undo, month close ----------
+const DS = {log: [], cov: {}, duty: null, closed: {}, month: '', sel: null, init: false};
+const DS_PRIVATE = new Set(['4002622637', '405097294', '5026747956']);   // private / brother's accounts — never required
+const DS_KIND = {sales: '🧾 Smart — бараагаар', pay: '💳 Smart — төлбөрийн хэлбэрээр', stmt: '🏦 Банкны хуулга', aging: '📦 Насжилтын тайлан', lpp: '🚚 LPP жагсаалт'};
+const dsAccLabel = a => (VIVI.ACC_NAME && VIVI.ACC_NAME[a] ? VIVI.ACC_NAME[a] + ' · ' : '') + a;
+// file fingerprint: the same file uploaded twice is recognised
+async function fileHash(buf){ try{ const h = await crypto.subtle.digest('SHA-256', buf); return [...new Uint8Array(h)].slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join(''); }catch(e){ return ''; } }
+async function dupUpload(hash){ if (!hash || !db) return null; try{ const s = await db.collection('uplog').where('hash', '==', hash).get(); const L = s.docs.map(d => d.data()).filter(x => !x.undone).sort((a, b) => String(b.at).localeCompare(String(a.at))); return L[0] || null; }catch(e){ return null; } }
+const dupNote = (x, name) => x ? `<div><span class="chip c-warn">Өмнө оруулсан</span> «${esc(name)}» файлыг ${esc(nameOf(x.by) || x.email || '')} ${esc(fmtDT(x.at))}-нд оруулсан байна.</div>` : '';
+async function upLog(e){ if (!db) return null; try{ const r = await db.collection('uplog').add({...e, by: me, email: (user.email() || '').toLowerCase(), at: new Date().toISOString()}); return r.id; }catch(err){ console.warn('uplog', err); return null; } }
+// which days of an account the statements cover — merged ranges
+async function regStmt(p, file, hash){
+  if (!db || !p || p.type !== 'bank' || !p.rows.length) return;
+  const acc = String(p.acc || (p.rows[0] && p.rows[0].acc) || ''); if (!acc) return;
+  const ds = p.rows.map(t => typeof t.dt === 'string' ? t.dt.slice(0, 10) : isoU(+t.dt)).filter(Boolean).sort(), a = ds[0], z = ds[ds.length - 1];
+  try{ const ref = db.doc('stmtcov/' + acc), o = await ref.get(), R = (o.exists ? o.data().r || [] : []).map(x => x.split('_'));
+    R.push([a, z]); R.sort((x, y) => x[0] < y[0] ? -1 : 1); const M = [];
+    for (const r of R){ const L = M[M.length - 1]; if (L && r[0] <= shiftDay(L[1], 1)){ if (r[1] > L[1]) L[1] = r[1]; } else M.push([r[0], r[1]]); }
+    await ref.set({acc, r: M.map(x => x[0] + '_' + x[1]), last: z, by: me, at: new Date().toISOString()});
+    DS.cov[acc] = {acc, r: M.map(x => x[0] + '_' + x[1]), last: z};
+  }catch(err){ console.warn('stmtcov', err); }
+  await upLog({kind: 'stmt', file, hash: hash || '', acc, a, z, n: p.rows.length});
+}
+const covHas = (acc, d) => ((DS.cov[acc] || {}).r || []).some(x => { const [a, z] = x.split('_'); return d >= a && d <= z; });
+// required accounts: chosen by the owner; by default every own account a statement was ever uploaded for (private ones never)
+const dsAccs = () => { const D = DS.duty || {}; if (Array.isArray(D.accs)) return D.accs.filter(a => !DS_PRIVATE.has(a)); return Object.keys(DS.cov).filter(a => !DS_PRIVATE.has(a)).sort(); };
+// the state of one day: per data kind 'ok' | 'part' | 'miss' (+ why)
+function dsDay(d){
+  const D = DR.days[d], out = {};
+  const S = D && D.stores ? Object.values(D.stores).reduce((a, x) => a + (x.s || 0), 0) : null;
+  const P = D && D.pay ? Object.values(D.pay).reduce((a, U) => a + Object.values(U).reduce((b, F) => b + (F.a || 0), 0), 0) : null;
+  out.sales = S == null ? ['miss', 'бараагаар тайлан алга'] : P != null && Math.abs(S - P) > 1000 ? ['part', `борлуулалт ${fmt(S)} ≠ төлбөр ${fmt(P)}`] : ['ok', fmt(S) + ' ₮'];
+  out.pay = P == null ? ['miss', 'төлбөрийн тайлан алга'] : S != null && Math.abs(S - P) > 1000 ? ['part', `төлбөр ${fmt(P)} ≠ борлуулалт ${fmt(S)}`] : ['ok', fmt(P) + ' ₮'];
+  for (const a of dsAccs()) out['stmt:' + a] = covHas(a, d) ? ['ok', 'хуулга орсон'] : ['miss', 'хуулга алга'];
+  return out;
+}
+// working days rule: Mon–Fri before the deadline the previous day(s) must be in (Monday: Fri, Sat, Sun)
+function dsDue(now){
+  const t = isoU(+now + 8 * 3600e3), wd = new Date(t + 'T00:00:00Z').getUTCDay(), L = [];
+  if (wd === 0 || wd === 6) return {today: t, days: [], workday: false};
+  const back = wd === 1 ? 3 : 1; for (let k = back; k >= 1; k--) L.push(shiftDay(t, -k));
+  return {today: t, days: L, workday: true};
+}
+// what is missing for one person (by e-mail) over the last 14 days; «due» = the days of this morning's deadline
+function dsTodo(email){
+  const D = DS.duty || {}, em = String(email || '').toLowerCase(), mine = k => !em || String(D[k] || '').toLowerCase() === em;
+  const due = dsDue(Date.now()), today = due.today, items = [];
+  for (let k = 14; k >= 1; k--){ const d = shiftDay(today, -k), st = dsDay(d), isDue = due.days.includes(d);
+    if (DS.closed[d.slice(0, 7)]) continue;
+    if (mine('smart')){ if (st.sales[0] !== 'ok') items.push({kind: 'sales', d, why: st.sales[1], due: isDue}); if (st.pay[0] === 'miss') items.push({kind: 'pay', d, why: st.pay[1], due: isDue}); }
+    if (mine('stmt')) for (const a of dsAccs()) if (st['stmt:' + a][0] !== 'ok') items.push({kind: 'stmt', d, acc: a, why: 'хуулга алга', due: isDue}); }
+  // aging: once a week (Monday)
+  if (mine('aging')){ const last = Object.keys((typeof AN !== 'undefined' && AN.snaps) || {}).sort().pop(); if (!last || last < shiftDay(today, -7)) items.push({kind: 'aging', d: today, why: last ? 'сүүлийнх ' + last : 'нэг ч алга', due: new Date(today + 'T00:00:00Z').getUTCDay() === 1}); }
+  return {items, due};
+}
+// banner on every page for the responsible people
+function renderDutyBanner(){
+  const el = $('#duty-banner'); if (!el || !DS.duty) return; const em = (user.email() || '').toLowerCase(), D = DS.duty;
+  if (![D.smart, D.stmt, D.aging].map(x => String(x || '').toLowerCase()).includes(em)){ el.hidden = true; return; }
+  const {items, due} = dsTodo(em); if (!items.length){ el.hidden = false; el.className = 'duty ok'; el.innerHTML = '✓ Таны оруулах өгөгдөл бүгд орсон байна.'; return; }
+  const late = due.workday && (new Date(Date.now() + 8 * 3600e3).toISOString().slice(11, 16) > (D.deadline || '11:30'));
+  const g = {}; for (const it of items){ const k = it.kind + (it.acc ? ':' + it.acc : ''); (g[k] = g[k] || {it, days: []}).days.push(it.d); }
+  el.hidden = false; el.className = 'duty ' + (late && items.some(x => x.due) ? 'bad' : 'warn');
+  el.innerHTML = `<b>${late && items.some(x => x.due) ? '⏰ Хугацаа хэтэрсэн' : '📋 Өнөөдөр ' + esc(D.deadline || '11:30') + ' хүртэл оруулах'}:</b> ` + Object.values(g).map(({it, days}) => `<span class="chip ${days.some(d => due.days.includes(d)) ? 'c-bad' : 'c-warn'}" style="margin:2px">${DS_KIND[it.kind] || it.kind}${it.acc ? ' ' + esc(dsAccLabel(it.acc)) : ''} — ${days.length > 3 ? days[0].slice(5) + '…' + days.at(-1).slice(5) + ' (' + days.length + ')' : days.map(d => d.slice(5)).join(', ')}</span>`).join('') + ` <a href="#" data-goto-data>дэлгэрэнгүй</a>`;
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-goto-data]')){ e.preventDefault(); showTab('data'); } });
+// ----- the panel -----
+function renderData(){
+  renderDutyBanner();
+  if (!$('#ds-cal')) return; const P = document.querySelector('[data-panel="data"]'); if (!P || P.hidden) return;
+  if (!DS.init){ DS.init = true; DS.month = shiftDay(today(), -1).slice(0, 7);
+    $('#ds-month').addEventListener('change', e => { DS.month = e.target.value; renderData(); });
+    $('#ds-prev').addEventListener('click', () => { DS.month = shiftDay(DS.month + '-01', -1).slice(0, 7); renderData(); });
+    $('#ds-next').addEventListener('click', () => { DS.month = shiftDay(DS.month + '-28', 5).slice(0, 7); renderData(); });
+    $('#ds-cfg').addEventListener('change', dsCfgSave); $('#ds-log').addEventListener('click', dsUndo); $('#ds-close').addEventListener('click', dsCloseMonth); }
+  const m = DS.month; $('#ds-month').value = m;
+  const a = m + '-01', z = shiftDay(shiftDay(m + '-28', 5).slice(0, 7) + '-01', -1); if (typeof drEnsure === 'function' && a < DR_FROM) drEnsure(a, z).then(g => g && renderData());
+  const days = []; for (let d = a; d <= z; d = shiftDay(d, 1)) days.push(d);
+  const t = today(), WDS = ['Ня', 'Да', 'Мя', 'Лх', 'Пү', 'Ба', 'Бя'];
+  const rows = [['sales', DS_KIND.sales], ['pay', DS_KIND.pay], ...dsAccs().map(x => ['stmt:' + x, '🏦 ' + dsAccLabel(x)])];
+  const st = Object.fromEntries(days.map(d => [d, d < t ? dsDay(d) : null]));
+  const snaps = Object.keys((typeof AN !== 'undefined' && AN.snaps) || {});
+  const cell = (d, k) => { if (!st[d]) return `<td class="ds-c ds-f"></td>`; const [s, why] = st[d][k] || ['miss', '']; return `<td class="ds-c ds-${s}" title="${esc(d + ': ' + why)}"></td>`; };
+  let html = `<thead><tr><th style="min-width:210px"></th>${days.map(d => `<th class="ds-h${[0, 6].includes(new Date(d + 'T00:00:00Z').getUTCDay()) ? ' we' : ''}">${+d.slice(8)}<br><span>${WDS[new Date(d + 'T00:00:00Z').getUTCDay()]}</span></th>`).join('')}<th>Дутуу</th></tr></thead><tbody>`;
+  for (const [k, lab] of rows){ const miss = days.filter(d => st[d] && (st[d][k] || ['miss'])[0] !== 'ok').length; html += `<tr><th class="ds-l">${esc(lab)}</th>${days.map(d => cell(d, k)).join('')}<td class="n">${miss ? `<b style="color:var(--bad)">${miss}</b>` : '✓'}</td></tr>`; }
+  html += `<tr><th class="ds-l">${DS_KIND.aging}</th>${days.map(d => `<td class="ds-c ${snaps.includes(d) ? 'ds-ok' : d < t && new Date(d + 'T00:00:00Z').getUTCDay() === 1 && !snaps.some(x => x >= d && x <= shiftDay(d, 6)) ? 'ds-miss' : 'ds-f'}" title="${esc(d)}${snaps.includes(d) ? ': агшин' : ''}"></td>`).join('')}<td></td></tr></tbody>`;
+  $('#ds-cal').innerHTML = html;
+  // the month's checklist
+  const past = days.filter(d => d < t), allOk = k => past.every(d => (st[d][k] || ['miss'])[0] === 'ok');
+  const chk = [['Бүх өдрийн Smart бараагаар тайлан', allOk('sales')], ['Бүх өдрийн төлбөрийн тайлан (борлуулалт = төлбөр)', allOk('pay')], ['Бүх дансны хуулга сарын турш', dsAccs().every(x => allOk('stmt:' + x))],
+    ['Сарын сүүлийн өдрийн насжилтын тайлан', snaps.some(x => x >= shiftDay(z, -1) && x <= shiftDay(z, 2))], ['Орлогын хяналт хадгалсан', (S.cashruns || S.runs || []).some(r => r.d0 <= a && r.d1 >= shiftDay(z, -1))]];
+  const C = DS.closed[m];
+  $('#ds-check').innerHTML = chk.map(([l, ok]) => `<div>${ok ? '✅' : '⬜'} ${esc(l)}</div>`).join('') + (C ? `<div class="note" style="margin-top:6px">🔒 Хаасан: ${esc(nameOf(C.by) || '')} ${esc(fmtDT(C.at))}</div>` : '');
+  $('#ds-close').hidden = !isOwner || past.length < days.length; $('#ds-close').textContent = C ? '🔓 Сарыг нээх' : '🔒 Сарыг хаах';
+  // who is responsible (owner sets it)
+  const D = DS.duty || {}, emails = [...new Set([...(typeof ACCESS !== 'undefined' ? ACCESS.emails : []), D.smart, D.stmt, D.aging].filter(Boolean))];
+  const sel = k => `<select data-ds="${k}" ${isOwner ? '' : 'disabled'}><option value="">—</option>${emails.map(e => `<option ${e === D[k] ? 'selected' : ''}>${esc(e)}</option>`).join('')}</select>`;
+  $('#ds-cfg').innerHTML = `<label class="f">Smart тайлан (бараагаар ба төлбөрийн)${sel('smart')}</label><label class="f">Банкны хуулга${sel('stmt')}</label><label class="f">Насжилтын тайлан (Даваа)${sel('aging')}</label><label class="f">Хугацаа (Да–Ба)<input data-ds="deadline" value="${esc(D.deadline || '11:30')}" ${isOwner ? '' : 'disabled'} style="width:90px"></label>`
+    + `<div class="f full"><span class="note">Заавал хуулга оруулах данс (хувийн данс тооцогдохгүй):</span><div class="row" style="flex-wrap:wrap;gap:4px 14px;margin-top:4px">${[...new Set([...Object.keys(DS.cov), ...dsAccs()])].filter(x => !DS_PRIVATE.has(x)).sort().map(x => `<label class="row note" style="gap:4px;width:auto"><input type="checkbox" data-ds-acc="${esc(x)}" ${dsAccs().includes(x) ? 'checked' : ''} ${isOwner ? '' : 'disabled'}>${esc(dsAccLabel(x))}</label>`).join('') || '<span class="note">Хуулга оруулахад автоматаар нэмэгдэнэ.</span>'}</div></div>`;
+  // upload history
+  const L = DS.log.slice().sort((x, y) => String(y.at).localeCompare(String(x.at))).slice(0, 150);
+  $('#ds-log').innerHTML = L.map(x => `<tr class="${x.undone ? 'dim' : ''}"><td class="mono" style="white-space:nowrap">${esc(fmtDT(x.at))}</td><td>${esc(nameOf(x.by) || x.email || '')}</td><td>${DS_KIND[x.kind] || esc(x.kind)}${x.acc ? '<div class="note">' + esc(dsAccLabel(x.acc)) + '</div>' : ''}</td><td class="note">${esc(x.file || '')}</td><td class="mono" style="white-space:nowrap">${esc(x.a === x.z ? x.a || '' : (x.a || '') + ' – ' + (x.z || ''))}</td><td class="n">${x.n ? fmt(x.n) : ''}</td><td class="note" style="white-space:normal">${esc(x.note || '')}</td><td>${x.undone ? '<span class="chip c-grey">буцаасан</span>' : x.prev ? `<button class="btn" data-undo="${esc(x.id)}">↩ Буцаах</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">Одоохондоо бүртгэл алга — шинэ оруулалтаас эхэлж бүртгэгдэнэ.</td></tr>';
+}
+async function dsCfgSave(e){
+  if (!isOwner) return; const D = Object.assign({}, DS.duty || {}), s = e.target.closest('[data-ds]'), c = e.target.closest('[data-ds-acc]');
+  if (s) D[s.dataset.ds] = s.value.trim();
+  if (c){ const cur = new Set(dsAccs()); c.checked ? cur.add(c.dataset.dsAcc) : cur.delete(c.dataset.dsAcc); D.accs = [...cur].sort(); }
+  try{ await db.doc('config/duty').set(D); DS.duty = D; }catch(err){ alert('Хадгалж чадсангүй: ' + (err.code || err.message)); } renderData();
+}
+async function dsUndo(e){
+  const b = e.target.closest('[data-undo]'); if (!b) return; const x = DS.log.find(y => y.id === b.dataset.undo); if (!x || !x.prev) return;
+  if (!confirm(`«${x.file}» оруулалтыг буцааж, ${x.a} – ${x.z} өдрүүдийг өмнөх байдалд нь оруулах уу?`)) return; b.disabled = true;
+  try{ let txt = ''; for (let i = 0; i < x.prev; i++){ const p = await db.doc('uplogprev/' + x.id + '_p' + i).get(); if (p.exists) txt += p.data().t; }
+    const B = JSON.parse(txt || '{}');
+    for (const [col, docs] of Object.entries(B)) for (const [id, v] of Object.entries(docs)){ if (v == null) await db.doc(col + '/' + id).delete(); else await db.doc(col + '/' + id).set(v); if (col === 'daily'){ if (v == null) delete DR.days[id]; else DR.days[id] = v; } }
+    await db.doc('uplog/' + x.id).update({undone: true, undoneAt: new Date().toISOString(), undoneBy: me}); x.undone = true; renderData(); render();
+  }catch(err){ console.warn(err); alert('Буцааж чадсангүй: ' + (err.code || err.message)); b.disabled = false; }
+}
+async function dsCloseMonth(){
+  if (!isOwner) return; const m = DS.month, C = DS.closed[m];
+  if (!confirm(C ? `${m} сарыг дахин нээх үү?` : `${m} сарыг хаах уу? Хаасны дараа зөвхөн та энэ сарын өгөгдлийг өөрчилнө.`)) return;
+  try{ if (C){ await db.doc('monthclose/' + m).delete(); delete DS.closed[m]; } else { const v = {m, by: me, at: new Date().toISOString()}; await db.doc('monthclose/' + m).set(v); DS.closed[m] = v; } }catch(err){ alert(err.code || err.message); }
+  renderData();
+}
+// before a daily upload: keep what the days looked like (≤ 62 days) so it can be undone
+async function dsSnapshotDays(dates){
+  if (dates.length > 62) return null; const B = {daily: {}, itemday: {}, dailykas: {}};
+  for (const d of dates){ B.daily[d] = DR.days[d] ? JSON.parse(JSON.stringify(DR.days[d])) : null;
+    for (const col of ['itemday', 'dailykas']){ try{ const s = await db.doc(col + '/' + d).get(); B[col][d] = s.exists ? s.data() : null; }catch(e){ B[col][d] = null; } } }
+  return B;
+}
+async function dsSavePrev(id, B){ if (!id || !B) return 0; const parts = ROT.chunkText(JSON.stringify(B), 600000); for (let i = 0; i < parts.length; i++) await db.doc('uplogprev/' + id + '_p' + i).set({t: parts[i], by: me}); await db.doc('uplog/' + id).update({prev: parts.length}); return parts.length; }
+// a panel that appears by a tab click draws itself at once (not only when new data arrives)
+document.addEventListener('click', e => { const b = e.target.closest('nav.tabs button[data-tab], #nav-groups button'); if (!b) return;
+  setTimeout(() => { try{ renderData(); }catch(err){} try{ renderRot(); }catch(err){} try{ renderAnal(); }catch(err){} }, 0); });
 // ===================== chat: one-to-one, groups, a thread under each payment request =====================
 // chats/{cid}: type dm|group|req, name, members [uid], last {t, at, by}, n, read {uid: iso}, reqId
 // msgs/{mid}: cid, members (copy, for the rules), by, at, t (text), files [{id, type, name}], au {id, type, dur}, notified
@@ -6284,7 +6486,7 @@ document.addEventListener('visibilitychange', chMarkRead);
 function chatBtn(r){ const c = CH.chats.find(x => x.id === 'req_' + r.id); return `<button class="btn" data-chat-req="${esc(r.id)}" title="Энэ хүсэлтийн чат">💬${c && c.n ? ' ' + c.n : ''}${c && chUnread(c) ? ' <span style="color:var(--bad)">●</span>' : ''}</button>`; }
 // ===================== two-level menu: groups on top, the group's tabs below (wrapping, no sideways scroll) =====================
 const NAV_GROUPS = [['fin', '💰 Санхүү', ['req', 'rqs', 'bank', 'rev', 'cash', 'bal', 'pay', 'contr']], ['rep', '📊 Тайлан', ['daily', 'anal', 'pl']],
-  ['wh', '📦 Агуулах, дэлгүүр', ['wh', 'rcv', 'inv', 'rot']], ['chat', '💬 Чат', ['chat']], ['set', '⚙ Тохиргоо', ['set']]];
+  ['wh', '📦 Агуулах, дэлгүүр', ['wh', 'rcv', 'inv', 'rot']], ['chat', '💬 Чат', ['chat']], ['set', '⚙ Тохиргоо', ['set', 'data']]];
 const navGrpOf = t => (NAV_GROUPS.find(g => g[2].includes(t)) || NAV_GROUPS[0])[0];
 let NAV_G = '';
 (() => { const nav = document.querySelector('nav.tabs'); if (!nav) return; const bar = document.createElement('div'); bar.className = 'nav-groups'; bar.id = 'nav-groups'; nav.parentNode.insertBefore(bar, nav);
@@ -6403,9 +6605,9 @@ else VIVIFB.start(async () => {
   if (!isOwner){
     try{ const a = await db.doc('config/access').get(); const x = a.exists ? a.data() : {}; ALLOW = {...DEFAULT_PERMS, ...((x.perms || {})[String(user.email()).toLowerCase()] || {})}; }catch(e){ console.warn(e); }
   }
-  ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); ALLOW.inv = !!(ALLOW.inv || ALLOW.invadm); ALLOW.chat = true; ALLOW.anal = !!ALLOW.daily; ALLOW.rot = !!ALLOW.daily; if (ALLOW.req) ALLOW.reqsub = false;   // an accountant makes real requests; the employee form is only for people without «Төлбөрийн хүсэлт»
+  ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); ALLOW.inv = !!(ALLOW.inv || ALLOW.invadm); ALLOW.chat = true; ALLOW.anal = !!ALLOW.daily; ALLOW.rot = !!ALLOW.daily; ALLOW.data = !!(ALLOW.daily || ALLOW.rev || ALLOW.cash || isOwner); if (ALLOW.req) ALLOW.reqsub = false;   // an accountant makes real requests; the employee form is only for people without «Төлбөрийн хүсэлт»
   window.ALLOWX = ALLOW; if (!isOwner && !ALLOW.req && !ALLOW.rev) $('#role').textContent = 'Ажилтан · ' + user.email();
-  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv', inv:'inv', reqsub:'rqs', contr:'contr', chat:'chat', anal:'anal', rot:'rot'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
+  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv', inv:'inv', reqsub:'rqs', contr:'contr', chat:'chat', anal:'anal', rot:'rot', data:'data'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
   for (const k in TABS){ const b = document.querySelector(`nav.tabs button[data-tab="${TABS[k]}"]`); if (b) b.hidden = !ALLOW[k]; if (KPI[k]) $(KPI[k]).closest('.kpi').hidden = !ALLOW[k]; }
   { const cur = document.querySelector('nav.tabs button[aria-selected="true"]'); if (!cur || cur.hidden){ const first = [...document.querySelectorAll('nav.tabs button')].find(b => !b.hidden); if (first) showTab(first.dataset.tab); } }
   if (!Object.values(ALLOW).some(Boolean)) gate('Танд харах хэсэг сонгогдоогүй байна. Эзэмшигчид хандана уу.', true);
@@ -6458,6 +6660,10 @@ else VIVIFB.start(async () => {
   db.doc('config/payees').onSnapshot(d => { const x = d.exists ? d.data() : {}; const base = (x.list || []).length ? x.list : PAYEES_DEFAULT.list;
     PAYEES.set((x.extra || []).concat(PAYEES_DEFAULT.added || [], base)); PAYEES.setDefaults(x.defaults || {}); PBINFO = {file: (x.list || []).length ? (x.file || '') : PBINFO.file, emps: x.emps || PBINFO.emps, extra: x.extra || [], defaults: x.defaults || {}}; renderPayees(); render(); }, onErr);
   // only the recent days live; older ones (history, last year) are fetched when a period needs them — drEnsure()
+  if (ALLOW.data){ db.collection('uplog').where('at', '>=', new Date(Date.now() - 120 * 864e5).toISOString()).onSnapshot(s => { DS.log = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+    db.collection('stmtcov').onSnapshot(s => { DS.cov = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
+    db.doc('config/duty').onSnapshot(s => { DS.duty = s.exists ? s.data() : {}; render(); }, onErr);
+    db.collection('monthclose').onSnapshot(s => { DS.closed = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); }
   if (isOwner){ $('#aud-card').hidden = false; db.collection('audit').where('at', '>=', new Date(Date.now() - 60 * 864e5).toISOString()).onSnapshot(s => { AUD.list = s.docs.map(d => ({id: d.id, ...d.data()})); renderAudit(); }, onErr); }
   if (ALLOW.daily) db.collection('stocksnap').onSnapshot(s => { AN.snaps = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
   if (ALLOW.daily || ALLOW.rev) db.collection('daily').where('date', '>=', DR_FROM).onSnapshot(s => { const keep = Object.fromEntries(Object.entries(DR.days).filter(([d]) => d < DR_FROM)); DR.days = {...keep, ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; DR.live = true; render(); }, onErr);
