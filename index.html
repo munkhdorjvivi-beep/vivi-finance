@@ -2415,8 +2415,14 @@ const ROT = (() => {
     return {rows, moves, orders, dead, bySup: Object.values(bySup).sort((a, b) => b.s - a.s), W};
   }
   // itemday docs ({date, u: {unit: {code: [q, net]}}}) of the last W weeks → sold / net per code and unit
+  // Firestore allows ~20 000 fields per document, so the big per-item data is kept as text: one line per item
+  const packDay = u => Object.entries(u).flatMap(([un, I]) => Object.entries(I).map(([c, [q, s]]) => un + '\t' + c + '\t' + q + '\t' + s)).join('\n');
+  const unpackDay = t => { const u = {}; for (const l of String(t || '').split('\n')){ if (!l) continue; const [un, c, q, s] = l.split('\t'); (u[un] = u[un] || {})[c] = [+q || 0, +s || 0]; } return u; };
+  const packMap = m => Object.entries(m).map(([c, v]) => c + '\t' + String(v).replace(/[\t\n]/g, ' ')).join('\n');
+  const unpackMap = t => { const m = {}; for (const l of String(t || '').split('\n')){ const i = l.indexOf('\t'); if (i > 0) m[l.slice(0, i)] = l.slice(i + 1); } return m; };
+  const chunkText = (txt, max) => { const out = []; let a = 0; max = max || 450000; while (a < txt.length){ let z = Math.min(txt.length, a + max); if (z < txt.length){ const nl = txt.lastIndexOf('\n', z); if (nl > a) z = nl + 1; } out.push(txt.slice(a, z)); a = z; } return out; };
   function soldOf(dayDocs){ const sold = {}, net = {};
-    for (const D of dayDocs) for (const [u, I] of Object.entries(D.u || {})) for (const [c, [q, s]] of Object.entries(I)){ ((sold[c] = sold[c] || {})[u] = (sold[c][u] || 0) + q); ((net[c] = net[c] || {})[u] = (net[c][u] || 0) + s); }
+    for (const D of dayDocs) for (const [u, I] of Object.entries(D.t != null ? unpackDay(D.t) : (D.u || {}))) for (const [c, [q, s]] of Object.entries(I)){ ((sold[c] = sold[c] || {})[u] = (sold[c][u] || 0) + q); ((net[c] = net[c] || {})[u] = (net[c][u] || 0) + s); }
     return {sold, net};
   }
   // aging items → stock per code and unit
@@ -2427,7 +2433,7 @@ const ROT = (() => {
   // compact text form for Firestore: "code\tunit\tqty\tname" per line
   const packStock = (st, names) => Object.entries(st).flatMap(([c, U]) => Object.entries(U).map(([u, q]) => c + '\t' + u + '\t' + q + '\t' + String((names || {})[c] || '').replace(/[\t\n]/g, ' ').slice(0, 60))).join('\n');
   function unpackStock(txt){ const st = {}, names = {}; for (const l of String(txt || '').split('\n')){ if (!l) continue; const [c, u, q, n] = l.split('\t'); (st[c] = st[c] || {})[u] = (st[c][u] || 0) + (+q || 0); if (n && !names[c]) names[c] = n; } return {st, names}; }
-  const R = {plan, soldOf, stockOf, packStock, unpackStock, isWh, isShop, LPP};
+  const R = {plan, soldOf, stockOf, packStock, unpackStock, packDay, unpackDay, packMap, unpackMap, chunkText, isWh, isShop, LPP};
   if (typeof module !== 'undefined') module.exports = R;
   return R;
 })();
@@ -4353,9 +4359,12 @@ $('#dr-save').addEventListener('click', async () => {
       if (P.kas && P.kas[d]){ try{ await db.doc('dailykas/' + d).set({date: d, u: P.kas[d], by: me, at: doc.at}); (DR.kas = DR.kas || {})[d] = P.kas[d]; }catch(e){ console.warn('dailykas', d, e); } }
     }
     // sold quantity per item and shop, one doc per day (rotation / re-ordering)
-    if (P.sales && P.sales.items) for (const d of P.dates){ const it = P.sales.items[d]; if (!it) continue; try{ await db.doc('itemday/' + d).set({date: d, u: it, by: me, at: new Date().toISOString()}); }catch(e){ console.warn('itemday', d, e); } }
+    if (P.sales && P.sales.items) for (const d of P.dates){ const it = P.sales.items[d]; if (!it) continue; try{ await db.doc('itemday/' + d).set({date: d, t: ROT.packDay(it), by: me, at: new Date().toISOString()}); }catch(e){ console.warn('itemday', d, e); } }
     // item code → group|supplier (for the stock snapshots), merged into one doc per month
-    if (P.sales && P.sales.codes && Object.keys(P.sales.codes).length){ try{ await db.doc('itemmap/m_' + P.dates[0].slice(0, 7)).set({m: P.sales.codes, by: me, at: new Date().toISOString()}, {merge: true}); }catch(e){ console.warn('itemmap', e); } }
+    if (P.sales && P.sales.codes && Object.keys(P.sales.codes).length){ try{ const known = await anItemMap(), add = {};
+        for (const [c, v] of Object.entries(P.sales.codes)) if (known[c] !== v) add[c] = v;
+        const parts = ROT.chunkText(ROT.packMap(add)); for (let i = 0; i < parts.length; i++) await db.doc('itemmap/n_' + P.dates[0] + '_' + Date.now().toString(36) + '_' + i).set({t: parts[i], by: me, at: new Date().toISOString()});
+        Object.assign(known, add); }catch(e){ console.warn('itemmap', e); } }
     DR.day = P.dates[P.dates.length - 1]; DR.range = P.dates.length > 1 ? 'custom' : 'day'; DR.from = P.dates[0]; DR.to = DR.day; drSyncBar();
     $('#dr-msg').textContent = `${P.dates.length} өдөр хадгаллаа.`; DR.parsed = null; $('#dr-files').value = ''; $('#dr-filelist').innerHTML = '';
   }catch(err){ console.warn(err); $('#dr-msg').textContent = 'Хадгалж чадсангүй: ' + (err.code || err.message || ''); $('#dr-save').disabled = false; }
@@ -5980,7 +5989,8 @@ async function anExcel(){
 
 // aging report → stock snapshot (shop × group × supplier), saved as stocksnap/{date}
 let AN_MAP = null;
-async function anItemMap(){ if (AN_MAP) return AN_MAP; const s = await db.collection('itemmap').get(); AN_MAP = {}; for (const d of s.docs) Object.assign(AN_MAP, d.data().m || {}); return AN_MAP; }
+async function anItemMap(){ if (AN_MAP) return AN_MAP; const s = await db.collection('itemmap').get(); AN_MAP = {};
+  for (const d of s.docs.sort((a, b) => a.id < b.id ? -1 : 1)){ const x = d.data(); Object.assign(AN_MAP, x.t != null ? ROT.unpackMap(x.t) : (x.m || {})); } return AN_MAP; }
 async function anSnapUpload(e){
   const fl = [...e.target.files]; if (!fl.length || !db) return; const msg = $('#an-snap-msg'); msg.textContent = 'Уншиж байна…';
   try{ const map = await anItemMap(); const out = [];
