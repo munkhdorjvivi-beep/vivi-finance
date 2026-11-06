@@ -482,9 +482,14 @@ body{margin:0;background:var(--bg)}
     <div class="kpis" id="an-kpis"></div>
     <div class="card"><h2>Яагаад өөрчлөгдсөн бэ</h2><div id="an-story" style="line-height:1.6"></div></div>
     <div class="card"><h2>Өдөр өдрөөр</h2><div id="an-chart"></div><div class="tbl" style="margin-top:8px"><table><thead><tr><th>Гараг</th><th>Одоо</th><th class="n">Борлуулалт</th><th>Тэр үед</th><th class="n">Борлуулалт</th><th class="n">Зөрүү</th><th class="n">%</th></tr></thead><tbody id="an-days"></tbody></table></div></div>
-    <div class="card"><h2>Барааны бүлгээр</h2><div class="tbl" style="max-height:460px;overflow:auto"><table><thead><tr><th>Бүлэг</th><th class="n">Одоо</th><th class="n">Тэр үед</th><th class="n">Зөрүү</th><th class="n">%</th><th class="n">Ширхэг</th><th class="n">Ашиг %</th><th class="n">Нийт өөрчлөлтөд</th></tr></thead><tbody id="an-grp"></tbody></table></div></div>
-    <div class="card"><h2>Нийлүүлэгчээр</h2><div class="tbl" style="max-height:460px;overflow:auto"><table><thead><tr><th>Нийлүүлэгч</th><th class="n">Одоо</th><th class="n">Тэр үед</th><th class="n">Зөрүү</th><th class="n">%</th><th class="n">Ширхэг</th><th class="n">Ашиг %</th><th class="n">Нийт өөрчлөлтөд</th></tr></thead><tbody id="an-sup"></tbody></table></div></div>
-    <div class="card"><h2>Дэлгүүрээр</h2><div class="tbl"><table><thead><tr><th>Дэлгүүр</th><th class="n">Одоо</th><th class="n">Тэр үед</th><th class="n">Зөрүү</th><th class="n">%</th><th class="n">Ширхэг</th><th class="n">Ашиг %</th><th class="n">Нийт өөрчлөлтөд</th></tr></thead><tbody id="an-units"></tbody></table></div></div>
+    <div class="card"><h2>Барааны бүлгээр</h2><div class="tbl" style="max-height:460px;overflow:auto"><table><thead><tr><th>Бүлэг</th><th class="n">Одоо</th><th class="n">Тэр үед</th><th class="n">Зөрүү</th><th class="n">%</th><th class="n">Ширхэг</th><th class="n">Ашиг %</th><th class="n">Хөнгөлөлт %</th><th class="n">Үлдэгдэл (ш)</th><th class="n">Нийт өөрчлөлтөд</th></tr></thead><tbody id="an-grp"></tbody></table></div></div>
+    <div class="card"><h2>Нийлүүлэгчээр</h2><div class="tbl" style="max-height:460px;overflow:auto"><table><thead><tr><th>Нийлүүлэгч</th><th class="n">Одоо</th><th class="n">Тэр үед</th><th class="n">Зөрүү</th><th class="n">%</th><th class="n">Ширхэг</th><th class="n">Ашиг %</th><th class="n">Хөнгөлөлт %</th><th class="n">Үлдэгдэл (ш)</th><th class="n">Нийт өөрчлөлтөд</th></tr></thead><tbody id="an-sup"></tbody></table></div></div>
+    <div class="card"><h2>Үлдэгдлийн агшин (насжилтын тайлан)</h2>
+      <p class="note" style="margin:0 0 8px">Долоо хоног бүр (жишээ нь Даваа гарагт) Smart-ын «Бараа материалын насжилтын тайлан»-г оруулбал шинжилгээ «борлуулалт буурсан нь бараа хүрэлцээгүйгээс үү» гэдгийг харуулна. Барааны бүлэг, нийлүүлэгчийг өдрийн тайлангийн барааны кодоор тодорхойлно.</p>
+      <div class="row"><input id="an-snap-file" type="file" multiple accept=".xls,.xlsx" style="max-width:340px"><span class="note" id="an-snap-msg"></span></div>
+      <div class="note" id="an-snap-list" style="margin-top:6px"></div>
+    </div>
+    <div class="card"><h2>Дэлгүүрээр</h2><div class="tbl"><table><thead><tr><th>Дэлгүүр</th><th class="n">Одоо</th><th class="n">Тэр үед</th><th class="n">Зөрүү</th><th class="n">%</th><th class="n">Ширхэг</th><th class="n">Ашиг %</th><th class="n">Хөнгөлөлт %</th><th class="n">Үлдэгдэл (ш)</th><th class="n">Нийт өөрчлөлтөд</th></tr></thead><tbody id="an-units"></tbody></table></div></div>
   </section>
 
   <!-- PAYROLL -->
@@ -2009,34 +2014,35 @@ const DAILY = (() => {
     const hi = rows.findIndex(r => r && r.some(c => String(c || '').trim() === 'Өртөг') && r.some(c => String(c || '').trim() === 'Байршил'));
     if (hi < 0) return {error: 'Борлуулалтын жагсаалт /бараагаар/ (Өртөг баганатай) биш байна.'};
     const H = rows[hi].map(c => String(c == null ? '' : c).trim()), ix = n => H.indexOf(n);
-    const c = {d: ix('Огноо'), loc: ix('Байршил'), sup: ix('Бэлтгэн нийлүүлэгчийн нэр'), grp: ix('Барааны бүлэг'), brand: ix('Брендийн нэр'), name: ix('Барааны нэр'), ret: ix('Буцаалтын дүн'), qty: ix('Тоо хэмжээ'), net: ix('Цэвэр борлуулалт'), cost: ix('Өртөг')};
+    const c = {d: ix('Огноо'), loc: ix('Байршил'), sup: ix('Бэлтгэн нийлүүлэгчийн нэр'), grp: ix('Барааны бүлэг'), brand: ix('Брендийн нэр'), name: ix('Барааны нэр'), ret: ix('Буцаалтын дүн'), qty: ix('Тоо хэмжээ'), net: ix('Цэвэр борлуулалт'), cost: ix('Өртөг'), disc: ix('Хөнгөлөлт'), code: ix('Барааны код')};
     if (c.net < 0 || c.cost < 0 || c.d < 0) return {error: '«Огноо», «Цэвэр борлуулалт», «Өртөг» багана олдсонгүй.'};
-    const days = {}; let n = 0, adjN = 0, skipped = null;
+    const days = {}, codes = {}; let n = 0, adjN = 0, skipped = null;
     for (const r of rows.slice(hi + 1)){
       if (!r || !r[c.loc]) continue;
       const d = toDate(r[c.d]); if (!d) continue;
       const day = ymd(d), unit = unitOf(String(r[c.loc]).trim());
       const sup = String(r[c.sup] || '').trim() || '(нийлүүлэгчгүй)';
       const grp = String((c.grp >= 0 && r[c.grp]) || '').trim().replace(/\.$/, '') || '–';
-      const qty = num(r[c.qty]), net = num(r[c.net]); let cost = num(r[c.cost]);
+      const qty = num(r[c.qty]), net = num(r[c.net]), h = c.disc >= 0 ? num(r[c.disc]) : 0; let cost = num(r[c.cost]);
+      if (c.code >= 0 && r[c.code] != null){ const k = String(r[c.code]).trim().replace(/[.\/#$\[\]~*`]/g, '_'); if (k && !codes[k]) codes[k] = grp.replace(/\d+$/, '').trim() + '|' + sup; }
       if (Math.abs(qty) >= 10000){ (skipped = skipped || []).push({d: day, loc: String(r[c.loc]).trim(), name: String(r[c.name] == null ? '' : r[c.name]).trim(), qty, net, cost}); continue; }   // typo in Smart (barcode typed as quantity)
       if (!cost && /ORION/i.test(sup) && qty){ cost = ORION_COST * qty; adjN++; }
       const D = days[day] = days[day] || {date: day, stores: {}, sup: {}, lines: 0, adjN: 0};
       D.lines++; if (!num(r[c.cost]) && cost) D.adjN++;
-      const S = D.stores[unit] = D.stores[unit] || {s: 0, c: 0, q: 0, r: 0};
-      S.s += net; S.c += cost; S.q += qty; if (c.ret >= 0) S.r += num(r[c.ret]);
+      const S = D.stores[unit] = D.stores[unit] || {s: 0, c: 0, q: 0, r: 0, h: 0};
+      S.s += net; S.c += cost; S.q += qty; S.h = (S.h || 0) + h; if (c.ret >= 0) S.r += num(r[c.ret]);
       const U = D.sup[unit] = D.sup[unit] || {};
-      const X = U[sup] = U[sup] || {s: 0, c: 0, q: 0, g: {}};
-      X.s += net; X.c += cost; X.q += qty;
-      const G = X.g[grp] = X.g[grp] || {s: 0, c: 0, q: 0}; G.s += net; G.c += cost; G.q += qty;
+      const X = U[sup] = U[sup] || {s: 0, c: 0, q: 0, h: 0, g: {}};
+      X.s += net; X.c += cost; X.q += qty; X.h += h;
+      const G = X.g[grp] = X.g[grp] || {s: 0, c: 0, q: 0, h: 0}; G.s += net; G.c += cost; G.q += qty; G.h += h;
       n++;
     }
     if (!n) return {error: 'Борлуулалтын мөр олдсонгүй.'};
     for (const D of Object.values(days)){
-      for (const S of Object.values(D.stores)){ S.s = r2(S.s); S.c = r2(S.c); S.r = r2(S.r); }
-      for (const U of Object.values(D.sup)) for (const X of Object.values(U)){ X.s = r2(X.s); X.c = r2(X.c); for (const G of Object.values(X.g)){ G.s = r2(G.s); G.c = r2(G.c); } }
+      for (const S of Object.values(D.stores)){ S.s = r2(S.s); S.c = r2(S.c); S.r = r2(S.r); S.h = r2(S.h); }
+      for (const U of Object.values(D.sup)) for (const X of Object.values(U)){ X.s = r2(X.s); X.c = r2(X.c); X.h = r2(X.h); for (const G of Object.values(X.g)){ G.s = r2(G.s); G.c = r2(G.c); G.h = r2(G.h); } }
     }
-    return {days, lines: n, adjN, skipped: skipped || []};
+    return {days, lines: n, adjN, skipped: skipped || [], codes};
   }
   // payment-form rows from core's Smart parser ({d, store, form, bank, amt}) → {date: {unit: {form: {a, n}}}}
   const formOf = r => r.form === 'Банкаар' ? (r.bank || 'Банкаар') : (r.form || '?');
@@ -2182,37 +2188,51 @@ const ANAL = (() => {
   }
   // sums of the daily docs over the days (one shop or all)
   function agg(days, a, z, unit){
-    const o = {s: 0, c: 0, q: 0, n: 0, units: {}, grp: {}, sup: {}, daily: [], miss: [], have: 0, wds: [0, 0, 0, 0, 0, 0, 0]};
+    const o = {s: 0, c: 0, q: 0, n: 0, h: 0, units: {}, grp: {}, sup: {}, daily: [], miss: [], have: 0, wds: [0, 0, 0, 0, 0, 0, 0]};
     for (const d of span(a, z)){ const D = days[d]; o.wds[wd(d)]++;
       if (!D || !D.stores){ o.miss.push(d); o.daily.push({d, s: 0, n: 0, miss: true}); continue; } o.have++;
       let ds = 0, dn = 0;
       for (const [u, S] of Object.entries(D.stores)){ if (unit && u !== unit) continue;
         const n = D.pay && D.pay[u] ? Object.values(D.pay[u]).reduce((x, F) => x + (F.n || 0), 0) : 0;
         const U = o.units[u] = o.units[u] || {s: 0, c: 0, q: 0, n: 0}; U.s += S.s || 0; U.c += S.c || 0; U.q += S.q || 0; U.n += n;
-        o.s += S.s || 0; o.c += S.c || 0; o.q += S.q || 0; o.n += n; ds += S.s || 0; dn += n; }
+        o.s += S.s || 0; o.c += S.c || 0; o.q += S.q || 0; o.n += n; o.h += S.h || 0; U.h = (U.h || 0) + (S.h || 0); ds += S.s || 0; dn += n; }
       for (const [u, SU] of Object.entries(D.sup || {})){ if (unit && u !== unit) continue;
-        for (const [sp, X] of Object.entries(SU)){ const P = o.sup[sp] = o.sup[sp] || {s: 0, c: 0, q: 0}; P.s += X.s || 0; P.c += X.c || 0; P.q += X.q || 0;
-          for (const [g, G] of Object.entries(X.g || {})){ const k = g.replace(/\d+$/, '').trim() || '–'; const R = o.grp[k] = o.grp[k] || {s: 0, c: 0, q: 0}; R.s += G.s || 0; R.c += G.c || 0; R.q += G.q || 0; } } }
+        for (const [sp, X] of Object.entries(SU)){ const P = o.sup[sp] = o.sup[sp] || {s: 0, c: 0, q: 0, h: 0}; P.s += X.s || 0; P.c += X.c || 0; P.q += X.q || 0; P.h += X.h || 0;
+          for (const [g, G] of Object.entries(X.g || {})){ const k = g.replace(/\d+$/, '').trim() || '–'; const R = o.grp[k] = o.grp[k] || {s: 0, c: 0, q: 0, h: 0}; R.s += G.s || 0; R.c += G.c || 0; R.q += G.q || 0; R.h += G.h || 0; } } }
       o.daily.push({d, s: ds, n: dn}); }
     return o;
   }
   // the two periods side by side: totals, why, and who contributed
-  function analyse(days, opt){
+  // stock snapshot nearest to a period (within 3 weeks of it), one shop or all: {date, q, g:{group: qty}, s:{supplier: qty}}
+  function snapFor(snaps, a, z, unit){
+    const mid = (Date.parse(a) + Date.parse(z)) / 2; let best = null;
+    for (const S of Object.values(snaps || {})){ const t = Date.parse(S.date); if (t < Date.parse(a) - 21 * 864e5 || t > Date.parse(z) + 7 * 864e5) continue; if (!best || Math.abs(t - mid) < Math.abs(Date.parse(best.date) - mid)) best = S; }
+    if (!best) return null; const o = {date: best.date, q: 0, g: {}, s: {}, unk: 0};
+    for (const [u, U] of Object.entries(best.units || {})){ if (unit && u !== unit) continue; o.q += U.q || 0; o.unk += U.unk || 0;
+      for (const [g, q] of Object.entries(U.g || {})) o.g[g] = (o.g[g] || 0) + q; for (const [x, q] of Object.entries(U.s || {})) o.s[x] = (o.s[x] || 0) + q; }
+    return o;
+  }
+  function analyse(days, opt, snaps){
     const [a, z] = period(opt.mode, opt.date, opt.from, opt.to), [a0, z0] = compare(opt.cmp, a, z);
     const A = agg(days, a, z, opt.unit), B = agg(days, a0, z0, opt.unit);
     const pct = (x, y) => y ? (x - y) / Math.abs(y) * 100 : null;
     const tk = o => o.n ? o.s / o.n : 0, ipr = o => o.n ? o.q / o.n : 0, gm = o => o.s ? (o.s - o.c) / o.s * 100 : 0;
     const kpi = {
       s: {a: A.s, b: B.s, p: pct(A.s, B.s)}, gp: {a: A.s - A.c, b: B.s - B.c, p: pct(A.s - A.c, B.s - B.c)}, gm: {a: gm(A), b: gm(B), pp: gm(A) - gm(B)},
-      q: {a: A.q, b: B.q, p: pct(A.q, B.q)}, n: {a: A.n, b: B.n, p: pct(A.n, B.n)}, t: {a: tk(A), b: tk(B), p: pct(tk(A), tk(B))}, ipr: {a: ipr(A), b: ipr(B), p: pct(ipr(A), ipr(B))}};
+      q: {a: A.q, b: B.q, p: pct(A.q, B.q)}, n: {a: A.n, b: B.n, p: pct(A.n, B.n)}, t: {a: tk(A), b: tk(B), p: pct(tk(A), tk(B))}, ipr: {a: ipr(A), b: ipr(B), p: pct(ipr(A), ipr(B))}, disc: {a: A.s + A.h ? A.h / (A.s + A.h) * 100 : 0, b: B.s + B.h ? B.h / (B.s + B.h) * 100 : 0}};
+    kpi.disc.pp = kpi.disc.a - kpi.disc.b; kpi.disc.ok = A.h > 0 && B.h > 0;   // older daily reports were saved without the discount
     // sales change = more/fewer payments × old average ticket + ticket change × new count
     const dS = A.s - B.s, traffic = A.n && B.n ? (A.n - B.n) * tk(B) : 0, ticket = A.n && B.n ? (tk(A) - tk(B)) * A.n : 0;
     const contrib = (X, Y) => [...new Set([...Object.keys(X), ...Object.keys(Y)])].map(k => { const x = X[k] || {s: 0, c: 0, q: 0}, y = Y[k] || {s: 0, c: 0, q: 0};
-      return {k, a: x.s, b: y.s, d: x.s - y.s, p: pct(x.s, y.s), qa: x.q, qb: y.q, gma: x.s ? (x.s - x.c) / x.s * 100 : null, gmb: y.s ? (y.s - y.c) / y.s * 100 : null, share: dS ? (x.s - y.s) / Math.abs(dS) * 100 : null}; })
+      return {k, a: x.s, b: y.s, d: x.s - y.s, ha: x.h || 0, hb: y.h || 0, p: pct(x.s, y.s), qa: x.q, qb: y.q, gma: x.s ? (x.s - x.c) / x.s * 100 : null, gmb: y.s ? (y.s - y.c) / y.s * 100 : null, share: dS ? (x.s - y.s) / Math.abs(dS) * 100 : null}; })
       .filter(r => Math.abs(r.a) + Math.abs(r.b) > 0).sort((p, q) => Math.abs(q.d) - Math.abs(p.d));
     const units = contrib(A.units, B.units), grp = contrib(A.grp, B.grp), sup = contrib(A.sup, B.sup);
+    // stock on hand around each period (from the aging snapshots)
+    const SA = snapFor(snaps, a, z, opt.unit), SB0 = snapFor(snaps, a0, z0, opt.unit), SB = SB0 && SA && SB0.date === SA.date ? null : SB0;
+    if (SA && SB){ for (const r of grp){ r.sa = SA.g[r.k] || 0; r.sb = SB.g[r.k] || 0; } for (const r of sup){ r.sa = SA.s[r.k] || 0; r.sb = SB.s[r.k] || 0; } }
+    const disc = o => o.s + o.h ? o.h / (o.s + o.h) * 100 : 0;
     // like for like: shops that sold in both periods
-    const POP = /поп-ап|түр цэг|дархан|сандэй|эцсийн хэрэглэгч/i, pops = units.filter(u => POP.test(u.k));
+    const POP = /поп-ап|түр цэг|дархан|сандэй|эцсийн хэрэглэгч|үзэсгэлэн|экспо|жэм палас|зайсан|хөдөө/i, pops = units.filter(u => POP.test(u.k));
     const lfl = units.filter(u => u.a > 0 && u.b > 0 && !POP.test(u.k)), lflA = lfl.reduce((x, u) => x + u.a, 0), lflB = lfl.reduce((x, u) => x + u.b, 0);
     const newU = units.filter(u => u.a > 0 && !(u.b > 0) && !POP.test(u.k)).map(u => u.k), goneU = units.filter(u => u.b > 0 && !(u.a > 0) && !POP.test(u.k)).map(u => u.k);
     // warnings: missing days, different weekday mix
@@ -2231,18 +2251,35 @@ const ANAL = (() => {
       story.push(`Борлуулалт ${F(A.s)}₮ — харьцуулах үеэс ${S(dS)}₮ (${P1(kpi.s.p)}).`);
       if (A.n && B.n) story.push(`Төлбөрийн тоо (≈ худалдан авагч) ${P1(kpi.n.p)} → ${S(traffic)}₮; дундаж чек ${F(tk(B))} → ${F(tk(A))}₮ (${P1(kpi.t.p)}) → ${S(ticket)}₮. ${Math.abs(traffic) > Math.abs(ticket) ? 'Гол шалтгаан — худалдан авагчийн тоо.' : 'Гол шалтгаан — нэг худалдан авагчийн худалдан авалт.'}`);
       if (Math.abs(kpi.gm.pp) >= 1) story.push(`Бохир ашгийн хувь ${kpi.gm.b.toFixed(1)}% → ${kpi.gm.a.toFixed(1)}% (${kpi.gm.pp > 0 ? '+' : ''}${kpi.gm.pp.toFixed(1)} пп)${kpi.gm.pp < -2 ? ' — хямдрал / урамшуулал их байсан эсвэл өртөг өндөр бараа их зарагдсан' : ''}.`);
+      if (kpi.disc.ok && Math.abs(kpi.disc.pp) >= 1) story.push(`Хөнгөлөлтийн түвшин ${kpi.disc.b.toFixed(1)}% → ${kpi.disc.a.toFixed(1)}% (${kpi.disc.pp > 0 ? '+' : ''}${kpi.disc.pp.toFixed(1)} пп) — ${kpi.disc.pp > 0 ? 'урамшуулал / хямдрал илүү' : 'хямдрал бага'} байсан${(kpi.disc.pp > 0) === (dS > 0) ? ', энэ нь борлуулалтын өөрчлөлтийг хэсэгчлэн тайлбарлана' : ''}.`);
       const up = grp.filter(r => r.d > 0).slice(0, 3), dn = grp.filter(r => r.d < 0).slice(0, 3);
       if (up.length) story.push('Өсөлт: ' + up.map(r => `${r.k} ${S(r.d)}₮ (${P1(r.p)})`).join(', ') + '.');
       if (dn.length) story.push('Бууралт: ' + dn.map(r => `${r.k} ${S(r.d)}₮ (${P1(r.p)})`).join(', ') + '.');
+      if (SA && SB){ const ST = [];
+        for (const r of grp.slice(0, 8)){ if (!(r.sa || r.sb) || Math.abs(r.d) < Math.abs(dS) * 0.05) continue; const sp = pct(r.sa, r.sb), pp = r.p;
+          if (sp == null || pp == null) continue;
+          if (pp < -10 && sp < -15) ST.push(`${r.k}: борлуулалт ${P1(pp)}, үлдэгдэл ${F(r.sb)} → ${F(r.sa)} ш (${P1(sp)}) — бараа хүрэлцээгүй байж магадгүй`);
+          else if (pp > 10 && sp > 15) ST.push(`${r.k}: борлуулалт ${P1(pp)}, үлдэгдэл ${F(r.sb)} → ${F(r.sa)} ш (${P1(sp)}) — бараа ихэссэн нь өсөлтөд нөлөөлсөн`);
+          else if (pp < -10 && sp > 0) ST.push(`${r.k}: үлдэгдэл хангалттай (${F(r.sb)} → ${F(r.sa)} ш) байсан ч борлуулалт ${P1(pp)} — эрэлт, үнэ, байршуулалтыг шалгах`);
+          else if (pp > 10 && sp < -15) ST.push(`${r.k}: үлдэгдэл багассан (${P1(sp)}) ч борлуулалт ${P1(pp)} — эрэлт өндөр, дахин захиалах`); }
+        story.push(`Үлдэгдэл (насжилтын тайлан ${SB.date} ба ${SA.date}): нийт ${F(SB.q)} → ${F(SA.q)} ш (${P1(pct(SA.q, SB.q))}).` + (ST.length ? ' ' + ST.join('; ') + '.' : ''));
+      } else if (snaps && Object.keys(snaps).length) story.push('Үлдэгдлийн харьцуулалт: хоёр хугацааны ойролцоо насжилтын тайлан (агшин) алга' + (SA ? ` (зөвхөн ${SA.date})` : SB ? ` (зөвхөн ${SB.date})` : '') + '.');
       const su = sup.filter(r => r.d > 0).slice(0, 2), sd = sup.filter(r => r.d < 0).slice(0, 2);
       if (su.length || sd.length) story.push('Нийлүүлэгчээр: ' + [...su, ...sd].map(r => `${r.k} ${S(r.d)}₮`).join(', ') + '.');
       const pd2 = pops.filter(u => Math.abs(u.d) >= 1000);
       if (pd2.length) story.push('Поп-ап / түр цэг: ' + pd2.map(u => `${u.k} ${S(u.d)}₮ (одоо ${F(u.a)}, тэр үед ${F(u.b)})`).join(', ') + '.');
       if (newU.length || goneU.length || pd2.length) story.push(`${newU.length || goneU.length ? `Дэлгүүрийн бүрэлдэхүүн өөр (${[...newU.map(u => '+' + u), ...goneU.map(u => '−' + u)].join(', ')}). ` : ''}Байнгын, хоёр үед хоёуланд нь ажилласан дэлгүүрүүдээр (LFL): ${F(lflB)} → ${F(lflA)}₮ (${P1(pct(lflA, lflB))}).`);
     }
-    return {a, z, a0, z0, A, B, kpi, dS, traffic, ticket, units, grp, sup, lfl: {a: lflA, b: lflB, p: pct(lflA, lflB), newU, goneU, pops: pops.map(u => u.k)}, warn, story, wdName: WD};
+    return {a, z, a0, z0, A, B, SA, SB, kpi, dS, traffic, ticket, units, grp, sup, lfl: {a: lflA, b: lflB, p: pct(lflA, lflB), newU, goneU, pops: pops.map(u => u.k)}, warn, story, wdName: WD};
   }
-  const R = {MODES, CMPS, period, compare, agg, analyse, addD, wd, WD};
+  // aging report items + code→"group|supplier" → stock per shop × group × supplier
+  function snapOf(aging, map, unitOf){
+    const units = {}, locName = {}; for (const [l, L] of Object.entries(aging.locs || {})) locName[l] = L.name;
+    for (const it of aging.items){ if (!(it.q > 0)) continue; const u = unitOf ? unitOf(locName[it.l] || it.l) : (locName[it.l] || it.l); const U = units[u] = units[u] || {q: 0, unk: 0, g: {}, s: {}};
+      const m = map[String(it.c).replace(/[.\/#$\[\]~*`]/g, '_')]; U.q += it.q; if (!m){ U.unk += it.q; continue; } const [g, sp] = m.split('|'); U.g[g] = (U.g[g] || 0) + it.q; U.s[sp] = (U.s[sp] || 0) + it.q; }
+    return {date: aging.date, units};
+  }
+  const R = {MODES, CMPS, period, compare, agg, analyse, addD, wd, WD, snapFor, snapOf};
   if (typeof module !== 'undefined') module.exports = R;
   return R;
 })();
@@ -4108,6 +4145,16 @@ $('#pl-area-save').addEventListener('click', async () => { if (!db) return; cons
   $$('#pl-area input').forEach(el => { const v = (parseAmt(String(el.value)) || 0); if (v) area[el.dataset.unit] = v; });
   try{ await db.doc('config/plarea').set({area, at: new Date().toISOString(), by: me}); $('#pl-area-msg').textContent = 'Хадгаллаа.'; }catch(e){ $('#pl-area-msg').textContent = 'Хадгалж чадсангүй.'; } });
 // ---------- daily report (Өдрийн тайлан) ----------
+// days before DR_FROM are not kept live — they load on demand for the period being looked at
+const DR_FROM = (() => { const t = new Date(Date.now() + 8 * 3600e3 - 150 * 86400e3); return t.toISOString().slice(0, 10); })();
+const DR_TRIED = {};
+async function drEnsure(a, z){
+  if (!db || !a || a >= DR_FROM) return false; const zz = z < DR_FROM ? z : shiftDay(DR_FROM, -1), key = a.slice(0, 7) + '|' + zz.slice(0, 7);
+  // fetched month by month, once
+  let got = false; for (let m = a.slice(0, 7); m <= zz.slice(0, 7); m = shiftDay(m + '-28', 5).slice(0, 7)){ if (DR_TRIED[m]) continue; DR_TRIED[m] = true;
+    try{ const s = await db.collection('daily').where('date', '>=', m + '-01').where('date', '<', shiftDay(m + '-28', 5).slice(0, 7) + '-01').get(); for (const d of s.docs) if (d.id < DR_FROM){ DR.days[d.id] = d.data(); got = true; } }catch(e){ console.warn('daily history', m, e); DR_TRIED[m] = false; } }
+  return got;
+}
 const DR = {cfg: {}, canFlow: false, txExtra: {}, days: {}, day: '', range: 'day', from: '', to: '', supUnit: '', open: {}, groups: ['ORION WOJCIECH BARANKIEWICZ', 'Мөнхдорж'], parsed: null};
 const MN_WD2 = ['Ням','Даваа','Мягмар','Лхагва','Пүрэв','Баасан','Бямба'];
 const wdOf2 = d => { const [y, m, dd] = d.split('-').map(Number); return MN_WD2[new Date(y, m - 1, dd).getDay()]; };
@@ -4156,6 +4203,8 @@ $('#dr-save').addEventListener('click', async () => {
       await db.doc('daily/' + d).set(doc);
       if (P.kas && P.kas[d]){ try{ await db.doc('dailykas/' + d).set({date: d, u: P.kas[d], by: me, at: doc.at}); (DR.kas = DR.kas || {})[d] = P.kas[d]; }catch(e){ console.warn('dailykas', d, e); } }
     }
+    // item code → group|supplier (for the stock snapshots), merged into one doc per month
+    if (P.sales && P.sales.codes && Object.keys(P.sales.codes).length){ try{ await db.doc('itemmap/m_' + P.dates[0].slice(0, 7)).set({m: P.sales.codes, by: me, at: new Date().toISOString()}, {merge: true}); }catch(e){ console.warn('itemmap', e); } }
     DR.day = P.dates[P.dates.length - 1]; DR.range = P.dates.length > 1 ? 'custom' : 'day'; DR.from = P.dates[0]; DR.to = DR.day; drSyncBar();
     $('#dr-msg').textContent = `${P.dates.length} өдөр хадгаллаа.`; DR.parsed = null; $('#dr-files').value = ''; $('#dr-filelist').innerHTML = '';
   }catch(err){ console.warn(err); $('#dr-msg').textContent = 'Хадгалж чадсангүй: ' + (err.code || err.message || ''); $('#dr-save').disabled = false; }
@@ -4182,7 +4231,7 @@ $('#dr-sup-units').addEventListener('click', e => { const b = e.target.closest('
 $('#dr-sup').addEventListener('click', e => { const tr = e.target.closest('tr[data-sup]'); if (!tr) return; DR.open[tr.dataset.sup] = !DR.open[tr.dataset.sup]; render(); });
 $('#dr-grp-add').addEventListener('change', e => { const v = e.target.value; if (v && !DR.groups.includes(v)) DR.groups.push(v); e.target.value = ''; render(); });
 $('#dr-groups').addEventListener('click', e => { const b = e.target.closest('button[data-rmgrp]'); if (!b) return; DR.groups = DR.groups.filter(x => x !== b.dataset.rmgrp); render(); });
-const drDocs = (a, z) => Object.values(DR.days).filter(d => d.date >= a && d.date <= z).sort((x, y) => x.date.localeCompare(y.date));
+const drDocs = (a, z) => (a < DR_FROM && drEnsure(a, z).then(g => g && render()), 0) || Object.values(DR.days).filter(d => d.date >= a && d.date <= z).sort((x, y) => x.date.localeCompare(y.date));
 const daysBetween = (a, z) => Math.round((Date.parse(z) - Date.parse(a)) / 86400e3) + 1;
 // ----- render -----
 function renderDaily(){
@@ -5692,7 +5741,7 @@ document.addEventListener('click', async e => {
     $('#rq-note').value = `${c.kind || 'Зээл'}ийн төлбөр: ${c.name}${c.no ? ' №' + c.no : ''} · ${s.next.d}`; $('#rq-msg').textContent = 'Гэрээнээс бөглөсөн — шалгаад илгээнэ үү.'; }
 });
 // ---------- sales analyser (Борлуулалтын шинжилгээ) ----------
-const AN = {date: '', mode: 'day', cmp: 'w1', unit: '', from: '', to: '', last: null, init: false};
+const AN = {date: '', mode: 'day', cmp: 'w1', unit: '', from: '', to: '', last: null, init: false, snaps: {}, loading: ''};
 const anPct = v => v == null || !isFinite(v) ? '–' : (v > 0 ? '+' : '') + v.toFixed(1) + '%';
 const anCls = v => v == null ? '' : v > 0.5 ? 'c-ok' : v < -0.5 ? 'c-bad' : 'c-grey';
 function anInit(){
@@ -5712,6 +5761,7 @@ function anInit(){
   $('#an-quick').addEventListener('click', e => { const b = e.target.closest('button[data-q]'); if (!b) return; const [m, c] = b.dataset.q.split('|'); AN.mode = m; AN.cmp = c;
     if (m === 'day'){ const L = anDays(); const y = ANAL.addD(isoU(Date.now() + 8 * 3600e3), -1); AN.date = L.includes(y) ? y : (L.at(-1) || y); AN.auto = false; } sync(); });
   $('#an-xlsx').addEventListener('click', anExcel);
+  $('#an-snap-file').addEventListener('change', anSnapUpload);
 }
 const anDays = () => Object.keys(DR.days || {}).filter(d => DR.days[d] && DR.days[d].stores).sort();
 function renderAnal(){
@@ -5723,7 +5773,11 @@ function renderAnal(){
   $('#an-unit').innerHTML = '<option value="">Бүх дэлгүүр</option>' + units.map(u => `<option ${u === AN.unit ? 'selected' : ''}>${esc(u)}</option>`).join('');
   $$('#an-quick button').forEach(b => b.setAttribute('aria-pressed', b.dataset.q === AN.mode + '|' + AN.cmp ? 'true' : 'false'));
   if (!L.length){ $('#an-kpis').innerHTML = ''; $('#an-story').innerHTML = '<div class="empty">«Өдрийн тайлан»-д өгөгдөл алга.</div>'; return; }
-  const r = AN.last = ANAL.analyse(DR.days, {mode: AN.mode, date: AN.date, from: AN.from, to: AN.to, cmp: AN.cmp, unit: AN.unit});
+  // older days (last year) come on demand
+  { const [a, z] = ANAL.period(AN.mode, AN.date, AN.from, AN.to), [a0, z0] = ANAL.compare(AN.cmp, a, z), key = a0 + a;
+    if (typeof drEnsure === 'function' && (a0 < DR_FROM || a < DR_FROM) && AN.loading !== key){ AN.loading = key; $('#an-story').innerHTML = '<div class="note">Өмнөх үеийн өгөгдлийг ачаалж байна…</div>';
+      Promise.all([drEnsure(a0, z0), drEnsure(a, z)]).then(() => renderAnal()); } }
+  const r = AN.last = ANAL.analyse(DR.days, {mode: AN.mode, date: AN.date, from: AN.from, to: AN.to, cmp: AN.cmp, unit: AN.unit}, AN.snaps);
   const lab = (a, z) => a === z ? `${a} (${ANAL.WD[ANAL.wd(a)]})` : `${a} (${ANAL.WD[ANAL.wd(a)]}) – ${z} (${ANAL.WD[ANAL.wd(z)]})`;
   $('#an-per').innerHTML = `<b>Одоо:</b> ${esc(lab(r.a, r.z))} &nbsp;·&nbsp; <b>Харьцуулах:</b> ${esc(lab(r.a0, r.z0))}${AN.unit ? ' · ' + esc(AN.unit) : ''}`;
   $('#an-warn').innerHTML = r.warn.map(w => `<div class="note" style="color:var(--warn);margin-top:4px">⚠ ${esc(w)}</div>`).join('');
@@ -5732,6 +5786,8 @@ function renderAnal(){
   $('#an-kpis').innerHTML = tile('Борлуулалт ₮', K.s.a, K.s.b, K.s.p, fx) + tile('Бохир ашиг ₮', K.gp.a, K.gp.b, K.gp.p, fx)
     + `<div class="kpi"><div class="l">Бохир ашгийн хувь</div><div class="v">${K.gm.a.toFixed(1)}%</div><div class="s">тэр үед ${K.gm.b.toFixed(1)}% · <span class="chip ${anCls(K.gm.pp)}">${K.gm.pp > 0 ? '+' : ''}${K.gm.pp.toFixed(1)} пп</span></div></div>`
     + tile('Төлбөрийн тоо (≈ чек)', K.n.a, K.n.b, K.n.p, fx) + tile('Дундаж чек ₮', K.t.a, K.t.b, K.t.p, fx) + tile('Ширхэг', K.q.a, K.q.b, K.q.p, fx) + tile('Нэг чекэнд ширхэг', K.ipr.a, K.ipr.b, K.ipr.p, f1)
+    + `<div class="kpi"><div class="l">Хөнгөлөлтийн түвшин</div><div class="v">${K.disc.a ? K.disc.a.toFixed(1) + '%' : '–'}</div><div class="s">${K.disc.ok ? `тэр үед ${K.disc.b.toFixed(1)}% · ${K.disc.pp > 0 ? '+' : ''}${K.disc.pp.toFixed(1)} пп` : 'хуучин тайланд хөнгөлөлт хадгалагдаагүй'}</div></div>`
+    + (r.SA || r.SB ? `<div class="kpi"><div class="l">Үлдэгдэл (ш)</div><div class="v">${r.SA ? fx(r.SA.q) : '–'}</div><div class="s">${r.SA ? r.SA.date : 'агшин алга'} · тэр үед ${r.SB ? fx(r.SB.q) + ' (' + r.SB.date + ')' : '–'}</div></div>` : '')
     + `<div class="kpi"><div class="l">Ижил дэлгүүрүүдээр (LFL)</div><div class="v">${anPct(r.lfl.p)}</div><div class="s">${fx(r.lfl.b)} → ${fx(r.lfl.a)}</div></div>`;
   $('#an-story').innerHTML = r.story.length ? r.story.map(t => `<div>• ${esc(t)}</div>`).join('') : '<div class="empty">Харьцуулах өгөгдөл алга.</div>';
   // day by day, the matching weekdays side by side
@@ -5740,7 +5796,9 @@ function renderAnal(){
     rows.push(`<tr><td>${x ? ANAL.WD[ANAL.wd(x.d)] : ''}</td><td class="mono">${x ? esc(x.d.slice(5)) : ''}</td><td class="n">${x ? (x.miss ? '<span class="note">тайлангүй</span>' : fmt(Math.round(x.s))) : ''}</td><td class="mono">${y ? esc(y.d.slice(5)) + (y.d.slice(0, 4) !== (x || y).d.slice(0, 4) ? ' ' + y.d.slice(0, 4) : '') : ''}</td><td class="n">${y ? (y.miss ? '<span class="note">тайлангүй</span>' : fmt(Math.round(y.s))) : ''}</td><td class="n">${x && y && !x.miss && !y.miss ? sgn(Math.round(x.s - y.s)) : ''}</td><td class="n">${p == null || x.miss || y.miss ? '' : `<span class="chip ${anCls(p)}">${anPct(p)}</span>`}</td></tr>`); }
   $('#an-days').innerHTML = rows.join('');
   $('#an-chart').innerHTML = n > 1 ? anChart(r) : '';
-  const tbl = (L2, lim) => L2.slice(0, lim).map(x => `<tr><td>${esc(x.k)}</td><td class="n">${fmt(Math.round(x.a))}</td><td class="n">${fmt(Math.round(x.b))}</td><td class="n"><b>${sgn(Math.round(x.d))}</b></td><td class="n"><span class="chip ${anCls(x.p)}">${anPct(x.p)}</span></td><td class="n">${fmt(Math.round(x.qa))} / ${fmt(Math.round(x.qb))}</td><td class="n">${x.gma == null ? '–' : x.gma.toFixed(0) + '%'}</td><td class="n">${x.share == null ? '' : x.share.toFixed(0) + '%'}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">–</td></tr>';
+  const tbl = (L2, lim) => L2.slice(0, lim).map(x => `<tr><td>${esc(x.k)}</td><td class="n">${fmt(Math.round(x.a))}</td><td class="n">${fmt(Math.round(x.b))}</td><td class="n"><b>${sgn(Math.round(x.d))}</b></td><td class="n"><span class="chip ${anCls(x.p)}">${anPct(x.p)}</span></td><td class="n">${fmt(Math.round(x.qa))} / ${fmt(Math.round(x.qb))}</td><td class="n">${x.gma == null ? '–' : x.gma.toFixed(0) + '%'}</td><td class="n">${x.a + x.ha ? (x.ha / (x.a + x.ha) * 100).toFixed(0) + '%' : '–'}</td><td class="n">${x.sa != null ? fmt(Math.round(x.sa)) + ' / ' + fmt(Math.round(x.sb)) : '–'}</td><td class="n">${x.share == null ? '' : x.share.toFixed(0) + '%'}</td></tr>`).join('') || '<tr><td colspan="10" class="empty">–</td></tr>';
+  if (r.SA && r.SB) for (const u of r.units){ const S1 = AN.snaps[r.SA.date], S0 = AN.snaps[r.SB.date]; u.sa = ((S1.units || {})[u.k] || {}).q || 0; u.sb = ((S0.units || {})[u.k] || {}).q || 0; }
+  $('#an-snap-list').innerHTML = Object.keys(AN.snaps).length ? 'Хадгалсан агшин: ' + Object.keys(AN.snaps).sort().reverse().map(d => `<span class="chip c-grey" style="margin:2px">${esc(d)} · ${fmt(Math.round(Object.values(AN.snaps[d].units || {}).reduce((x, U) => x + (U.q || 0), 0)))} ш</span>`).join('') : 'Агшин алга.';
   $('#an-grp').innerHTML = tbl(r.grp, 40); $('#an-sup').innerHTML = tbl(r.sup, 40); $('#an-units').innerHTML = tbl(r.units, 20);
 }
 // two lines: now and then, matched by position (same weekday)
@@ -5765,6 +5823,23 @@ async function anExcel(){
   const wb = XLSX.utils.book_new(); const add = (n, a, w) => { const ws = XLSX.utils.aoa_to_sheet(a); ws['!cols'] = w.map(x => ({wch: x})); XLSX.utils.book_append_sheet(wb, ws, n); };
   add('Хураангуй', sum, [24, 18, 18, 12]); add('Өдрөөр', days, [8, 12, 14, 8, 12, 14, 14]); add('Барааны бүлэг', T(r.grp), [28, 14, 14, 14, 8, 10, 10, 10, 10, 12]); add('Нийлүүлэгч', T(r.sup), [32, 14, 14, 14, 8, 10, 10, 10, 10, 12]); add('Дэлгүүр', T(r.units), [24, 14, 14, 14, 8, 10, 10, 10, 10, 12]);
   XLSX.writeFile(wb, `Shinjilgee_${r.a}_${r.z}_vs_${r.a0}.xlsx`);
+}
+
+// aging report → stock snapshot (shop × group × supplier), saved as stocksnap/{date}
+let AN_MAP = null;
+async function anItemMap(){ if (AN_MAP) return AN_MAP; const s = await db.collection('itemmap').get(); AN_MAP = {}; for (const d of s.docs) Object.assign(AN_MAP, d.data().m || {}); return AN_MAP; }
+async function anSnapUpload(e){
+  const fl = [...e.target.files]; if (!fl.length || !db) return; const msg = $('#an-snap-msg'); msg.textContent = 'Уншиж байна…';
+  try{ const map = await anItemMap(); const out = [];
+    for (const f of fl){ const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1, raw: true, defval: null});
+      const ag = INV.parseAging(rows); if (ag.error){ out.push(f.name + ': ' + ag.error); continue; }
+      const date = ag.date || prompt('«' + f.name + '» — тайлангийн огноо (YYYY-MM-DD)?', isoU(Date.now() + 8 * 3600e3)); if (!date) continue; ag.date = date;
+      const S = ANAL.snapOf(ag, map, PAY.unitOf), tot = Object.values(S.units).reduce((x, U) => x + U.q, 0), unk = Object.values(S.units).reduce((x, U) => x + U.unk, 0);
+      await db.doc('stocksnap/' + date).set({...S, by: me, at: new Date().toISOString(), file: f.name}); AN.snaps[date] = S;
+      out.push(`${date}: ${fmt(Math.round(tot))} ш${unk ? ` (бүлэг тодорхойгүй ${Math.round(unk / tot * 100)}%)` : ''}`); }
+    msg.textContent = 'Хадгаллаа: ' + out.join(' · '); renderAnal();
+  }catch(err){ console.warn(err); msg.textContent = 'Алдаа: ' + (err.code || err.message || err); }
+  e.target.value = '';
 }
 // ===================== chat: one-to-one, groups, a thread under each payment request =====================
 // chats/{cid}: type dm|group|req, name, members [uid], last {t, at, by}, n, read {uid: iso}, reqId
@@ -6030,7 +6105,8 @@ $('#imp-file').addEventListener('change', async e => {
       if (!/^[A-Za-z0-9_-]+$/.test(col) || !/^[A-Za-z0-9_.:@+-]+$/.test(id)) continue;
       if (col === 'daily'){ d.by = me; d.ownerNotified = true; }   // history import: no push per day
       if (col === 'dailykas') d.by = me;   // the rules want the writer's own uid
-      await db.collection(col).doc(id).set(d); n++; if (n % 20 === 0) $('#imp-msg').textContent = `Импортолж байна… ${n}`;
+      if (col === 'itemmap' || col === 'stocksnap') d.by = me;
+      await (col === 'daily' ? db.collection(col).doc(id).set(d, {merge: true}) : db.collection(col).doc(id).set(d)); n++; if (n % 20 === 0) $('#imp-msg').textContent = `Импортолж байна… ${n}`;
     }
     $('#imp-msg').textContent = `${n} бичлэг орлоо.`;
   }catch(err){ console.warn(err); $('#imp-msg').textContent = 'Импорт амжилтгүй: ' + (err.code || err.message || ''); }
@@ -6116,7 +6192,9 @@ else VIVIFB.start(async () => {
   }
   db.doc('config/payees').onSnapshot(d => { const x = d.exists ? d.data() : {}; const base = (x.list || []).length ? x.list : PAYEES_DEFAULT.list;
     PAYEES.set((x.extra || []).concat(PAYEES_DEFAULT.added || [], base)); PAYEES.setDefaults(x.defaults || {}); PBINFO = {file: (x.list || []).length ? (x.file || '') : PBINFO.file, emps: x.emps || PBINFO.emps, extra: x.extra || [], defaults: x.defaults || {}}; renderPayees(); render(); }, onErr);
-  if (ALLOW.daily || ALLOW.rev) db.collection('daily').onSnapshot(s => { DR.days = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
+  // only the recent days live; older ones (history, last year) are fetched when a period needs them — drEnsure()
+  if (ALLOW.daily) db.collection('stocksnap').onSnapshot(s => { AN.snaps = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
+  if (ALLOW.daily || ALLOW.rev) db.collection('daily').where('date', '>=', DR_FROM).onSnapshot(s => { const keep = Object.fromEntries(Object.entries(DR.days).filter(([d]) => d < DR_FROM)); DR.days = {...keep, ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; DR.live = true; render(); }, onErr);
   $('#cash-upload').hidden = !(isOwner || ALLOW.rev); window.REV_DAILY = isOwner || !!ALLOW.daily || !!ALLOW.rev;
   $('#dr-upload').hidden = !ALLOW.daily; DR.canFlow = isOwner || (ALLOW.bank && ALLOW.bal);
   if (ALLOW.pl){
