@@ -481,16 +481,16 @@ body{margin:0;background:var(--bg)}
       <h2>Борлуулалтын шинжилгээ</h2>
       <p class="note" style="margin:0 0 8px">Сонгосон өдөр / хугацааг <b>ижил гарагтай</b> өдрүүдтэй харьцуулна (Пүрэв — Пүрэвтэй, Бямба — Бямбатай). Өөрчлөлтийг худалдан авагчийн тоо, дундаж чек, барааны бүлэг, нийлүүлэгч, дэлгүүрээр задална. Өгөгдөл — «Өдрийн тайлан»-д оруулсан Smart тайлангууд.</p>
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
-        <label class="f" style="min-width:0">Өдөр<span class="row" style="gap:4px"><button class="btn" id="an-prev" title="Өмнөх">◀</button><input type="date" id="an-date" style="width:auto"><button class="btn" id="an-next" title="Дараах">▶</button></span></label>
-        <label class="f" style="min-width:0">Хугацаа<select id="an-mode" style="width:auto"></select></label>
-        <span id="an-custom" class="row" hidden style="gap:4px;align-items:flex-end"><label class="f" style="min-width:0">Эхлэх<input type="date" id="an-from" style="width:auto"></label><label class="f" style="min-width:0">Дуусах<input type="date" id="an-to" style="width:auto"></label></span>
-        <label class="f" style="min-width:0">Юутай харьцуулах<select id="an-cmp" style="width:auto"></select></label>
+        <label class="f" style="min-width:0"><b>A</b> — эхлэх<input type="date" id="an-a" style="width:auto"></label>
+        <label class="f" style="min-width:0">дуусах<input type="date" id="an-z" style="width:auto"></label>
+        <span style="padding:0 6px 10px;font-size:20px">↔</span>
+        <label class="f" style="min-width:0"><b>B</b> — эхлэх<input type="date" id="an-a0" style="width:auto"></label>
+        <label class="f" style="min-width:0">дуусах<input type="date" id="an-z0" style="width:auto"></label>
+        <label class="f" style="min-width:0">B-г бөглөх<select id="an-cmp" style="width:auto"></select></label>
         <label class="f" style="min-width:0">Дэлгүүр<select id="an-unit" style="width:auto"></select></label>
         <button class="btn" id="an-xlsx">📥 Excel</button>
       </div>
-      <div class="filter chips" id="an-quick" style="margin-top:8px">
-        <button data-q="day|w1">Өчигдөр ↔ 7 хоногийн өмнөх ижил гараг</button><button data-q="week|w1">7 хоног ↔ өмнөх 7 хоног</button><button data-q="wtd|w1">Энэ долоо хоног ↔ өнгөрсөн</button><button data-q="mtd|w4">Сарын эхнээс ↔ 4 долоо хоногийн өмнө</button><button data-q="mtd|y1">Сарын эхнээс ↔ өнгөрсөн жил</button>
-      </div>
+      <p class="note" style="margin:6px 0 0">A ба B-г хүссэн огноогоороо сонгоно. «B-г бөглөх» нь A-г сонгоход B-г автоматаар (ижил гарагаар) бөглөх туслах — B-ийн огноог гараар өөрчилбөл «гараар» болно.</p>
       <div id="an-per" style="margin-top:10px"></div>
       <div id="an-warn"></div>
     </div>
@@ -737,7 +737,7 @@ body{margin:0;background:var(--bg)}
       <h2>Эргэлт, шилжүүлэг, захиалга</h2>
       <p class="note" style="margin:0 0 8px">Сүүлийн долоо хоногуудын <b>барааны борлуулалт</b> (Өдрийн тайлангаас) ба <b>сүүлийн насжилтын тайлан</b>гийн үлдэгдлээр: аль барааг аль дэлгүүрээс аль дэлгүүрт шилжүүлэх, нийлүүлэгч бүрээс <b>загвараар</b> юу захиалах (LPP-ээс бусад — LPP трак-аар ирдэг), юу огт зарагдахгүй байгааг харуулна.</p>
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
-        <label class="f" style="min-width:0">Борлуулалтын хугацаа<select id="rt-w" style="width:auto"><option value="2">2 долоо хоног</option><option value="4" selected>4 долоо хоног</option><option value="8">8 долоо хоног</option><option value="12">12 долоо хоног</option></select></label>
+        <label class="f" style="min-width:0">Борлуулалт — эхлэх<input type="date" id="rt-a" style="width:auto"></label><label class="f" style="min-width:0">дуусах<input type="date" id="rt-b" style="width:auto"></label>
         <label class="f" style="min-width:0">Нийлүүлэгч<select id="rt-sup" style="width:auto;max-width:260px"></select></label>
         <label class="f" style="min-width:0">Хайх<input id="rt-q" placeholder="нэр, код, бүлэг…" style="width:200px"></label>
         <button class="btn" id="rt-xlsx">📥 Excel</button>
@@ -2318,7 +2318,7 @@ const ANAL = (() => {
     return o;
   }
   function analyse(days, opt, snaps){
-    const [a, z] = period(opt.mode, opt.date, opt.from, opt.to), [a0, z0] = compare(opt.cmp, a, z);
+    const [a, z] = opt.a ? [opt.a, opt.z || opt.a] : period(opt.mode, opt.date, opt.from, opt.to), [a0, z0] = opt.a0 ? [opt.a0, opt.z0 || opt.a0] : compare(opt.cmp, a, z);
     const A = agg(days, a, z, opt.unit), B = agg(days, a0, z0, opt.unit);
     const pct = (x, y) => y ? (x - y) / Math.abs(y) * 100 : null;
     const tk = o => o.n ? o.s / o.n : 0, ipr = o => o.n ? o.q / o.n : 0, gm = o => o.s ? (o.s - o.c) / o.s * 100 : 0;
@@ -5976,40 +5976,37 @@ const anPct = v => v == null || !isFinite(v) ? '–' : (v > 0 ? '+' : '') + v.to
 const anCls = v => v == null ? '' : v > 0.5 ? 'c-ok' : v < -0.5 ? 'c-bad' : 'c-grey';
 function anInit(){
   if (AN.init) return; AN.init = true;
-  $('#an-mode').innerHTML = Object.entries(ANAL.MODES).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
-  $('#an-cmp').innerHTML = Object.entries(ANAL.CMPS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
-  try{ const s = JSON.parse(localStorage.getItem('vivi-anal') || '{}'); if (s.mode) AN.mode = s.mode; if (s.cmp) AN.cmp = s.cmp; }catch(e){}
-  const sync = () => { try{ localStorage.setItem('vivi-anal', JSON.stringify({mode: AN.mode, cmp: AN.cmp})); }catch(e){} renderAnal(); };
-  $('#an-date').addEventListener('change', e => { AN.auto = false; AN.date = e.target.value; renderAnal(); });
-  $('#an-prev').addEventListener('click', () => { AN.auto = false; AN.date = ANAL.addD(AN.date, -1); renderAnal(); });
-  $('#an-next').addEventListener('click', () => { AN.auto = false; AN.date = ANAL.addD(AN.date, 1); renderAnal(); });
-  $('#an-mode').addEventListener('change', e => { AN.mode = e.target.value; sync(); });
-  $('#an-cmp').addEventListener('change', e => { AN.cmp = e.target.value; sync(); });
+  $('#an-cmp').innerHTML = Object.entries(ANAL.CMPS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('') + '<option value="manual">гараар</option>';
+  try{ const s = JSON.parse(localStorage.getItem('vivi-anal') || '{}'); if (s.cmp) AN.cmp = s.cmp; }catch(e){}
+  const fillB = () => { if (AN.cmp !== 'manual'){ const [a0, z0] = ANAL.compare(AN.cmp, AN.a, AN.z); AN.a0 = a0; AN.z0 = z0; } };
+  AN.fillB = fillB;
+  $('#an-a').addEventListener('change', e => { AN.auto = false; AN.a = e.target.value; if (!AN.z || AN.z < AN.a) AN.z = AN.a; fillB(); renderAnal(); });
+  $('#an-z').addEventListener('change', e => { AN.auto = false; AN.z = e.target.value; if (!AN.a || AN.a > AN.z) AN.a = AN.z; fillB(); renderAnal(); });
+  $('#an-a0').addEventListener('change', e => { AN.cmp = 'manual'; AN.a0 = e.target.value; if (!AN.z0 || AN.z0 < AN.a0) AN.z0 = AN.a0; renderAnal(); });
+  $('#an-z0').addEventListener('change', e => { AN.cmp = 'manual'; AN.z0 = e.target.value; if (!AN.a0 || AN.a0 > AN.z0) AN.a0 = AN.z0; renderAnal(); });
+  $('#an-cmp').addEventListener('change', e => { AN.cmp = e.target.value; try{ localStorage.setItem('vivi-anal', JSON.stringify({cmp: AN.cmp})); }catch(err){} fillB(); renderAnal(); });
   $('#an-unit').addEventListener('change', e => { AN.unit = e.target.value; renderAnal(); });
-  $('#an-from').addEventListener('change', e => { AN.from = e.target.value; renderAnal(); });
-  $('#an-to').addEventListener('change', e => { AN.to = e.target.value; renderAnal(); });
-  $('#an-quick').addEventListener('click', e => { const b = e.target.closest('button[data-q]'); if (!b) return; const [m, c] = b.dataset.q.split('|'); AN.mode = m; AN.cmp = c;
-    if (m === 'day'){ const L = anDays(); const y = ANAL.addD(isoU(Date.now() + 8 * 3600e3), -1); AN.date = L.includes(y) ? y : (L.at(-1) || y); AN.auto = false; } sync(); });
   $('#an-xlsx').addEventListener('click', anExcel);
   $('#an-snap-file').addEventListener('change', anSnapUpload);
 }
 const anDays = () => Object.keys(DR.days || {}).filter(d => DR.days[d] && DR.days[d].stores).sort();
 function renderAnal(){
   if (!$('#an-kpis') || typeof DR === 'undefined') return; anInit();
-  const L = anDays(); if (!AN.date || AN.auto !== false) AN.date = L.at(-1) || isoU(Date.now());   // the last day with a report, until the user picks one
-  $('#an-date').value = AN.date; $('#an-mode').value = AN.mode; $('#an-cmp').value = AN.cmp; $('#an-custom').hidden = AN.mode !== 'custom';
-  if (AN.mode === 'custom'){ if (!AN.from) AN.from = ANAL.addD(AN.date, -6); if (!AN.to) AN.to = AN.date; $('#an-from').value = AN.from; $('#an-to').value = AN.to; }
+  const L = anDays();
+  // until the user picks dates: A = the last day with a report
+  if (!AN.a || AN.auto !== false){ AN.a = AN.z = L.at(-1) || isoU(Date.now()); if (AN.cmp === 'manual') AN.cmp = 'w1'; AN.fillB(); }
+  if (!AN.a0) AN.fillB();
+  $('#an-a').value = AN.a; $('#an-z').value = AN.z; $('#an-a0').value = AN.a0; $('#an-z0').value = AN.z0; $('#an-cmp').value = AN.cmp;
   const units = [...new Set(L.slice(-120).flatMap(d => Object.keys(DR.days[d].stores || {})))].sort();
   $('#an-unit').innerHTML = '<option value="">Бүх дэлгүүр</option>' + units.map(u => `<option ${u === AN.unit ? 'selected' : ''}>${esc(u)}</option>`).join('');
-  $$('#an-quick button').forEach(b => b.setAttribute('aria-pressed', b.dataset.q === AN.mode + '|' + AN.cmp ? 'true' : 'false'));
   if (!L.length){ $('#an-kpis').innerHTML = ''; $('#an-story').innerHTML = '<div class="empty">«Өдрийн тайлан»-д өгөгдөл алга.</div>'; return; }
   // older days (last year) come on demand
-  { const [a, z] = ANAL.period(AN.mode, AN.date, AN.from, AN.to), [a0, z0] = ANAL.compare(AN.cmp, a, z), key = a0 + a;
+  { const a = AN.a, z = AN.z, a0 = AN.a0, z0 = AN.z0, key = a0 + z0 + a + z;
     if (typeof drEnsure === 'function' && (a0 < DR_FROM || a < DR_FROM) && AN.loading !== key){ AN.loading = key; $('#an-story').innerHTML = '<div class="note">Өмнөх үеийн өгөгдлийг ачаалж байна…</div>';
       Promise.all([drEnsure(a0, z0), drEnsure(a, z)]).then(() => renderAnal()); } }
-  const r = AN.last = ANAL.analyse(DR.days, {mode: AN.mode, date: AN.date, from: AN.from, to: AN.to, cmp: AN.cmp, unit: AN.unit}, AN.snaps);
+  const r = AN.last = ANAL.analyse(DR.days, {a: AN.a, z: AN.z, a0: AN.a0, z0: AN.z0, cmp: AN.cmp, unit: AN.unit}, AN.snaps);
   const lab = (a, z) => a === z ? `${a} (${ANAL.WD[ANAL.wd(a)]})` : `${a} (${ANAL.WD[ANAL.wd(a)]}) – ${z} (${ANAL.WD[ANAL.wd(z)]})`;
-  $('#an-per').innerHTML = `<div class="an-ab"><div class="an-a"><span class="note">A — одоо</span><b>${esc(r.LA)}</b><span>${fmt(Math.round(r.kpi.s.a))} ₮</span></div><div class="an-vs">↔</div><div class="an-b"><span class="note">B — харьцуулах (${esc(ANAL.CMPS[AN.cmp] || '')})</span><b>${esc(r.LB)}</b><span>${fmt(Math.round(r.kpi.s.b))} ₮</span></div><div class="an-d"><span class="note">A − B</span><b class="${r.dS >= 0 ? 'pos' : 'neg'}">${sgn(Math.round(r.dS))} ₮</b><span class="chip ${anCls(r.kpi.s.p)}">${anPct(r.kpi.s.p)}</span></div></div>${AN.unit ? '<div class="note" style="margin-top:4px">Дэлгүүр: ' + esc(AN.unit) + '</div>' : ''}`;
+  $('#an-per').innerHTML = `<div class="an-ab"><div class="an-a"><span class="note">A — одоо</span><b>${esc(r.LA)}</b><span>${fmt(Math.round(r.kpi.s.a))} ₮</span></div><div class="an-vs">↔</div><div class="an-b"><span class="note">B — харьцуулах${AN.cmp !== 'manual' ? ' (' + esc(ANAL.CMPS[AN.cmp] || '') + ')' : ''}</span><b>${esc(r.LB)}</b><span>${fmt(Math.round(r.kpi.s.b))} ₮</span></div><div class="an-d"><span class="note">A − B</span><b class="${r.dS >= 0 ? 'pos' : 'neg'}">${sgn(Math.round(r.dS))} ₮</b><span class="chip ${anCls(r.kpi.s.p)}">${anPct(r.kpi.s.p)}</span></div></div>${AN.unit ? '<div class="note" style="margin-top:4px">Дэлгүүр: ' + esc(AN.unit) + '</div>' : ''}`;
   $$('[data-panel="anal"] [data-h="a"]').forEach(th => th.textContent = 'A ' + r.LA); $$('[data-panel="anal"] [data-h="b"]').forEach(th => th.textContent = 'B ' + r.LB);
   $$('[data-panel="anal"] [data-h="da"]').forEach(th => th.textContent = 'A өдөр'); $$('[data-panel="anal"] [data-h="db"]').forEach(th => th.textContent = 'B өдөр');
   $('#an-warn').innerHTML = r.warn.map(w => `<div class="note" style="color:var(--warn);margin-top:4px">⚠ ${esc(w)}</div>`).join('');
@@ -6046,7 +6043,7 @@ async function anExcel(){
   const r = AN.last; if (!r || typeof XLSX === 'undefined') return;
   const A_ = 'A ' + r.LA, B_ = 'B ' + r.LB, head = ['', A_, B_, 'Зөрүү A − B', '%', 'Ширхэг A', 'Ширхэг B', 'Ашиг % A', 'Ашиг % B', 'Нийт өөрчлөлтөд %'];
   const T = L => [head].concat(L.map(x => [x.k, Math.round(x.a), Math.round(x.b), Math.round(x.d), x.p == null ? '' : +x.p.toFixed(1), Math.round(x.qa), Math.round(x.qb), x.gma == null ? '' : +x.gma.toFixed(1), x.gmb == null ? '' : +x.gmb.toFixed(1), x.share == null ? '' : +x.share.toFixed(1)]));
-  const K = r.kpi, sum = [['Борлуулалтын шинжилгээ'], ['A — одоо', r.LA], ['B — харьцуулах', r.LB + ' (' + (ANAL.CMPS[AN.cmp] || '') + ')'], ['Дэлгүүр', AN.unit || 'Бүгд'], [],
+  const K = r.kpi, sum = [['Борлуулалтын шинжилгээ'], ['A — одоо', r.LA], ['B — харьцуулах', r.LB + (AN.cmp !== 'manual' ? ' (' + (ANAL.CMPS[AN.cmp] || '') + ')' : '')], ['Дэлгүүр', AN.unit || 'Бүгд'], [],
     ['Үзүүлэлт', A_, B_, '%'], ['Борлуулалт', Math.round(K.s.a), Math.round(K.s.b), K.s.p == null ? '' : +K.s.p.toFixed(1)], ['Бохир ашиг', Math.round(K.gp.a), Math.round(K.gp.b), K.gp.p == null ? '' : +K.gp.p.toFixed(1)],
     ['Бохир ашгийн хувь', +K.gm.a.toFixed(1), +K.gm.b.toFixed(1), +K.gm.pp.toFixed(1) + ' пп'], ['Төлбөрийн тоо', K.n.a, K.n.b, K.n.p == null ? '' : +K.n.p.toFixed(1)], ['Дундаж чек', Math.round(K.t.a), Math.round(K.t.b), K.t.p == null ? '' : +K.t.p.toFixed(1)],
     ['Ширхэг', Math.round(K.q.a), Math.round(K.q.b), K.q.p == null ? '' : +K.q.p.toFixed(1)], ['LFL', Math.round(r.lfl.a), Math.round(r.lfl.b), r.lfl.p == null ? '' : +r.lfl.p.toFixed(1)], [], ['Яагаад'], ...r.story.map(t => [t]), [], ...r.warn.map(w => ['⚠ ' + w])];
@@ -6097,7 +6094,7 @@ document.addEventListener('click', async e => {
   catch(err){ console.warn(err); alert('Сэргээж чадсангүй: ' + (err.code || err.message || err)); b.disabled = false; }
 });
 // ---------- rotation: moves between shops, re-orders by model, slow stock ----------
-const RT = {w: 4, sup: '', q: '', t: 'mv', days: null, daysW: 0, stock: null, stockDate: '', names: {}, plan: null, cfg: {}, loading: false};
+const RT = {a: '', b: '', loadedFrom: '', sup: '', q: '', t: 'mv', days: null, daysW: 0, stock: null, stockDate: '', names: {}, plan: null, cfg: {}, loading: false};
 // the latest aging report, item by item, saved in pieces of ~500 KB
 async function rotSaveStock(ag, date){
   try{ const st = ROT.stockOf(ag, PAY.unitOf), names = {}; for (const it of ag.items) if (it.n && !names[it.c]) names[String(it.c).replace(/[.\/#$\[\]~*`]/g, '_')] = it.n;
@@ -6112,7 +6109,8 @@ async function rotSaveStock(ag, date){
 async function rotLoad(){
   if (RT.loading || !db) return; RT.loading = true; $('#rt-src').textContent = 'Ачаалж байна…';
   try{
-    if (RT.daysW < RT.w){ const from = shiftDay(today(), -RT.w * 7); const s = await db.collection('itemday').where('date', '>=', from).get(); RT.days = s.docs.map(d => d.data()); RT.daysW = RT.w; }
+    const from = RT.a && (!RT.loadedFrom || RT.a < RT.loadedFrom) ? RT.a : (RT.loadedFrom || shiftDay(today(), -120));
+    if (!RT.loadedFrom || from < RT.loadedFrom){ const s = await db.collection('itemday').where('date', '>=', from).get(); const byD = Object.fromEntries((RT.days || []).map(d => [d.date, d])); for (const d of s.docs){ const x = d.data(); byD[x.date] = x; } RT.days = Object.values(byD); RT.loadedFrom = from; }
     if (!RT.stock){ const L = await db.doc('stockitem/latest').get(); if (L.exists){ const {date, parts} = L.data(); let txt = ''; for (let i = 0; i < parts; i++){ const p = await db.doc('stockitem/' + date + '_p' + i).get(); if (p.exists) txt += p.data().t; } const u = ROT.unpackStock(txt); RT.stock = u.st; RT.names = u.names; RT.stockDate = date; } else RT.stock = {}; }
     if (typeof anItemMap === 'function') RT.map = await anItemMap();
     try{ const c = await db.doc('config/rot').get(); RT.cfg = c.exists ? (c.data().sup || {}) : {}; }catch(e){}
@@ -6121,17 +6119,24 @@ async function rotLoad(){
 }
 function rotPlan(){
   if (RT.plan) return RT.plan;
-  const cut = shiftDay(today(), -RT.w * 7), D = (RT.days || []).filter(d => d.date >= cut), {sold, net} = ROT.soldOf(D);
+  // the W weeks end on the LAST day that has a sales report (if the newest days are not in yet, the averages still use full weeks)
+  // default: the 8 weeks up to the last day that has a report; the user can pick any dates
+  const all = (RT.days || []).map(d => d.date).sort(), lastD = all.length ? all[all.length - 1] : shiftDay(today(), -1);
+  if (!RT.b){ RT.b = lastD < shiftDay(today(), -1) ? lastD : shiftDay(today(), -1); RT.a = shiftDay(RT.b, -55); }
+  const cut = RT.a, endD = RT.b;
+  const D = (RT.days || []).filter(d => d.date >= cut && d.date <= endD), {sold, net} = ROT.soldOf(D);
+  const have = new Set(D.map(d => d.date)), holes = []; for (let d = cut; d <= endD; d = shiftDay(d, 1)) if (!have.has(d)) holes.push(d);
   const map = Object.assign({}, RT.map || {}); for (const [c, n] of Object.entries(RT.names)) if (!map[c]) map[c] = '–|(тодорхойгүй)|' + n; else if (!String(map[c]).split('|')[2]) map[c] = map[c] + '|' + n;
-  const weeks = D.length ? Math.max(1, Math.min(RT.w, Math.round(D.length / 7 * 10) / 10)) : RT.w;
-  RT.plan = ROT.plan({sold, net, stock: RT.stock || {}, map, weeks, cfg: RT.cfg}); RT.plan.nDays = D.length; RT.plan.first = D.map(d => d.date).sort()[0] || ''; RT.plan.last = D.map(d => d.date).sort().at(-1) || '';
+  const weeks = Math.max(1 / 7, D.length / 7);   // weekly averages over the days that have a report
+  RT.plan = ROT.plan({sold, net, stock: RT.stock || {}, map, weeks, cfg: RT.cfg}); RT.plan.nDays = D.length; RT.plan.holes = holes; RT.plan.cut = cut; RT.plan.endD = endD; RT.plan.first = D.map(d => d.date).sort()[0] || ''; RT.plan.last = D.map(d => d.date).sort().at(-1) || '';
   return RT.plan;
 }
 let RT_INIT = false;
 function renderRot(){
   if (!$('#rt-body')) return;
   if (!RT_INIT){ RT_INIT = true;
-    $('#rt-w').addEventListener('change', e => { RT.w = +e.target.value; RT.plan = null; rotLoad(); });
+    $('#rt-a').addEventListener('change', e => { RT.a = e.target.value; if (RT.b < RT.a) RT.b = RT.a; RT.plan = null; rotLoad(); });
+    $('#rt-b').addEventListener('change', e => { RT.b = e.target.value; if (RT.a > RT.b) RT.a = RT.b; RT.plan = null; rotLoad(); });
     $('#rt-sup').addEventListener('change', e => { RT.sup = e.target.value; renderRot(); });
     $('#rt-q').addEventListener('input', e => { RT.q = e.target.value.trim().toLowerCase(); renderRot(); });
     $('#rt-tabs').addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (!b) return; RT.t = b.dataset.t; renderRot(); });
@@ -6140,11 +6145,13 @@ function renderRot(){
     $('#rt-cfg').addEventListener('change', rotCfgSave);
   }
   if (document.querySelector('[data-panel="rot"]').hidden) return;
+  if (RT.a){ $('#rt-a').value = RT.a; $('#rt-b').value = RT.b; }
   if (RT.days == null || RT.stock == null){ rotLoad(); return; }
-  const P = rotPlan();
-  const want = RT.w * 7, short = P.nDays && P.nDays < want - 3, stale = P.last && P.last < shiftDay(today(), -3);
-  const warnTxt = (short ? `<div style="color:var(--warn);margin-top:4px">⚠ ${RT.w} долоо хоног (${want} өдөр) сонгосон ч барааны борлуулалт зөвхөн ${P.nDays} өдрийнх байна — тооцоо эдгээр өдрөөр хийгдэв. Дутуу өдрүүдийн Smart-ын барааны тайланг «Өдрийн тайлан»-д оруулна уу.</div>` : '')
-    + (stale ? `<div style="color:var(--warn);margin-top:4px">⚠ Барааны борлуулалт ${esc(P.last)}-нд дууссан — ${esc(shiftDay(P.last, 1))}-ээс хойших өдрийн тайланг оруулна уу.</div>` : '');
+  const P = rotPlan(); $('#rt-a').value = RT.a; $('#rt-b').value = RT.b;
+  const stale = P.last && P.last < shiftDay(today(), -2), HOL = P.holes || [];
+  const rng = L => { const out = []; let a = null, b = null; for (const d of L){ if (b && d === shiftDay(b, 1)) b = d; else { if (a) out.push(a === b ? a.slice(5) : a.slice(5) + '–' + b.slice(5)); a = b = d; } } if (a) out.push(a === b ? a.slice(5) : a.slice(5) + '–' + b.slice(5)); return out.join(', '); };
+  const warnTxt = (stale ? `<div style="color:var(--warn);margin-top:4px">⚠ Хамгийн сүүлийн барааны тайлан ${esc(P.last)} — ${esc(shiftDay(P.last, 1))}-ээс өнөөдөр хүртэлх өдрүүдийн тайланг «Өдрийн тайлан»-д оруулна уу. Сонгосон хугацааны ${esc(P.last)}-с хойших өдрүүд тооцоонд ороогүй.</div>` : '')
+    + (HOL.length ? `<div style="color:var(--warn);margin-top:4px">⚠ Энэ хугацаанд ${HOL.length} өдрийн тайлан алга: ${esc(rng(HOL))}</div>` : '');
   $('#rt-src').innerHTML = `Борлуулалт: ${P.nDays ? esc(P.first) + ' – ' + esc(P.last) + ' (' + P.nDays + ' өдөр)' : '<b style="color:var(--bad)">барааны борлуулалт алга — «Өдрийн тайлан»-д Smart-ын барааны тайланг оруулна уу</b>'} · Үлдэгдэл: ${RT.stockDate ? 'насжилтын тайлан ' + esc(RT.stockDate) + (RT.stockDate < shiftDay(today(), -14) ? ' <b style="color:var(--warn)">(хуучин — шинэ тайлан оруулна уу: Тайлан → Борлуулалтын шинжилгээ → Үлдэгдлийн агшин)</b>' : '') : '<b style="color:var(--bad)">алга — насжилтын тайлан оруулна уу (Тайлан → Борлуулалтын шинжилгээ → Үлдэгдлийн агшин)</b>'}` + warnTxt;
   const sups = P.bySup.map(b => b.sup); $('#rt-sup').innerHTML = '<option value="">Бүх нийлүүлэгч</option>' + sups.map(s => `<option ${s === RT.sup ? 'selected' : ''}>${esc(s)}</option>`).join('');
   const nOrd = {}; for (const o of P.orders) nOrd[o.sup] = (nOrd[o.sup] || 0) + 1;
