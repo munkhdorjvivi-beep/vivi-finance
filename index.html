@@ -114,7 +114,7 @@ section[data-panel="req"]:not([data-mode="rec"]) #recur-card{display:none}
 .chat-compose{border-top:1px solid var(--line,#ddd);padding-top:8px}.chat-back{display:none}
 @media (max-width:760px){.chat-wrap{grid-template-columns:1fr}.chat-back{display:inline-block}.chat-wrap.mobile-list .chat-main{display:none}.chat-wrap:not(.mobile-list) .chat-side{display:none}.chat-main{height:80vh}}
 .duty{margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--line);line-height:1.7}.duty.warn{background:rgba(183,121,31,.10);border-color:rgba(183,121,31,.4)}.duty.bad{background:rgba(192,57,43,.10);border-color:rgba(192,57,43,.45)}.duty.ok{background:rgba(31,157,107,.08);border-color:rgba(31,157,107,.35)}
-.ds-cal{border-collapse:separate;border-spacing:2px}.ds-cal th,.ds-cal td{padding:0}.ds-h{font-size:11px;text-align:center;min-width:22px;font-weight:600}.ds-h span{font-weight:400;opacity:.6}.ds-h.we{color:var(--bad)}.ds-l{text-align:left;font-weight:500;padding:2px 8px 2px 0!important;white-space:nowrap;font-size:13px}
+.ds-cal{border-collapse:separate;border-spacing:2px;width:auto!important}.ds-cal th,.ds-cal td{padding:0}.ds-h{font-size:11px;text-align:center;min-width:22px;font-weight:600}.ds-h span{font-weight:400;opacity:.6}.ds-h.we{color:var(--bad)}.ds-l{text-align:left;font-weight:500;padding:2px 8px 2px 0!important;white-space:nowrap;font-size:13px}
 .ds-c{width:22px;height:22px;border-radius:5px}.ds-ok{background:#2e9e6b}.ds-part{background:#e0a526}.ds-miss{background:#d9534f}.ds-f{background:var(--surface-2,#ececec)}.ds-key{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle}
 tr.dim td{opacity:.5}
 .an-ab{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}.an-ab>div{display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);border-radius:12px;padding:8px 12px;min-width:0}.an-ab b{font-size:16px}.an-a{background:rgba(31,95,139,.07)}.an-b{background:rgba(120,120,120,.07)}.an-ab .an-vs{border:0;justify-content:center;font-size:20px;padding:0 2px}.an-d b.pos{color:var(--ok)}.an-d b.neg{color:var(--bad)}
@@ -301,6 +301,7 @@ body{margin:0;background:var(--bg)}
       <div class="banner" id="rev-cover" style="margin-top:10px"></div>
       <div class="row" id="rev-per-row" style="margin-top:10px;align-items:flex-end" hidden><label class="f" style="width:auto">Хяналтын хугацаа<span class="row" style="gap:6px"><input type="date" id="rev-d0" style="width:auto"> – <input type="date" id="rev-d1" style="width:auto"></span></label><span class="note" id="rev-per-note" style="max-width:640px"></span></div>
       <div class="files" id="cash-filelist" style="margin-top:10px"></div>
+      <div id="up-rev" style="margin-top:10px"></div>
       <div class="row" style="margin-top:10px"><button class="btn primary" id="cash-save" disabled>Үр дүнг хадгалж нягтланд харуулах</button><span class="note" id="cash-msg"></span></div>
     </div>
     <div class="card" id="rev-arch-card">
@@ -422,6 +423,7 @@ body{margin:0;background:var(--bg)}
       <div class="row"><input id="dr-files" type="file" multiple accept=".xls,.xlsx" style="max-width:340px"><button class="btn primary" id="dr-save" disabled>Хадгалах</button></div>
       <div class="files" id="dr-filelist" style="margin-top:8px"></div>
       <div class="note" id="dr-msg" style="margin-top:6px"></div>
+      <div id="dr-recent" style="margin-top:12px"></div>
     </div>
     <div class="card">
       <div class="row daybar" style="margin-bottom:6px">
@@ -500,7 +502,7 @@ body{margin:0;background:var(--bg)}
     <div class="card"><h2>Үлдэгдлийн агшин (насжилтын тайлан)</h2>
       <p class="note" style="margin:0 0 8px">Долоо хоног бүр (жишээ нь Даваа гарагт) Smart-ын «Бараа материалын насжилтын тайлан»-г оруулбал шинжилгээ «борлуулалт буурсан нь бараа хүрэлцээгүйгээс үү» гэдгийг харуулна. Барааны бүлэг, нийлүүлэгчийг өдрийн тайлангийн барааны кодоор тодорхойлно.</p>
       <div class="row"><input id="an-snap-file" type="file" multiple accept=".xls,.xlsx" style="max-width:340px"><span class="note" id="an-snap-msg"></span></div>
-      <div class="note" id="an-snap-list" style="margin-top:6px"></div>
+      <div class="note" id="an-snap-list" style="margin-top:6px"></div><div id="up-aging"></div>
     </div>
     <div class="card"><h2>Дэлгүүрээр</h2><div class="tbl"><table><thead><tr><th>Дэлгүүр</th><th class="n" data-h="a">Одоо</th><th class="n" data-h="b">Тэр үед</th><th class="n">Зөрүү</th><th class="n">%</th><th class="n">Ширхэг</th><th class="n">Ашиг %</th><th class="n">Хөнгөлөлт %</th><th class="n">Үлдэгдэл (ш)</th><th class="n">Нийт өөрчлөлтөд</th></tr></thead><tbody id="an-units"></tbody></table></div></div>
   </section>
@@ -516,6 +518,7 @@ body{margin:0;background:var(--bg)}
       <label class="row note" id="pay-arch-row" style="gap:6px;margin-top:8px" hidden><input type="checkbox" id="pay-arch" style="width:auto"> Архив — өнгөрсөн сарын жагсаалт (зөвшөөрөл, шилжүүлгийн тулгалтгүй, зөвхөн зардлын түүхэнд)</label>
       <div id="pay-draft" style="margin-top:10px" hidden></div>
       <div class="row" style="margin-top:10px"><button class="btn primary" id="pay-send" disabled>Эзэмшигчид илгээх</button><span class="note" id="pay-msg"></span></div>
+      <div id="up-payroll" style="margin-top:8px"></div>
     </div>
     <div class="card" id="pay-cost-card">
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
@@ -540,7 +543,7 @@ body{margin:0;background:var(--bg)}
         </div>
         <label class="note row" style="gap:6px">ХХБ цалингийн данс гэх мэт имэйл ирдэггүй дансны хуулга:<input id="pay-stmt" type="file" multiple accept=".xls,.xlsx" style="max-width:240px"></label>
       </div>
-      <div class="note" id="pay-stmt-msg" style="margin-bottom:6px"></div>
+      <div class="note" id="pay-stmt-msg" style="margin-bottom:6px"></div><div id="up-paystmt" style="margin-bottom:8px"></div>
       <div class="tbl"><table><thead><tr><th>Хэлтэс</th><th>Ажилтан</th><th>Данс</th><th class="n">Жагсаалт</th><th class="n">Шилжсэн</th><th class="n">Зөрүү</th><th style="min-width:280px">Төлөв / гүйлгээ</th></tr></thead><tbody id="pay-body"></tbody></table></div>
       <p class="note" style="margin:8px 0 0">Хүн бүрийн нийт шилжүүлсэн дүнг жагсаалттай тулгана — нэг хүнд хэд хэдэн дансаар (НДШ ба НДШ-гүй хэсэг, шүүхийн шийдвэр гүйцэтгэгч гэх мэт) шилжсэн ч нийлбэр таарвал «Шилжсэн». Жагсаалтад байхгүй өөр дансаар шилжсэн бол шар тэмдэглэгээтэй.</p>
     </div>
@@ -568,7 +571,7 @@ body{margin:0;background:var(--bg)}
       <p class="note" style="margin:0">Борлуулалт, маржинг «Өдрийн тайлан»-гаас (өдөр бүрийн Smart тайлан) нийлүүлж, тогтмол зардлыг хугацааны хоногт хувааж, зардлыг банкны имэйл мэдэгдлээс авна. Хугацаа «Өдрийн тайлан»-тай нэг.</p>
       <details style="margin-top:8px"><summary class="note">Банкны хуулга нэмэх (заавал биш — имэйл ирдэггүй дансны зардлыг бүрэн болгоно)</summary>
         <div class="row" style="margin-top:6px"><input id="pl-stmt" type="file" multiple accept=".xls,.xlsx" style="max-width:320px"><button class="btn primary" id="pl-save" disabled>Хуулга хадгалах</button></div>
-        <div class="files" id="pl-files" style="margin-top:8px"></div></details>
+        <div class="files" id="pl-files" style="margin-top:8px"></div><div id="up-pl" style="margin-top:8px"></div></details>
       <div class="note" id="pl-msg" style="margin-top:6px"></div>
     </div>
     <div class="card">
@@ -662,6 +665,7 @@ body{margin:0;background:var(--bg)}
       <div class="row" id="wd-pct" style="margin-top:8px;gap:10px"></div>
       <div id="wd-info" class="note" style="margin-top:8px"></div>
       <div class="row" style="margin-top:10px"><button class="btn primary" id="wd-save" disabled>Хадгалж скан эхлүүлэх</button><span class="note" id="wd-msg"></span></div>
+      <div id="up-lpp" style="margin-top:8px"></div>
       <h2 style="margin-top:18px">Хүргэлтүүд</h2>
       <div class="tbl"><table><thead><tr><th>Нэр</th><th>Огноо</th><th class="n">Ширхэг</th><th>Хувь</th><th class="n">Скан</th><th>Төлөв</th><th></th></tr></thead><tbody id="wd-list"></tbody></table></div>
       <div id="wd-rep" style="margin-top:14px"></div>
@@ -719,6 +723,7 @@ body{margin:0;background:var(--bg)}
         </div>
         <div id="ivn-info" class="note" style="margin-top:6px"></div>
         <div class="row" style="margin-top:8px"><button class="btn primary" id="ivn-save" disabled>Тооллого үүсгэх</button><span class="note" id="ivn-msg"></span></div>
+        <div id="up-inv" style="margin-top:8px"></div>
       </div>
       <h2 style="margin-top:18px">Тооллогууд</h2>
       <div class="tbl"><table><thead><tr><th>Нэр</th><th>Дэлгүүр · байршил</th><th>Үлдэгдлийн огноо</th><th class="n">Smart үлдэгдэл</th><th class="n">Тоолсон</th><th>Бүс</th><th>Төлөв</th><th></th></tr></thead><tbody id="iv-list"></tbody></table></div>
@@ -3793,6 +3798,7 @@ $('#pay-send').addEventListener('click', async () => {
   if (!/^\d{4}-\d{2}$/.test(d.per)){ $('#pay-msg').textContent = 'Сарыг сонгоно уу.'; return; }
   const id = d.per + '-' + d.kind + (PS.lists.some(l => l.id === d.per + '-' + d.kind) ? '-' + Date.now().toString(36) : '');
   $('#pay-send').disabled = true; $('#pay-msg').textContent = 'Илгээж байна…';
+  if (typeof upLog === 'function') upLog({kind: 'payroll', file: d.file || '', a: d.per, z: d.per, n: (d.people || []).length, note: d.per + ' · ' + (d.kind || '')});
   const arch = isOwner && $('#pay-arch').checked;
   try{
     const flags = draftFlags(d);
@@ -5158,6 +5164,7 @@ async function wdSave(){
       for (const k of ks){ const it = WD.items[k]; items[k] = {k, m: it.m, s: it.s, e: it.e, q: it.q, n: it.n, c: it.c, g: it.g, b: it.b, p: it.p, l: WH.suffixOf(it, c)}; if (WD.plan.plan[k]) plan[k] = WD.plan.plan[k]; }
       await db.doc('delivpart/' + id + '_' + i).set({deliv: id, i, items, plan}); }
     await db.doc('delivcnt/' + id).set({deliv: id, c: {}, x: {}, u: {}, tot: {}});
+    if (typeof upLog === 'function') upLog({kind: 'lpp', file: WD.file || name, a: today(), z: today(), n: WD.lines, note: name + ' · ' + fmt(WD.pcs) + ' ш'});
     await ref.set({name, createdAt: new Date().toISOString(), by: me, status: 'active', total: WD.pcs, lines: WD.lines, fp: WD.fp, parts, pct: Object.fromEntries(c.stores.map(s => [s.key, s.pct])), planTot: WD.plan.got, file: WD.file || ''});
     WS.active = id; try{ localStorage.setItem('vivi-wh-active', id); }catch(e){}
     if (isOwner && WS.master){ const add = {}; for (const [e, k] of Object.entries(WD.eans || {})) if (!WS.master[e]){ const it = WD.items[k]; add[e] = [it.m, it.s, it.n, it.b, it.g, it.c, it.p, 0, 0]; }
@@ -5572,6 +5579,7 @@ async function ivCreate(){
   if (!locs.length || !zones.length) return; const name = $('#ivn-name').value.trim() || `${s} тооллого ${A.date}`;
   const items = A.items.filter(x => INV.storeOfLoc(x.l) === s), flt = ivNewFlt();     // the whole store: a piece found on another location is recognised
   $('#ivn-save').disabled = true; const msg = t => $('#ivn-msg').textContent = t;
+  if (typeof upLog === 'function') upLog({kind: 'inv', file: A.file || name, a: A.date || today(), z: A.date || today(), n: items.length, note: name});
   try{ const ref = db.collection('inv').doc(), id = ref.id, CH = 2000, parts = Math.ceil(items.length / CH);
     for (let i = 0; i < parts; i++){ msg(`Хадгалж байна… ${i + 1}/${parts}`); await db.doc('invpart/' + id + '_' + i).set({inv: id, i, items: items.slice(i * CH, (i + 1) * CH)}); }
     await ref.set({name, store: s, locs, zones, flt, date: A.date, file: A.file || '', parts, nItems: items.length, bookQ: items.filter(x => locs.includes(x.l) && INV.fmatch(flt, x.n)).reduce((a, x) => a + x.q, 0), status: 'open', createdAt: new Date().toISOString(), by: me, sales: null, recount: []});
@@ -6176,7 +6184,7 @@ function rotExcel(){
 // ---------- data status: what was uploaded, what is missing, who does what, undo, month close ----------
 const DS = {log: [], cov: {}, duty: null, closed: {}, month: '', sel: null, init: false};
 const DS_PRIVATE = new Set(['4002622637', '405097294', '5026747956']);   // private / brother's accounts — never required
-const DS_KIND = {sales: '🧾 Smart — бараагаар', pay: '💳 Smart — төлбөрийн хэлбэрээр', stmt: '🏦 Банкны хуулга', aging: '📦 Насжилтын тайлан', lpp: '🚚 LPP жагсаалт'};
+const DS_KIND = {sales: '🧾 Smart — бараагаар', pay: '💳 Smart — төлбөрийн хэлбэрээр', stmt: '🏦 Банкны хуулга', aging: '📦 Насжилтын тайлан', lpp: '🚚 LPP жагсаалт', inv: '📋 Тооллогын насжилт', payroll: '👥 Цалингийн жагсаалт'};
 const dsAccLabel = a => (VIVI.ACC_NAME && VIVI.ACC_NAME[a] ? VIVI.ACC_NAME[a] + ' · ' : '') + a;
 // file fingerprint: the same file uploaded twice is recognised
 async function fileHash(buf){ try{ const h = await crypto.subtle.digest('SHA-256', buf); return [...new Uint8Array(h)].slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join(''); }catch(e){ return ''; } }
@@ -6241,7 +6249,8 @@ function renderDutyBanner(){
 document.addEventListener('click', e => { if (e.target.closest('[data-goto-data]')){ e.preventDefault(); showTab('data'); } });
 // ----- the panel -----
 function renderData(){
-  renderDutyBanner();
+  renderDutyBanner(); try{ renderDailyRecent(); }catch(e){ console.warn('daily recent', e); }
+  try{ renderUpBox('#up-rev', ['stmt'], true); renderUpBox('#up-pl', ['stmt'], true); renderUpBox('#up-paystmt', ['stmt']); renderUpBox('#up-aging', ['aging']); renderUpBox('#up-lpp', ['lpp']); renderUpBox('#up-inv', ['inv']); renderUpBox('#up-payroll', ['payroll']); }catch(e){ console.warn('upbox', e); }
   if (!$('#ds-cal')) return; const P = document.querySelector('[data-panel="data"]'); if (!P || P.hidden) return;
   if (!DS.init){ DS.init = true; DS.month = shiftDay(today(), -1).slice(0, 7);
     $('#ds-month').addEventListener('change', e => { DS.month = e.target.value; renderData(); });
@@ -6308,6 +6317,29 @@ async function dsSavePrev(id, B){ if (!id || !B) return 0; const parts = ROT.chu
 // a panel that appears by a tab click draws itself at once (not only when new data arrives)
 document.addEventListener('click', e => { const b = e.target.closest('nav.tabs button[data-tab], #nav-groups button'); if (!b) return;
   setTimeout(() => { try{ renderData(); }catch(err){} try{ renderRot(); }catch(err){} try{ renderAnal(); }catch(err){} }, 0); });
+
+// in «Өдрийн тайлан» itself: the last 14 days at a glance + the last files uploaded
+function renderDailyRecent(){
+  const el = $('#dr-recent'); if (!el || typeof DR === 'undefined') return; const t = today(), WDS = ['Ня', 'Да', 'Мя', 'Лх', 'Пү', 'Ба', 'Бя'];
+  const days = []; for (let k = 14; k >= 1; k--) days.push(shiftDay(t, -k));
+  const row = (k, lab) => `<tr><th class="ds-l">${lab}</th>${days.map(d => { const [s, why] = dsDay(d)[k]; return `<td class="ds-c ds-${s}" title="${esc(d + ': ' + why)}"></td>`; }).join('')}</tr>`;
+  const L = DS.log.filter(x => x.kind === 'sales' || x.kind === 'pay').sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 8);
+  el.innerHTML = `<div class="note" style="margin-bottom:4px"><b>Сүүлийн 14 хоног</b> — <span class="ds-key ds-ok"></span> орсон · <span class="ds-key ds-part"></span> борлуулалт ≠ төлбөр · <span class="ds-key ds-miss"></span> ороогүй · <a href="#" data-goto-data>бүтэн хуанли, түүх</a></div>
+    <div class="tbl" style="overflow:auto"><table class="ds-cal"><thead><tr><th></th>${days.map(d => `<th class="ds-h${[0, 6].includes(new Date(d + 'T00:00:00Z').getUTCDay()) ? ' we' : ''}">${+d.slice(8)}<br><span>${WDS[new Date(d + 'T00:00:00Z').getUTCDay()]}</span></th>`).join('')}</tr></thead><tbody>${row('sales', '🧾 Бараагаар')}${row('pay', '💳 Төлбөрийн')}</tbody></table></div>
+    <div class="note" style="margin:10px 0 4px"><b>Сүүлд оруулсан файлууд</b></div>
+    ${L.length ? `<div class="tbl"><table><tbody>${L.map(x => `<tr class="${x.undone ? 'dim' : ''}"><td class="mono" style="white-space:nowrap">${esc(fmtDT(x.at))}</td><td>${esc(nameOf(x.by) || x.email || '')}</td><td>${DS_KIND[x.kind] || ''}</td><td class="note">${esc(x.file || '')}</td><td class="mono" style="white-space:nowrap">${esc(x.a === x.z ? x.a || '' : (x.a || '') + ' – ' + (x.z || ''))}</td><td class="note">${x.undone ? 'буцаасан' : esc(x.note || '')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="note">Энэ шинэчлэлээс хойш оруулсан файл энд бичигдэнэ.</div>'}`;
+}
+
+// the same «what was uploaded» box next to every other upload: last files (+ for statements the last 14 days per account)
+function renderUpBox(sel, kinds, withAccs){
+  const el = $(sel); if (!el) return; const t = today(), WDS = ['Ня', 'Да', 'Мя', 'Лх', 'Пү', 'Ба', 'Бя'];
+  const L = DS.log.filter(x => kinds.includes(x.kind)).sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 8);
+  let strip = '';
+  if (withAccs && dsAccs().length){ const days = []; for (let k = 14; k >= 1; k--) days.push(shiftDay(t, -k));
+    strip = `<div class="note" style="margin-bottom:4px"><b>Хуулга — сүүлийн 14 хоног</b> · <span class="ds-key ds-ok"></span> орсон · <span class="ds-key ds-miss"></span> ороогүй · <a href="#" data-goto-data>бүтэн хуанли</a></div>
+      <div class="tbl" style="overflow:auto"><table class="ds-cal"><thead><tr><th></th>${days.map(d => `<th class="ds-h${[0, 6].includes(new Date(d + 'T00:00:00Z').getUTCDay()) ? ' we' : ''}">${+d.slice(8)}<br><span>${WDS[new Date(d + 'T00:00:00Z').getUTCDay()]}</span></th>`).join('')}</tr></thead><tbody>${dsAccs().map(a => `<tr><th class="ds-l">${esc(dsAccLabel(a))}</th>${days.map(d => `<td class="ds-c ${covHas(a, d) ? 'ds-ok' : 'ds-miss'}" title="${esc(d)}"></td>`).join('')}</tr>`).join('')}</tbody></table></div>`; }
+  el.innerHTML = strip + `<div class="note" style="margin:10px 0 4px"><b>Сүүлд оруулсан файлууд</b></div>` + (L.length ? `<div class="tbl"><table><tbody>${L.map(x => `<tr class="${x.undone ? 'dim' : ''}"><td class="mono" style="white-space:nowrap">${esc(fmtDT(x.at))}</td><td>${esc(nameOf(x.by) || x.email || '')}</td><td>${DS_KIND[x.kind] || ''}${x.acc ? '<div class="note">' + esc(dsAccLabel(x.acc)) + '</div>' : ''}</td><td class="note">${esc(x.file || '')}</td><td class="mono" style="white-space:nowrap">${esc(x.a === x.z ? x.a || '' : (x.a || '') + ' – ' + (x.z || ''))}</td><td class="note">${esc(x.note || '')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="note">Энэ шинэчлэлээс хойш оруулсан файл энд бичигдэнэ.</div>');
+}
 // ===================== chat: one-to-one, groups, a thread under each payment request =====================
 // chats/{cid}: type dm|group|req, name, members [uid], last {t, at, by}, n, read {uid: iso}, reqId
 // msgs/{mid}: cid, members (copy, for the rules), by, at, t (text), files [{id, type, name}], au {id, type, dur}, notified
@@ -6660,7 +6692,8 @@ else VIVIFB.start(async () => {
   db.doc('config/payees').onSnapshot(d => { const x = d.exists ? d.data() : {}; const base = (x.list || []).length ? x.list : PAYEES_DEFAULT.list;
     PAYEES.set((x.extra || []).concat(PAYEES_DEFAULT.added || [], base)); PAYEES.setDefaults(x.defaults || {}); PBINFO = {file: (x.list || []).length ? (x.file || '') : PBINFO.file, emps: x.emps || PBINFO.emps, extra: x.extra || [], defaults: x.defaults || {}}; renderPayees(); render(); }, onErr);
   // only the recent days live; older ones (history, last year) are fetched when a period needs them — drEnsure()
-  if (ALLOW.data){ db.collection('uplog').where('at', '>=', new Date(Date.now() - 120 * 864e5).toISOString()).onSnapshot(s => { DS.log = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+  db.collection('uplog').where('at', '>=', new Date(Date.now() - 120 * 864e5).toISOString()).onSnapshot(s => { DS.log = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+  if (ALLOW.data || ALLOW.pay || ALLOW.pl){
     db.collection('stmtcov').onSnapshot(s => { DS.cov = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
     db.doc('config/duty').onSnapshot(s => { DS.duty = s.exists ? s.data() : {}; render(); }, onErr);
     db.collection('monthclose').onSnapshot(s => { DS.closed = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); }
