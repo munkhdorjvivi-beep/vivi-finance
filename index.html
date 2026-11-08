@@ -743,13 +743,18 @@ body{margin:0;background:var(--bg)}
         <button class="btn" id="rt-xlsx">📥 Excel</button>
       </div>
       <div class="note" id="rt-src" style="margin-top:8px"></div>
+      <div class="row" style="gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap"><span class="note">💲 <b>Үнэ, өртөг</b> — нягтлангийн «Үлдэгдэл» тайлан (Нэгж өртөг, Худалдах үнэ, Кассын үнэ):</span><input type="file" id="rt-price" accept=".xls,.xlsx" style="max-width:300px"><span class="note" id="rt-price-msg"></span></div>
+      <div class="row" style="gap:8px;margin-top:6px;align-items:center;flex-wrap:wrap"><span class="note">🎁 <b>LPP 1+1</b> (хямд нь үнэгүй) — эхэлсэн</span><input type="date" id="rt-pr-a" style="width:auto"><span class="note">дуусах</span><input type="date" id="rt-pr-z" style="width:auto"><span class="note">кассын үнийн</span><input type="number" id="rt-pr-pct" min="0" max="100" step="1" placeholder="бодит" style="width:70px"><span class="note">% орно (хоосон = бодит борлуулалтаар)</span><span class="note" id="rt-pr-info"></span></div>
     </div>
-    <div class="card"><h2>Нийлүүлэгчээр</h2><div class="tbl" style="max-height:360px;overflow:auto"><table><thead><tr><th>Нийлүүлэгч</th><th class="n">Борлуулалт ₮</th><th class="n">Зарсан ш</th><th class="n">Үлдэгдэл ш</th><th class="n">Хүрэлцэх (7 хоног)</th><th class="n">Борлуулалтын хувь</th><th class="n">Зарагдаагүй код</th><th class="n">Захиалах загвар</th></tr></thead><tbody id="rt-sups"></tbody></table></div></div>
+    <div class="kpis" id="rt-kpis"></div>
+    <div class="note" id="rt-routes" style="margin:0 0 10px"></div>
+    <div class="card"><h2>Нийлүүлэгчээр</h2><div class="tbl" style="max-height:360px;overflow:auto"><table><thead><tr><th>Нийлүүлэгч</th><th class="n">Борлуулалт ₮</th><th class="n">Зарсан ш</th><th class="n">Үлдэгдэл ш</th><th class="n">Үлдэгдэл ₮ (өртөг)</th><th class="n">Үлдэгдэл ₮ (кассын үнэ)</th><th class="n">Хүрэлцэх (7 хоног)</th><th class="n">Борлуулалтын хувь</th><th class="n">Хямдруулах ₮</th><th class="n">Захиалах загвар</th></tr></thead><tbody id="rt-sups"></tbody></table></div></div>
     <div class="card">
-      <div class="filter chips" id="rt-tabs"><button data-t="mv" aria-pressed="true">🔁 Шилжүүлэх</button><button data-t="or">🛒 Захиалах (загвараар)</button><button data-t="dd">🐢 Зарагдахгүй байгаа</button></div>
+      <div class="filter chips" id="rt-tabs"><button data-t="mv" aria-pressed="true">🔁 Шилжүүлэх</button><button data-t="or">🛒 Захиалах (загвараар)</button><button data-t="dd">💸 Хямдруулах</button></div>
       <div id="rt-cfg" class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap" hidden></div>
       <div class="tbl" style="margin-top:8px;max-height:620px;overflow:auto"><table><thead id="rt-head"></thead><tbody id="rt-body"></tbody></table></div>
       <div class="note" id="rt-more" style="margin-top:6px"></div>
+      <p class="note" style="margin:6px 0 0">* «7 хоногт зарагдана» = бүх хугацааны ба сүүлийн 4 долоо хоногийн дунджаас бага нь (улирал дууссан бараанд захиалга санал болгохгүй). «Хямдруулах» = дэлгүүрт байгаа, сонгосон хугацаанд (4+ долоо хоног) огт зарагдаагүй, эсвэл 1 жилээс илүү нөөцтэй (90+ хоног хадгалагдсан бол хагас жил) бараа — хөлдсөн мөнгөөр (өртөг × үлдэгдэл) эрэмбэлсэн, эхнээс нь хямдруул. Улирлын бараа (өвлийн гутал г.м.) — хугацааг өнгөрсөн жилийн ижил улирлаар сонгож шалгана уу.</p>
     </div>
   </section>
 
@@ -2114,7 +2119,7 @@ const DAILY = (() => {
     const hi = rows.findIndex(r => r && r.some(c => String(c || '').trim() === 'Өртөг') && r.some(c => String(c || '').trim() === 'Байршил'));
     if (hi < 0) return {error: 'Борлуулалтын жагсаалт /бараагаар/ (Өртөг баганатай) биш байна.'};
     const H = rows[hi].map(c => String(c == null ? '' : c).trim()), ix = n => H.indexOf(n);
-    const c = {d: ix('Огноо'), loc: ix('Байршил'), sup: ix('Бэлтгэн нийлүүлэгчийн нэр'), grp: ix('Барааны бүлэг'), brand: ix('Брендийн нэр'), name: ix('Барааны нэр'), ret: ix('Буцаалтын дүн'), qty: ix('Тоо хэмжээ'), net: ix('Цэвэр борлуулалт'), cost: ix('Өртөг'), disc: ix('Хөнгөлөлт'), code: ix('Барааны код')};
+    const c = {d: ix('Огноо'), loc: ix('Байршил'), sup: ix('Бэлтгэн нийлүүлэгчийн нэр'), grp: ix('Барааны бүлэг'), brand: ix('Брендийн нэр'), name: ix('Барааны нэр'), ret: ix('Буцаалтын дүн'), qty: ix('Тоо хэмжээ'), net: ix('Цэвэр борлуулалт'), cost: ix('Өртөг'), disc: ix('Хөнгөлөлт'), code: ix('Барааны код'), list: ix('Үндсэн үнэ')};
     if (c.net < 0 || c.cost < 0 || c.d < 0) return {error: '«Огноо», «Цэвэр борлуулалт», «Өртөг» багана олдсонгүй.'};
     const days = {}, codes = {}, items = {}; let n = 0, adjN = 0, skipped = null;
     for (const r of rows.slice(hi + 1)){
@@ -2125,7 +2130,7 @@ const DAILY = (() => {
       const grp = String((c.grp >= 0 && r[c.grp]) || '').trim().replace(/\.$/, '') || '–';
       const qty = num(r[c.qty]), net = num(r[c.net]), h = c.disc >= 0 ? num(r[c.disc]) : 0; let cost = num(r[c.cost]);
       let ck = '';
-      if (c.code >= 0 && r[c.code] != null){ ck = String(r[c.code]).trim().replace(/[.\/#$\[\]~*`]/g, '_'); if (ck && !codes[ck]) codes[ck] = grp.replace(/\d+$/, '').trim() + '|' + sup + '|' + String(r[c.name] == null ? '' : r[c.name]).trim().replace(/\|/g, '/').slice(0, 70); }
+      if (c.code >= 0 && r[c.code] != null){ ck = String(r[c.code]).trim().replace(/[.\/#$\[\]~*`]/g, '_'); if (ck && (!codes[ck] || (qty > 0 && cost > 0))) codes[ck] = grp.replace(/\d+$/, '').trim() + '|' + sup + '|' + String(r[c.name] == null ? '' : r[c.name]).trim().replace(/\|/g, '/').slice(0, 70) + '|' + (qty > 0 && cost > 0 ? Math.round(cost / qty) : '') + '|' + (c.list >= 0 && num(r[c.list]) > 0 ? Math.round(num(r[c.list])) : qty > 0 ? Math.round(net / qty) : ''); }
       if (Math.abs(qty) >= 10000){ (skipped = skipped || []).push({d: day, loc: String(r[c.loc]).trim(), name: String(r[c.name] == null ? '' : r[c.name]).trim(), qty, net, cost}); continue; }   // typo in Smart (barcode typed as quantity)
       if (!cost && /ORION/i.test(sup) && qty){ cost = ORION_COST * qty; adjN++; }
       const D = days[day] = days[day] || {date: day, stores: {}, sup: {}, lines: 0, adjN: 0};
@@ -2137,7 +2142,7 @@ const DAILY = (() => {
       X.s += net; X.c += cost; X.q += qty; X.h += h;
       const G = X.g[grp] = X.g[grp] || {s: 0, c: 0, q: 0, h: 0}; G.s += net; G.c += cost; G.q += qty; G.h += h;
       // per item and shop (for rotation / re-ordering): [qty, net]
-      if (ck){ const IU = (items[day] = items[day] || {})[unit] = (items[day] || {})[unit] || {}; const it = IU[ck] = IU[ck] || [0, 0]; it[0] += qty; it[1] = r2(it[1] + net); }
+      if (ck){ const IU = (items[day] = items[day] || {})[unit] = (items[day] || {})[unit] || {}; const it = IU[ck] = IU[ck] || [0, 0, 0]; it[0] += qty; it[1] = r2(it[1] + net); it[2] = r2(it[2] + cost); }
       n++;
     }
     if (!n) return {error: 'Борлуулалтын мөр олдсонгүй.'};
@@ -2390,76 +2395,136 @@ const ANAL = (() => {
   return R;
 })();
 
-// ===== VIVI rotation: what sells where, what to move between shops, what to re-order from which supplier =====
+// ===== VIVI rotation: what sells where, what to move between shops, what to re-order, what to mark down =====
 const ROT = (() => {
   // the warehouse and shops (sales units of PAY.unitOf); closed shops and pop-ups are not targets
   const isWh = u => /агуулах/i.test(u), isShop = u => !isWh(u) && !/хаагдсан|поп-ап|түр цэг|хангамж|дархан|сандэй/i.test(u);
-  const LPP = /ORION|LPP|SINSAY|RESERVED|CROPP|MOHITO|HOUSE/i;
-  // sold: {code: {unit: qty}} over W weeks; stock: {code: {unit: qty}}; map: code → "group|supplier|name"
+  const LPP = /ORION|LPP|SINSAY|RESERVED|CROPP|MOHITO|HOUSE|NETWORK\s*360/i;
+  const AGE = ['0–30', '31–60', '61–90', '91–120', '120+'];
+  // map value: "group|supplier|name|unit cost|unit price"
+  const mapOf = (map, c) => { const m = String(map[c] || '').split('|'); return {grp: m[0] || '–', sup: m[1] || '(тодорхойгүй)', name: m[2] || '', uc: +m[3] || 0, up: +m[4] || 0}; };
+
+  /* o = {sold, net, cost, rq, days, rdays, stock, age, map, cfg, shopWeeks}
+     sold/net/rq: {code: {unit: x}}; cost: {code: [cost, qty]}; days = days with a report in the period, rdays = of them in the last 28 days */
+  const SKIP = (sup, grp, name, c) => sup === '(нийлүүлэгчгүй)' || /хангамж|үйлчилгээ|бэлгийн карт|гэрээт/i.test(grp) || /^(хүргэлт|тор\b)|\bтор\s+\d/i.test(name) || /^\d{1,6}$/.test(c) && /хүргэлт|тор/i.test(name);
   function plan(o){
-    const {sold, net, stock, map, weeks} = o, W = Math.max(1, weeks || 4);
-    const cfgOf = sp => Object.assign({lead: 4, target: 8, min: 1}, (o.cfg || {})[sp] || {});
+    const {sold, net, stock, map} = o, W = Math.max(1 / 7, (o.days || 28) / 7), Wr = Math.max(1 / 7, (o.rdays || 0) / 7), useRecent = (o.days || 0) > (o.rdays || 0) + 7 && (o.rdays || 0) >= 14;
+    const cfgOf = sp => Object.assign({lead: 4, target: 8, min: 1, minSold: 3}, (o.cfg || {})[sp] || {});
     const tgtShop = o.shopWeeks || 4;            // a shop should hold ~4 weeks of its own sales
     const codes = new Set([...Object.keys(sold), ...Object.keys(stock)]);
-    const rows = [], moves = [], orders = [], dead = [];
+    const rows = [], moves = [], orders = [], mark = [];
+    const pf = sp => (o.promo || {})[sp] != null ? o.promo[sp] : 1;   // share of the till price that really comes in (LPP 1+1: the cheaper one free)
     for (const c of codes){
-      const m = String(map[c] || '').split('|'), grp = m[0] || '–', sup = m[1] || '(тодорхойгүй)', name = m[2] || '', lpp = LPP.test(sup);
-      const S = sold[c] || {}, K = stock[c] || {}, units = new Set([...Object.keys(S), ...Object.keys(K)]);
-      let tq = 0, ts = 0, tst = 0, wst = 0; const per = {};
-      for (const u of units){ const q = Math.max(0, S[u] || 0), st = Math.max(0, K[u] || 0); per[u] = {q, st, w: q / W}; tq += q; tst += st; if (isWh(u)) wst += st; }
-      ts = Object.values((net || {})[c] || {}).reduce((a, v) => a + v, 0);
-      const avg = tq / W, cover = avg ? tst / avg : (tst ? Infinity : 0);
-      const R = {c, name, grp, sup, lpp, q: tq, s: ts, avg, st: tst, wst, cover, per};
+      const {grp, sup, name, uc: mc, up} = mapOf(map, c), lpp = LPP.test(sup);
+      if (SKIP(sup, grp, name, c)) continue;   // bags, delivery, staff supplies — not goods to order or mark down
+      const S = sold[c] || {}, Rq = (o.rq || {})[c] || {}, K = stock[c] || {}, units = new Set([...Object.keys(S), ...Object.keys(K)]);
+      const PL = (o.price || {})[c], sc = (o.cost || {})[c];
+      // unit cost: the accountant's stock price list (Нэгж өртөг) first, else this period's sales, else the last known
+      const uc = PL && PL[0] > 0 ? PL[0] : sc && sc[1] > 0 && sc[0] > 0 ? sc[0] / sc[1] : mc;
+      let tq = 0, tst = 0, wst = 0, rate = 0; const per = {};
+      for (const u of units){ const q = Math.max(0, S[u] || 0), st = Math.max(0, K[u] || 0), w = q / W, wr = Math.max(0, Rq[u] || 0) / Wr;
+        // decisions use the slower of «whole period» and «last 4 weeks» — a season that has ended does not ask for stock
+        const r = useRecent ? Math.min(w, wr) : w; per[u] = {q, st, w, wr, r}; tq += q; tst += st; if (isWh(u)) wst += st; if (isShop(u)) rate += r; }
+      const ts = Object.values((net || {})[c] || {}).reduce((a, v) => a + v, 0), avg = tq / W, cover = rate ? tst / rate : (tst ? Infinity : 0);
+      const ag = (o.age || {})[c] || [], old = (ag[3] || 0) + (ag[4] || 0);
+      // list price (Худалдах / Үндсэн үнэ), the till price today (Кассын үнэ — with the current discount), and the average price it really sold for in the period
+      const ap = tq > 0 && ts > 0 ? ts / tq : 0, lp = PL && PL[1] > 0 ? PL[1] : up || ap, kp = PL && PL[2] > 0 ? PL[2] : lp;
+      const R = {c, name, grp, sup, lpp, q: tq, s: ts, avg, rate, st: tst, wst, cover, per, uc, up: lp, ap, val: tst * (uc || 0), rv: tst * lp, kp, kv: tst * kp, ev: tst * kp * pf(sup), rva: tst * (ap || kp), ag, old};
       rows.push(R);
-      // moves: shops with a lot more than they sell → shops that sell it and run short; the warehouse feeds shops too
+      // moves: shops with much more than they sell → shops that sell it and run short; the warehouse and closed shops feed shops
       const need = [], have = [];
       for (const [u, P] of Object.entries(per)){
         if (isWh(u) || /хаагдсан/i.test(u)){ if (P.st > 0) have.push({u, x: P.st, why: isWh(u) ? 'агуулахад' : 'хаагдсан салбарт'}); continue; }
         if (!isShop(u)) continue;
-        const want = Math.ceil(P.w * tgtShop);
-        if (P.w > 0 && P.st < want) need.push({u, x: want - P.st, w: P.w});
-        else if (P.q === 0 && P.st >= 2) have.push({u, x: P.st, why: W + ' долоо хоногт зарагдаагүй'});
-        else if (P.w > 0 && P.st > P.w * tgtShop * 3) have.push({u, x: Math.floor(P.st - P.w * tgtShop * 1.5), why: Math.round(P.st / P.w) + ' долоо хоногийн нөөцтэй'});
+        const want = Math.ceil(P.r * tgtShop);
+        if (P.r > 0 && P.st < want) need.push({u, x: want - P.st, r: P.r});
+        else if (P.q === 0 && P.st >= 2) have.push({u, x: P.st, why: 'зарагдаагүй'});
+        else if (P.r > 0 && P.st > P.r * tgtShop * 3) have.push({u, x: Math.floor(P.st - P.r * tgtShop * 1.5), why: Math.round(P.st / P.r) + ' долоо хоногийн нөөц'});
       }
-      need.sort((a, b) => b.w - a.w); have.sort((a, b) => (isShop(a.u) ? 0 : -1) - (isShop(b.u) ? 0 : -1) || b.x - a.x);
+      need.sort((a, b) => b.r - a.r); have.sort((a, b) => (isShop(a.u) ? 0 : -1) - (isShop(b.u) ? 0 : -1) || b.x - a.x);
       for (const n of need) for (const h of have){ if (n.x <= 0) break; if (h.x <= 0 || h.u === n.u) continue; const x = Math.min(n.x, h.x); n.x -= x; h.x -= x;
-        moves.push({c, name, grp, sup, from: h.u, to: n.u, qty: x, why: `${n.u}: 7 хоногт ${n.w.toFixed(1).replace('.', ',')} ш зарагддаг, үлдэгдэл ${per[n.u].st}; ${h.u}: ${h.why}`}); }
-      // slow: stock that did not sell at all in the period
-      if (tq <= 0 && tst - wst > 0) dead.push({c, name, grp, sup, st: tst - wst, wst, where: Object.entries(per).filter(([u, P]) => P.st > 0 && !isWh(u)).map(([u, P]) => u + ' ' + P.st).join(', ')});
+        moves.push({c, name, grp, sup, from: h.u, to: n.u, qty: x, toRate: n.r, toSt: per[n.u].st, fromSt: per[h.u].st, why: h.why, val: x * (uc || 0)}); }
+      // mark-down candidates: stock in the shops that does not move (no sale, or more than half a year of stock)
+      const shopSt = Object.entries(per).filter(([u]) => !isWh(u)).reduce((a, [, P]) => a + P.st, 0);
+      // slow = judged on the FASTER of «whole period» and «last 4 weeks» (a seasonal dip alone is not a reason to mark down)
+      const fast = Math.max(avg, rate), coverM = fast ? tst / fast : Infinity, share = tst ? old / tst : 0;
+      const noSale = tq <= 0 && (o.days || 0) >= 28, slow = tq > 0 && (coverM > 52 || coverM > 26 && share >= 0.5);
+      if (shopSt > 0 && (noSale || slow)){
+        const step = noSale ? (share >= 0.5 ? 50 : 30) : coverM > 104 ? 30 : 20;
+        mark.push({c, name, grp, sup, lpp, st: shopSt, wst, q: tq, cover: coverM, old, uc, up: lp, ap, val: tst * (uc || 0), rv: tst * lp, kp, kv: tst * kp, ev: tst * kp * pf(sup), rva: tst * (ap || kp), step,
+          where: Object.entries(per).filter(([u, P]) => P.st > 0 && !isWh(u)).map(([u, P]) => u + ' ' + P.st).join(', ')}); }
     }
     // re-order by MODEL (same supplier + name; the codes under it are sizes / colours) — not for LPP, that comes by the truck
-    const models = {}; for (const R2 of rows){ if (R2.lpp) continue; const k = R2.sup + '|' + (R2.name || R2.c); const M = models[k] = models[k] || {sup: R2.sup, grp: R2.grp, name: R2.name || R2.c, q: 0, s: 0, st: 0, codes: []}; M.q += R2.q; M.s += R2.s; M.st += R2.st; M.codes.push(R2); }
-    for (const M of Object.values(models)){ const C = cfgOf(M.sup), avg = M.q / W; if (M.q < (C.minSold || 3)) continue; const cover = avg ? M.st / avg : Infinity; if (cover >= C.lead + 1) continue;
-      const qty = Math.max(C.min, Math.ceil(avg * (C.lead + C.target) - M.st)); if (qty <= 0) continue;
-      // split over the codes by what each sold
+    const models = {}; for (const R2 of rows){ if (R2.lpp) continue; const k = R2.sup + '|' + (R2.name || R2.c); const M = models[k] = models[k] || {sup: R2.sup, grp: R2.grp, name: R2.name || R2.c, q: 0, s: 0, st: 0, rate: 0, codes: []}; M.q += R2.q; M.s += R2.s; M.st += R2.st; M.rate += R2.rate; M.codes.push(R2); }
+    for (const M of Object.values(models)){ const C = cfgOf(M.sup); if (M.q < C.minSold || !(M.rate > 0)) continue; const cover = M.st / M.rate; if (cover >= C.lead + 1) continue;
+      const qty = Math.max(C.min, Math.ceil(M.rate * (C.lead + C.target) - M.st)); if (qty <= 0) continue;
       const split = M.codes.filter(x => x.q > 0).map(x => ({c: x.c, q: x.q, st: x.st, add: Math.max(0, Math.round(qty * x.q / M.q))}));
-      orders.push({sup: M.sup, grp: M.grp, name: M.name, sold: M.q, s: M.s, avg, st: M.st, cover, qty, split, n: M.codes.length}); }
-    // per supplier: sell-through and cover
-    const bySup = {}; for (const R of rows){ const B = bySup[R.sup] = bySup[R.sup] || {sup: R.sup, lpp: R.lpp, q: 0, s: 0, st: 0, codes: 0, sold0: 0}; B.q += R.q; B.s += R.s; B.st += R.st; B.codes++; if (!R.q && R.st) B.sold0++; }
-    for (const B of Object.values(bySup)){ B.avg = B.q / W; B.cover = B.avg ? B.st / B.avg : null; B.thru = B.q + B.st ? B.q / (B.q + B.st) * 100 : 0; }
-    moves.sort((a, b) => b.qty - a.qty); orders.sort((a, b) => a.sup.localeCompare(b.sup) || b.s - a.s); dead.sort((a, b) => b.st - a.st);
-    return {rows, moves, orders, dead, bySup: Object.values(bySup).sort((a, b) => b.s - a.s), W};
+      const uc = M.codes.map(x => x.uc).find(v => v > 0) || 0;
+      orders.push({sup: M.sup, grp: M.grp, name: M.name, sold: M.q, s: M.s, rate: M.rate, st: M.st, cover, qty, split, n: M.codes.length, uc, cost: qty * uc, codes: M.codes.map(x => x.c), lead: C.lead, target: C.target}); }
+    // codes that did not sell in the period: «real» price = list price × how the supplier's other goods really sold (vs. their list price)
+    const ratio = {}; for (const R of rows) if (R.ap && R.kp && R.q > 0){ const X = ratio[R.sup] = ratio[R.sup] || [0, 0]; X[0] += R.ap * R.q; X[1] += R.kp * R.q; }
+    const rOf = sp => { const X = ratio[sp]; return X && X[1] > 0 ? Math.min(1, X[0] / X[1]) : 1; };
+    for (const R of rows) if (!R.ap) R.rva = R.kv * rOf(R.sup);
+    for (const m of mark) if (!m.ap) m.rva = m.kv * rOf(m.sup);
+    // per supplier
+    const bySup = {}; for (const R of rows){ const B = bySup[R.sup] = bySup[R.sup] || {sup: R.sup, lpp: R.lpp, q: 0, s: 0, st: 0, val: 0, rv: 0, kv: 0, ev: 0, rva: 0, markRv: 0, markKv: 0, markEv: 0, rate: 0, codes: 0, sold0: 0, mark: 0, markVal: 0, ord: 0, ordCost: 0};
+      B.q += R.q; B.s += R.s; B.st += R.st; B.val += R.val; B.rv += R.rv; B.kv += R.kv; B.ev += R.ev; B.rva += R.rva; B.rate += R.rate; B.codes++; if (!R.q && R.st) B.sold0++; }
+    for (const m of mark){ const B = bySup[m.sup]; B.mark++; B.markVal += m.val; B.markRv += m.rv; B.markKv += m.kv; B.markEv += m.ev; }
+    for (const x of orders){ const B = bySup[x.sup]; B.ord++; B.ordCost += x.cost; }
+    for (const B of Object.values(bySup)){ B.cover = B.rate ? B.st / B.rate : null; B.thru = B.q + B.st ? B.q / (B.q + B.st) * 100 : 0; }
+    moves.sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to) || b.qty - a.qty); orders.sort((a, b) => a.sup.localeCompare(b.sup) || b.s - a.s); mark.sort((a, b) => b.val - a.val || b.st - a.st);
+    // the whole picture
+    const routes = {}; for (const m of moves){ const k = m.from + ' → ' + m.to; const R = routes[k] = routes[k] || {route: k, from: m.from, to: m.to, lines: 0, qty: 0, val: 0}; R.lines++; R.qty += m.qty; R.val += m.val; }
+    const ageQ = [0, 0, 0, 0, 0]; for (const R of rows) (R.ag || []).forEach((v, i) => ageQ[i] += v || 0);
+    const sum = {st: rows.reduce((a, R) => a + R.st, 0), val: rows.reduce((a, R) => a + R.val, 0), noCost: rows.filter(R => R.st > 0 && !R.uc).reduce((a, R) => a + R.st, 0), rv: rows.reduce((a, R) => a + R.rv, 0), kv: rows.reduce((a, R) => a + R.kv, 0), ev: rows.reduce((a, R) => a + R.ev, 0), markEv: mark.reduce((a, m) => a + m.ev, 0), promo: o.promo || null, markKv: mark.reduce((a, m) => a + m.kv, 0), markRva: mark.reduce((a, m) => a + m.rva, 0), priced: !!o.price, rva: rows.reduce((a, R) => a + R.rva, 0), noPrice: rows.filter(R => R.st > 0 && !R.kp).reduce((a, R) => a + R.st, 0), markRv: mark.reduce((a, m) => a + m.rv, 0),
+      q: rows.reduce((a, R) => a + R.q, 0), s: rows.reduce((a, R) => a + R.s, 0), moves: moves.length, moveQ: moves.reduce((a, m) => a + m.qty, 0), orders: orders.length, orderCost: orders.reduce((a, x) => a + x.cost, 0),
+      mark: mark.length, markQ: mark.reduce((a, m) => a + m.st, 0), markVal: mark.reduce((a, m) => a + m.val, 0), ageQ, useRecent};
+    return {rows, moves, orders, mark, dead: mark, routes: Object.values(routes).sort((a, b) => b.qty - a.qty), bySup: Object.values(bySup).sort((a, b) => b.s - a.s), W, sum};
   }
-  // itemday docs ({date, u: {unit: {code: [q, net]}}}) of the last W weeks → sold / net per code and unit
   // Firestore allows ~20 000 fields per document, so the big per-item data is kept as text: one line per item
-  const packDay = u => Object.entries(u).flatMap(([un, I]) => Object.entries(I).map(([c, [q, s]]) => un + '\t' + c + '\t' + q + '\t' + s)).join('\n');
-  const unpackDay = t => { const u = {}; for (const l of String(t || '').split('\n')){ if (!l) continue; const [un, c, q, s] = l.split('\t'); (u[un] = u[un] || {})[c] = [+q || 0, +s || 0]; } return u; };
+  // item-day line: unit \t code \t qty \t net [\t cost]
+  const packDay = u => Object.entries(u).flatMap(([un, I]) => Object.entries(I).map(([c, v]) => un + '\t' + c + '\t' + v[0] + '\t' + v[1] + (v[2] != null ? '\t' + Math.round(v[2] * 100) / 100 : ''))).join('\n');
+  const unpackDay = t => { const u = {}; for (const l of String(t || '').split('\n')){ if (!l) continue; const [un, c, q, s, k] = l.split('\t'); (u[un] = u[un] || {})[c] = [+q || 0, +s || 0, k == null ? null : +k || 0]; } return u; };
   const packMap = m => Object.entries(m).map(([c, v]) => c + '\t' + String(v).replace(/[\t\n]/g, ' ')).join('\n');
   const unpackMap = t => { const m = {}; for (const l of String(t || '').split('\n')){ const i = l.indexOf('\t'); if (i > 0) m[l.slice(0, i)] = l.slice(i + 1); } return m; };
   const chunkText = (txt, max) => { const out = []; let a = 0; max = max || 450000; while (a < txt.length){ let z = Math.min(txt.length, a + max); if (z < txt.length){ const nl = txt.lastIndexOf('\n', z); if (nl > a) z = nl + 1; } out.push(txt.slice(a, z)); a = z; } return out; };
-  function soldOf(dayDocs){ const sold = {}, net = {};
-    for (const D of dayDocs) for (const [u, I] of Object.entries(D.t != null ? unpackDay(D.t) : (D.u || {}))) for (const [c, [q, s]] of Object.entries(I)){ ((sold[c] = sold[c] || {})[u] = (sold[c][u] || 0) + q); ((net[c] = net[c] || {})[u] = (net[c][u] || 0) + s); }
-    return {sold, net};
+  // item-day docs → sold / net / cost per code and unit, by month, and the last 28 days (recentFrom)
+  function soldOf(dayDocs, recentFrom){ const sold = {}, net = {}, cost = {}, rq = {}, mon = {}, monS = {};
+    for (const D of dayDocs){ const m = String(D.date || '').slice(0, 7), rec = recentFrom && D.date >= recentFrom;
+      for (const [u, I] of Object.entries(D.t != null ? unpackDay(D.t) : (D.u || {}))) for (const [c, v] of Object.entries(I)){ const [q, s, k] = v;
+        ((sold[c] = sold[c] || {})[u] = (sold[c][u] || 0) + q); ((net[c] = net[c] || {})[u] = (net[c][u] || 0) + s);
+        if (k != null && q > 0){ const C = cost[c] = cost[c] || [0, 0]; C[0] += k; C[1] += q; }
+        if (rec) ((rq[c] = rq[c] || {})[u] = (rq[c][u] || 0) + q);
+        ((mon[c] = mon[c] || {})[m] = (mon[c][m] || 0) + q); ((monS[c] = monS[c] || {})[m] = (monS[c][m] || 0) + s); } }
+    return {sold, net, cost, rq, mon, monS};
   }
-  // aging items → stock per code and unit
+  // aging items → stock per code and unit (+ quantity by age, summed over units)
   function stockOf(aging, unitOf){ const st = {}, ln = {}; for (const [l, L] of Object.entries(aging.locs || {})) ln[l] = L.name;
     for (const it of aging.items){ if (!(it.q > 0)) continue; const u = unitOf ? unitOf(ln[it.l] || it.l) : (ln[it.l] || it.l), c = String(it.c).replace(/[.\/#$\[\]~*`]/g, '_'); (st[c] = st[c] || {})[u] = (st[c][u] || 0) + it.q; }
     return st;
   }
-  // compact text form for Firestore: "code\tunit\tqty\tname" per line
-  const packStock = (st, names) => Object.entries(st).flatMap(([c, U]) => Object.entries(U).map(([u, q]) => c + '\t' + u + '\t' + q + '\t' + String((names || {})[c] || '').replace(/[\t\n]/g, ' ').slice(0, 60))).join('\n');
-  function unpackStock(txt){ const st = {}, names = {}; for (const l of String(txt || '').split('\n')){ if (!l) continue; const [c, u, q, n] = l.split('\t'); (st[c] = st[c] || {})[u] = (st[c][u] || 0) + (+q || 0); if (n && !names[c]) names[c] = n; } return {st, names}; }
-  const R = {plan, soldOf, stockOf, packStock, unpackStock, packDay, unpackDay, packMap, unpackMap, chunkText, isWh, isShop, LPP};
+  function ageOf(aging){ const ag = {}; for (const it of aging.items){ if (!(it.q > 0) || !it.ag || !it.ag.length) continue; const c = String(it.c).replace(/[.\/#$\[\]~*`]/g, '_'), A = ag[c] = ag[c] || [0, 0, 0, 0, 0]; it.ag.forEach((v, i) => A[i] += v || 0); } return ag; }
+  // compact text: "code \t unit \t qty \t name [\t age0,age1,…]" per line
+  const packStock = (st, names, ages) => Object.entries(st).flatMap(([c, U]) => Object.entries(U).map(([u, q], i) => c + '\t' + u + '\t' + q + '\t' + String((names || {})[c] || '').replace(/[\t\n]/g, ' ').slice(0, 60) + (i === 0 && ages && ages[c] ? '\t' + ages[c].join(',') : ''))).join('\n');
+  function unpackStock(txt){ const st = {}, names = {}, age = {}; for (const l of String(txt || '').split('\n')){ if (!l) continue; const [c, u, q, n, a] = l.split('\t'); (st[c] = st[c] || {})[u] = (st[c][u] || 0) + (+q || 0); if (n && !names[c]) names[c] = n; if (a) age[c] = a.split(',').map(Number); } return {st, names, age}; }
+  // the accountant's «Үлдэгдэл» report: code, name, supplier, brand, group … locations … Тоо хэмжээ, Нэгж өртөг, Худалдах үнэ, «YYYY.MM.DD Кассын үнэ»
+  function parsePrice(rows, sheetName){
+    const hi = rows.findIndex(r => r && r.some(c => /^нэгж өртөг$/i.test(String(c || '').trim())) && r.some(c => /худалдах үнэ/i.test(String(c || ''))));
+    if (hi < 0) return {error: 'Үнийн тайлан биш байна («Нэгж өртөг», «Худалдах үнэ» багана олдсонгүй)'};
+    const H = rows[hi].map(c => String(c == null ? '' : c).trim()), ix = re => H.findIndex(h => re.test(h));
+    const ci = ix(/^код$/i), ni = ix(/^нэр$/i), si = ix(/нийлүүлэгч/i), gi = ix(/^барааны бүлэг$/i), qi = ix(/^тоо хэмжээ$/i), ui = ix(/^нэгж өртөг$/i), li = ix(/^худалдах үнэ$/i), ki = ix(/кассын үнэ$/i);
+    const dm = (H[ki] || '').match(/(\d{4})[.\/-](\d{2})[.\/-](\d{2})/) || String(sheetName || '').match(/(\d{4})[.\/-](\d{2})[.\/-](\d{2})/), sm = !dm && String(sheetName || '').match(/(\d{2})\.(\d{2})/);
+    const date = dm ? dm[1] + '-' + dm[2] + '-' + dm[3] : sm ? new Date().getFullYear() + '-' + sm[1] + '-' + sm[2] : '';
+    const items = {}; let q = 0, cv = 0, lv = 0, kv = 0;
+    for (const r of rows.slice(hi + 1)){ if (!r || r[ci] == null || r[ni] == null) continue; const c = String(r[ci]).trim().replace(/[.\/#$\[\]~*`]/g, '_'); if (!c) continue;
+      const u = +r[ui] || 0, l = +r[li] || 0, k = ki >= 0 ? +r[ki] || 0 : l, n = +r[qi] || 0;
+      items[c] = [Math.round(u * 100) / 100, l, k, String(r[si] || '').trim(), String(r[gi] || '').trim(), String(r[ni] || '').trim().replace(/[|\t\n]/g, ' ').slice(0, 70)];
+      q += n; cv += n * u; lv += n * l; kv += n * k; }
+    return {date, items, tot: {q, cv, lv, kv}, cash: ki >= 0};
+  }
+  const packPrice = it => Object.entries(it).map(([c, v]) => c + '\t' + v.join('\t')).join('\n');
+  const unpackPrice = t => { const m = {}; for (const l of String(t || '').split('\n')){ if (!l) continue; const [c, u, li, k, sp, g, n] = l.split('\t'); m[c] = [+u || 0, +li || 0, +k || 0, sp || '', g || '', n || '']; } return m; };
+  const R = {SKIP, parsePrice, packPrice, unpackPrice, plan, soldOf, stockOf, ageOf, packStock, unpackStock, packDay, unpackDay, packMap, unpackMap, chunkText, isWh, isShop, LPP, AGE, mapOf};
   if (typeof module !== 'undefined') module.exports = R;
   return R;
 })();
@@ -6057,7 +6122,8 @@ async function anExcel(){
 // aging report → stock snapshot (shop × group × supplier), saved as stocksnap/{date}
 let AN_MAP = null;
 async function anItemMap(){ if (AN_MAP) return AN_MAP; const s = await db.collection('itemmap').get(); AN_MAP = {};
-  for (const d of s.docs.sort((a, b) => a.id < b.id ? -1 : 1)){ const x = d.data(); Object.assign(AN_MAP, x.t != null ? ROT.unpackMap(x.t) : (x.m || {})); } return AN_MAP; }
+  const key = d => (d.id.startsWith('n_') ? '1' : '0') + d.id;   // imported history first, daily uploads (newer) on top
+  for (const d of s.docs.sort((a, b) => key(a) < key(b) ? -1 : 1)){ const x = d.data(); Object.assign(AN_MAP, x.t != null ? ROT.unpackMap(x.t) : (x.m || {})); } return AN_MAP; }
 async function anSnapUpload(e){
   const fl = [...e.target.files]; if (!fl.length || !db) return; const msg = $('#an-snap-msg'); msg.textContent = 'Уншиж байна…';
   try{ const map = await anItemMap(); const out = [];
@@ -6094,11 +6160,11 @@ document.addEventListener('click', async e => {
   catch(err){ console.warn(err); alert('Сэргээж чадсангүй: ' + (err.code || err.message || err)); b.disabled = false; }
 });
 // ---------- rotation: moves between shops, re-orders by model, slow stock ----------
-const RT = {a: '', b: '', loadedFrom: '', sup: '', q: '', t: 'mv', days: null, daysW: 0, stock: null, stockDate: '', names: {}, plan: null, cfg: {}, loading: false};
+const RT = {a: '', b: '', loadedFrom: '', sup: '', q: '', t: 'mv', days: null, daysW: 0, stock: null, stockDate: '', names: {}, plan: null, cfg: {}, loading: false, price: null, priceDate: '', promo: {from: '2026-10-10', to: '2027-10-09', pct: 50}};
 // the latest aging report, item by item, saved in pieces of ~500 KB
 async function rotSaveStock(ag, date){
   try{ const st = ROT.stockOf(ag, PAY.unitOf), names = {}; for (const it of ag.items) if (it.n && !names[it.c]) names[String(it.c).replace(/[.\/#$\[\]~*`]/g, '_')] = it.n;
-    const txt = ROT.packStock(st, names), parts = []; for (let i = 0; i < txt.length; i += 500000){ let j = Math.min(txt.length, i + 500000); parts.push([i, j]); }
+    const txt = ROT.packStock(st, names, ROT.ageOf(ag));
     // cut on line ends
     const chunks = []; let a = 0; while (a < txt.length){ let z = Math.min(txt.length, a + 500000); if (z < txt.length){ const nl = txt.lastIndexOf('\n', z); if (nl > a) z = nl + 1; } chunks.push(txt.slice(a, z)); a = z; }
     for (let i = 0; i < chunks.length; i++) await db.doc('stockitem/' + date + '_p' + i).set({t: chunks[i], by: me});
@@ -6106,14 +6172,30 @@ async function rotSaveStock(ag, date){
     RT.stock = null; RT.stockDate = '';
   }catch(e){ console.warn('stockitem', e); }
 }
+// the accountant's stock + price report («10.31 Үлдэгдэл»: Нэгж өртөг, Худалдах үнэ, Кассын үнэ) — kept in stockitem/price_*
+async function rotPriceUpload(e){
+  const f = e.target.files[0], msg = $('#rt-price-msg'); if (!f || !db) return; msg.textContent = 'Уншиж байна…';
+  try{ const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let PR = null;
+    for (const n of wb.SheetNames){ const r = ROT.parsePrice(XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null}), n); if (!r.error){ PR = r; break; } }
+    if (!PR){ msg.innerHTML = '<b style="color:var(--bad)">Үнийн тайлан олдсонгүй — «Код», «Нэгж өртөг», «Худалдах үнэ», «Кассын үнэ» баганатай хуудас хэрэгтэй</b>'; return; }
+    const date = PR.date || today(), chunks = ROT.chunkText(ROT.packPrice(PR.items), 300000);
+    for (let i = 0; i < chunks.length; i++) await db.doc('stockitem/price_' + date + '_p' + i).set({t: chunks[i], by: me});
+    await db.doc('stockitem/price_latest').set({date, parts: chunks.length, tot: PR.tot, file: f.name, by: me, at: new Date().toISOString()});
+    if (typeof upLog === 'function') try{ await upLog({kind: 'price', file: f.name, hash: await fileHash(await f.arrayBuffer()), a: date, z: date, n: Object.keys(PR.items).length, note: fmt(Math.round(PR.tot.kv)) + ' ₮ кассын үнээр'}); }catch(_){}
+    msg.innerHTML = `✓ ${esc(date)} · ${fmt(Object.keys(PR.items).length)} код · ${fmt(Math.round(PR.tot.q))} ш · өртгөөр ${fmt(Math.round(PR.tot.cv))} ₮ · кассын үнээр ${fmt(Math.round(PR.tot.kv))} ₮`;
+    RT.price = null; RT.plan = null; rotLoad();
+  }catch(err){ console.warn(err); msg.textContent = 'Алдаа: ' + (err.code || err.message); }
+  e.target.value = '';
+}
 async function rotLoad(){
   if (RT.loading || !db) return; RT.loading = true; $('#rt-src').textContent = 'Ачаалж байна…';
   try{
     const from = RT.a && (!RT.loadedFrom || RT.a < RT.loadedFrom) ? RT.a : (RT.loadedFrom || shiftDay(today(), -120));
     if (!RT.loadedFrom || from < RT.loadedFrom){ const s = await db.collection('itemday').where('date', '>=', from).get(); const byD = Object.fromEntries((RT.days || []).map(d => [d.date, d])); for (const d of s.docs){ const x = d.data(); byD[x.date] = x; } RT.days = Object.values(byD); RT.loadedFrom = from; }
-    if (!RT.stock){ const L = await db.doc('stockitem/latest').get(); if (L.exists){ const {date, parts} = L.data(); let txt = ''; for (let i = 0; i < parts; i++){ const p = await db.doc('stockitem/' + date + '_p' + i).get(); if (p.exists) txt += p.data().t; } const u = ROT.unpackStock(txt); RT.stock = u.st; RT.names = u.names; RT.stockDate = date; } else RT.stock = {}; }
+    if (!RT.stock){ const L = await db.doc('stockitem/latest').get(); if (L.exists){ const {date, parts} = L.data(); let txt = ''; for (let i = 0; i < parts; i++){ const p = await db.doc('stockitem/' + date + '_p' + i).get(); if (p.exists) txt += p.data().t; } const u = ROT.unpackStock(txt); RT.stock = u.st; RT.names = u.names; RT.age = u.age; RT.stockDate = date; } else RT.stock = {}; }
+    if (!RT.price){ RT.price = {}; RT.priceDate = ''; try{ const L = await db.doc('stockitem/price_latest').get(); if (L.exists){ const {date, parts} = L.data(); let txt = ''; for (let i = 0; i < parts; i++){ const p = await db.doc('stockitem/price_' + date + '_p' + i).get(); if (p.exists) txt += p.data().t; } RT.price = ROT.unpackPrice(txt); RT.priceDate = date; } }catch(e){ console.warn('price', e); } }
     if (typeof anItemMap === 'function') RT.map = await anItemMap();
-    try{ const c = await db.doc('config/rot').get(); RT.cfg = c.exists ? (c.data().sup || {}) : {}; }catch(e){}
+    try{ const c = await db.doc('config/rot').get(); RT.cfg = c.exists ? (c.data().sup || {}) : {}; if (c.exists && c.data().promo) RT.promo = c.data().promo; }catch(e){}
   }catch(e){ console.warn('rot load', e); $('#rt-src').textContent = 'Ачаалж чадсангүй: ' + (e.code || e.message); }
   RT.loading = false; RT.plan = null; renderRot();
 }
@@ -6124,11 +6206,23 @@ function rotPlan(){
   const all = (RT.days || []).map(d => d.date).sort(), lastD = all.length ? all[all.length - 1] : shiftDay(today(), -1);
   if (!RT.b){ RT.b = lastD < shiftDay(today(), -1) ? lastD : shiftDay(today(), -1); RT.a = shiftDay(RT.b, -55); }
   const cut = RT.a, endD = RT.b;
-  const D = (RT.days || []).filter(d => d.date >= cut && d.date <= endD), {sold, net} = ROT.soldOf(D);
+  const D = (RT.days || []).filter(d => d.date >= cut && d.date <= endD), lastIn = D.map(d => d.date).sort().at(-1) || endD, recentFrom = shiftDay(lastIn, -27);
+  const SO = ROT.soldOf(D, recentFrom), rdays = D.filter(d => d.date >= recentFrom).length;
   const have = new Set(D.map(d => d.date)), holes = []; for (let d = cut; d <= endD; d = shiftDay(d, 1)) if (!have.has(d)) holes.push(d);
-  const map = Object.assign({}, RT.map || {}); for (const [c, n] of Object.entries(RT.names)) if (!map[c]) map[c] = '–|(тодорхойгүй)|' + n; else if (!String(map[c]).split('|')[2]) map[c] = map[c] + '|' + n;
-  const weeks = Math.max(1 / 7, D.length / 7);   // weekly averages over the days that have a report
-  RT.plan = ROT.plan({sold, net, stock: RT.stock || {}, map, weeks, cfg: RT.cfg}); RT.plan.nDays = D.length; RT.plan.holes = holes; RT.plan.cut = cut; RT.plan.endD = endD; RT.plan.first = D.map(d => d.date).sort()[0] || ''; RT.plan.last = D.map(d => d.date).sort().at(-1) || '';
+  const map = Object.assign({}, RT.map || {});
+  // supplier / group / name from the accountant's report for codes the sales never showed
+  for (const [c, v] of Object.entries(RT.price || {})){ const m = String(map[c] || '').split('|'); if (!map[c] || m[1] === '(тодорхойгүй)' || !m[1]) map[c] = [v[4] || m[0] || '–', v[3] || '(тодорхойгүй)', m[2] || v[5]].concat(m.slice(3)).join('|'); }
+  for (const [c, n] of Object.entries(RT.names)) if (!map[c]) map[c] = '–|(тодорхойгүй)|' + n; else if (!String(map[c]).split('|')[2]) map[c] = map[c] + '|' + n;
+  // LPP 1+1 (the cheaper one free): how much of the till price really comes in — measured on LPP sales since the promotion started
+  let promo = null, promoInfo = {}; const PRM = RT.promo || {};
+  if (RT.priceDate && PRM.from && today() >= PRM.from && (!PRM.to || today() <= PRM.to)){ const acc = {};
+    for (const d of RT.days || []){ if (d.date < PRM.from || (PRM.to && d.date > PRM.to)) continue; for (const I of Object.values(d.t != null ? ROT.unpackDay(d.t) : (d.u || {}))) for (const [c, v] of Object.entries(I)){
+      const sp = String(map[c] || '').split('|')[1] || '', p = (RT.price || {})[c]; if (!ROT.LPP.test(sp) || !p || !p[2]) continue; const A = acc[sp] = acc[sp] || [0, 0, 0]; A[0] += v[0]; A[1] += v[1]; A[2] += v[0] * p[2]; } }
+    const fix = PRM.pct > 0 ? Math.min(100, PRM.pct) / 100 : null;   // a fixed share set by hand wins over the measured one
+    promo = {}; for (const [sp, A] of Object.entries(acc)){ const m = A[2] > 0 && A[0] >= 30 ? A[1] / A[2] : null; promo[sp] = fix != null ? fix : Math.max(0.2, Math.min(1, m == null ? 0.5 : m)); promoInfo[sp] = {q: A[0], r: promo[sp], m, measured: m != null}; }
+    for (const v of Object.values(RT.price || {})) if (ROT.LPP.test(v[3]) && promo[v[3]] == null){ promo[v[3]] = fix != null ? fix : 0.5; promoInfo[v[3]] = {q: 0, r: promo[v[3]], m: null, measured: false}; } }
+  RT.plan = ROT.plan({promo, sold: SO.sold, net: SO.net, cost: SO.cost, rq: SO.rq, days: D.length, rdays, stock: RT.stock || {}, age: RT.age || {}, map, price: RT.priceDate ? RT.price : null, cfg: RT.cfg}); RT.plan.promoInfo = promoInfo; RT.plan.mon = SO.mon; RT.plan.monS = SO.monS; RT.plan.recentFrom = recentFrom;
+  RT.plan.months = [...new Set(D.map(d => d.date.slice(0, 7)))].sort(); RT.plan.nDays = D.length; RT.plan.holes = holes; RT.plan.cut = cut; RT.plan.endD = endD; RT.plan.first = D.map(d => d.date).sort()[0] || ''; RT.plan.last = D.map(d => d.date).sort().at(-1) || '';
   return RT.plan;
 }
 let RT_INIT = false;
@@ -6143,32 +6237,43 @@ function renderRot(){
     $('#rt-sups').addEventListener('click', e => { const tr = e.target.closest('[data-sup]'); if (!tr) return; RT.sup = RT.sup === tr.dataset.sup ? '' : tr.dataset.sup; renderRot(); });
     $('#rt-xlsx').addEventListener('click', rotExcel);
     $('#rt-cfg').addEventListener('change', rotCfgSave);
+    $('#rt-price').addEventListener('change', rotPriceUpload);
+    for (const id of ['#rt-pr-a', '#rt-pr-z', '#rt-pr-pct']) $(id).addEventListener('change', async () => { RT.promo = {from: $('#rt-pr-a').value, to: $('#rt-pr-z').value, pct: +$('#rt-pr-pct').value || 0}; try{ await db.doc('config/rot').set({promo: RT.promo}, {merge: true}); }catch(err){ console.warn(err); } RT.plan = null; renderRot(); });
   }
   if (document.querySelector('[data-panel="rot"]').hidden) return;
   if (RT.a){ $('#rt-a').value = RT.a; $('#rt-b').value = RT.b; }
   if (RT.days == null || RT.stock == null){ rotLoad(); return; }
-  const P = rotPlan(); $('#rt-a').value = RT.a; $('#rt-b').value = RT.b;
+  const P = rotPlan(); $('#rt-a').value = RT.a; $('#rt-b').value = RT.b; $('#rt-pr-a').value = (RT.promo || {}).from || ''; $('#rt-pr-z').value = (RT.promo || {}).to || ''; $('#rt-pr-pct').value = (RT.promo || {}).pct || '';
+  const PI = Object.entries(P.promoInfo || {}).filter(([, v]) => v.q > 0 || !v.measured).sort((a, b) => b[1].q - a[1].q);
+  $('#rt-pr-info').innerHTML = !RT.priceDate ? 'нягтлангийн үнийн тайлан оруулсны дараа тооцно' : PI.length ? (RT.promo.pct > 0 ? `тооцоонд <b>${RT.promo.pct}%</b> (гараар) · бодитоор: ` : 'бодитоор: ') + PI.slice(0, 4).map(([sp, v]) => `${esc(sp.split(' ')[0])} ${v.measured ? '<b>' + Math.round(v.m * 100) + '%</b> (' + fmt(Math.round(v.q)) + ' ш)' : '—'}`).join(' · ') : 'урамшууллын хугацаа идэвхгүй';
   const stale = P.last && P.last < shiftDay(today(), -2), HOL = P.holes || [];
   const rng = L => { const out = []; let a = null, b = null; for (const d of L){ if (b && d === shiftDay(b, 1)) b = d; else { if (a) out.push(a === b ? a.slice(5) : a.slice(5) + '–' + b.slice(5)); a = b = d; } } if (a) out.push(a === b ? a.slice(5) : a.slice(5) + '–' + b.slice(5)); return out.join(', '); };
   const warnTxt = (stale ? `<div style="color:var(--warn);margin-top:4px">⚠ Хамгийн сүүлийн барааны тайлан ${esc(P.last)} — ${esc(shiftDay(P.last, 1))}-ээс өнөөдөр хүртэлх өдрүүдийн тайланг «Өдрийн тайлан»-д оруулна уу. Сонгосон хугацааны ${esc(P.last)}-с хойших өдрүүд тооцоонд ороогүй.</div>` : '')
     + (HOL.length ? `<div style="color:var(--warn);margin-top:4px">⚠ Энэ хугацаанд ${HOL.length} өдрийн тайлан алга: ${esc(rng(HOL))}</div>` : '');
   $('#rt-src').innerHTML = `Борлуулалт: ${P.nDays ? esc(P.first) + ' – ' + esc(P.last) + ' (' + P.nDays + ' өдөр)' : '<b style="color:var(--bad)">барааны борлуулалт алга — «Өдрийн тайлан»-д Smart-ын барааны тайланг оруулна уу</b>'} · Үлдэгдэл: ${RT.stockDate ? 'насжилтын тайлан ' + esc(RT.stockDate) + (RT.stockDate < shiftDay(today(), -14) ? ' <b style="color:var(--warn)">(хуучин — шинэ тайлан оруулна уу: Тайлан → Борлуулалтын шинжилгээ → Үлдэгдлийн агшин)</b>' : '') : '<b style="color:var(--bad)">алга — насжилтын тайлан оруулна уу (Тайлан → Борлуулалтын шинжилгээ → Үлдэгдлийн агшин)</b>'}` + warnTxt;
+  const n0_ = v => fmt(Math.round(v || 0)), U = P.sum;
+  $('#rt-kpis').innerHTML = `<div class="kpi"><div class="l">Үлдэгдэл (насжилт ${esc(RT.stockDate || '–')})</div><div class="v">${n0_(U.st)} ш</div><div class="s">өртгөөр ≈ ${n0_(U.val)} ₮ · кассын үнээр ≈ ${n0_(U.kv)} ₮ · ${U.promo ? `<b>LPP 1+1 тооцсон борлуулалтын үнээр ≈ ${n0_(U.ev)} ₮</b> · ` : ''} худалдах (үндсэн) үнээр ≈ ${n0_(U.rv)} ₮ · хугацаанд бодит зарагдсан үнээр ≈ ${n0_(U.rva)} ₮${U.priced ? '' : ' · <b style="color:var(--warn)">нягтлангийн үнийн тайлан оруулаагүй — үнэ, өртөг борлуулалтаас</b>'}${U.noCost ? ' · ' + n0_(U.noCost) + ' ш өртөггүй' : ''}${U.noPrice ? ' · ' + n0_(U.noPrice) + ' ш үнэгүй' : ''}</div></div>`
+    + `<div class="kpi"><div class="l">🔁 Шилжүүлэх</div><div class="v">${n0_(U.moveQ)} ш</div><div class="s">${n0_(U.moves)} мөр · ${P.routes.length} чиглэл</div></div>`
+    + `<div class="kpi"><div class="l">🛒 Захиалах (LPP-ээс бусад)</div><div class="v">${n0_(U.orders)} загвар</div><div class="s">өртгөөр ≈ ${n0_(U.orderCost)} ₮</div></div>`
+    + `<div class="kpi"><div class="l">💸 Хямдруулах — хөлдсөн мөнгө</div><div class="v">${n0_(U.markVal)} ₮</div><div class="s">↑ өртгөөр · кассын үнээр ${n0_(U.markKv)} ₮${U.promo ? ' (1+1 тооцсон ' + n0_(U.markEv) + ' ₮)' : ''} · ${n0_(U.markQ)} ш · ${n0_(U.mark)} код · эхний 100 код = ${n0_(P.mark.slice(0, 100).reduce((a, m) => a + m.val, 0))} ₮</div></div>`
+    + (U.ageQ.some(v => v) ? `<div class="kpi"><div class="l">Үлдэгдлийн нас</div><div class="v">${U.st ? Math.round((U.ageQ[3] + U.ageQ[4]) / U.st * 100) : 0}%</div><div class="s">90+ хоног хадгалагдсан · ${ROT.AGE.map((a, i) => a + ': ' + n0_(U.ageQ[i])).join(' · ')}</div></div>` : '');
+  $('#rt-routes').innerHTML = P.routes.length ? '<b>Шилжүүлгийн чиглэл:</b> ' + P.routes.slice(0, 8).map(r => `<span class="chip c-acc" style="margin:2px">${esc(r.route)}: ${n0_(r.qty)} ш (${r.lines} мөр)</span>`).join('') : '';
   const sups = P.bySup.map(b => b.sup); $('#rt-sup').innerHTML = '<option value="">Бүх нийлүүлэгч</option>' + sups.map(s => `<option ${s === RT.sup ? 'selected' : ''}>${esc(s)}</option>`).join('');
   const nOrd = {}; for (const o of P.orders) nOrd[o.sup] = (nOrd[o.sup] || 0) + 1;
   const n0 = v => fmt(Math.round(v || 0)), cov = v => v == null || !isFinite(v) ? '–' : v.toFixed(1).replace('.', ',');
-  $('#rt-sups').innerHTML = P.bySup.filter(b => b.s > 0 || b.st > 0).slice(0, 60).map(b => `<tr data-sup="${esc(b.sup)}" style="cursor:pointer${b.sup === RT.sup ? ';background:rgba(31,95,139,.08)' : ''}"><td>${esc(b.sup)}${b.lpp ? ' <span class="chip c-grey">трак</span>' : ''}</td><td class="n">${n0(b.s)}</td><td class="n">${n0(b.q)}</td><td class="n">${n0(b.st)}</td><td class="n"><span class="chip ${b.cover == null ? 'c-grey' : b.cover < 3 ? 'c-bad' : b.cover > 26 ? 'c-warn' : 'c-ok'}">${cov(b.cover)}</span></td><td class="n">${b.thru.toFixed(0)}%</td><td class="n">${b.sold0 ? n0(b.sold0) : ''}</td><td class="n">${nOrd[b.sup] ? '<b>' + nOrd[b.sup] + '</b>' : ''}</td></tr>`).join('') || '<tr><td colspan="8" class="empty">–</td></tr>';
+  $('#rt-sups').innerHTML = P.bySup.filter(b => b.s > 0 || b.st > 0).slice(0, 60).map(b => `<tr data-sup="${esc(b.sup)}" style="cursor:pointer${b.sup === RT.sup ? ';background:rgba(31,95,139,.08)' : ''}"><td>${esc(b.sup)}${b.lpp ? ' <span class="chip c-grey">трак</span>' : ''}</td><td class="n">${n0(b.s)}</td><td class="n">${n0(b.q)}</td><td class="n">${n0(b.st)}</td><td class="n">${b.val ? n0(b.val) : '–'}</td><td class="n">${b.kv ? n0(b.kv) : '–'}${b.ev < b.kv - 1 ? `<div class="note">1+1: ${n0(b.ev)}</div>` : ''}</td><td class="n"><span class="chip ${b.cover == null ? 'c-grey' : b.cover < 3 ? 'c-bad' : b.cover > 26 ? 'c-warn' : 'c-ok'}">${cov(b.cover)}</span></td><td class="n">${b.thru.toFixed(0)}%</td><td class="n">${b.markVal ? n0(b.markVal) : ''}</td><td class="n">${nOrd[b.sup] ? '<b>' + nOrd[b.sup] + '</b>' : ''}</td></tr>`).join('') || '<tr><td colspan="10" class="empty">–</td></tr>';
   $$('#rt-tabs [data-t]').forEach(b => b.setAttribute('aria-pressed', b.dataset.t === RT.t ? 'true' : 'false'));
   const F = x => (!RT.sup || x.sup === RT.sup) && (!RT.q || (String(x.name || '') + ' ' + (x.c || '') + ' ' + (x.grp || '')).toLowerCase().includes(RT.q));
   let H = '', B = '', L;
-  if (RT.t === 'mv'){ L = P.moves.filter(F); H = '<tr><th>Бараа</th><th>Код</th><th>Хаанаас</th><th>Хаашаа</th><th class="n">Тоо</th><th>Яагаад</th></tr>';
-    B = L.slice(0, 400).map(m => `<tr><td>${esc(m.name)}<div class="note">${esc(m.sup)} · ${esc(m.grp)}</div></td><td class="mono">${esc(m.c)}</td><td>${esc(m.from)}</td><td><b>${esc(m.to)}</b></td><td class="n"><b>${m.qty}</b></td><td class="note" style="white-space:normal">${esc(m.why)}</td></tr>`).join(''); }
-  else if (RT.t === 'or'){ L = P.orders.filter(F); H = '<tr><th>Нийлүүлэгч</th><th>Загвар</th><th class="n">Зарсан</th><th class="n">7 хоногт</th><th class="n">Үлдэгдэл</th><th class="n">Хүрэлцэх</th><th class="n">Захиалах</th><th>Код бүрээр (зарсан → нэмэх)</th></tr>';
-    B = L.slice(0, 400).map(o => `<tr><td class="note">${esc(o.sup)}</td><td>${esc(o.name)}<div class="note">${esc(o.grp)}</div></td><td class="n">${o.sold}</td><td class="n">${o.avg.toFixed(1).replace('.', ',')}</td><td class="n">${o.st}</td><td class="n"><span class="chip ${o.cover < 2 ? 'c-bad' : 'c-warn'}">${cov(o.cover)}</span></td><td class="n"><b>${o.qty}</b></td><td class="note" style="white-space:normal">${o.split.length > 1 ? o.split.map(x => esc(x.c) + ': ' + x.q + '→+' + x.add).join(' · ') : ''}</td></tr>`).join('');
+  if (RT.t === 'mv'){ L = P.moves.filter(F); H = '<tr><th>Хаанаас → Хаашаа</th><th>Бараа</th><th>Код</th><th class="n">Тоо</th><th class="n">Хүлээн авагч: 7 хоногт зарагдана</th><th class="n">Хүлээн авагчийн үлдэгдэл</th><th>Илгээгч</th></tr>';
+    B = L.slice(0, 400).map(m => `<tr><td style="white-space:nowrap">${esc(m.from)} → <b>${esc(m.to)}</b></td><td>${esc(m.name)}<div class="note">${esc(m.sup)} · ${esc(m.grp)}</div></td><td class="mono">${esc(m.c)}</td><td class="n"><b>${m.qty}</b></td><td class="n">${m.toRate.toFixed(1).replace('.', ',')}</td><td class="n">${m.toSt}</td><td class="note">${esc(m.why)} (${m.fromSt} ш)</td></tr>`).join(''); }
+  else if (RT.t === 'or'){ L = P.orders.filter(F); H = '<tr><th>Нийлүүлэгч</th><th>Загвар</th><th class="n">Зарсан</th><th class="n">7 хоногт*</th><th class="n">Үлдэгдэл</th><th class="n">Хүрэлцэх</th><th class="n">Захиалах</th><th>Код бүрээр (зарсан → нэмэх)</th></tr>';
+    B = L.slice(0, 400).map(o => `<tr><td class="note">${esc(o.sup)}</td><td>${esc(o.name)}<div class="note">${esc(o.grp)}</div></td><td class="n">${o.sold}</td><td class="n">${o.rate.toFixed(1).replace('.', ',')}</td><td class="n">${o.st}</td><td class="n"><span class="chip ${o.cover < 2 ? 'c-bad' : 'c-warn'}">${cov(o.cover)}</span></td><td class="n"><b>${o.qty}</b></td><td class="note" style="white-space:normal">${o.split.length > 1 ? o.split.map(x => esc(x.c) + ': ' + x.q + '→+' + x.add).join(' · ') : ''}</td></tr>`).join('');
     const sp = RT.sup || ''; const C = Object.assign({lead: 4, target: 8, minSold: 3}, RT.cfg[sp] || {});
     $('#rt-cfg').innerHTML = isOwner ? `<span class="note">${sp ? esc(sp) + ':' : 'Бүх нийлүүлэгч (анхдагч):'}</span><label class="row note" style="gap:4px">Ирэх хугацаа<input data-cfg="lead" value="${C.lead}" style="width:56px"> 7 хоног</label><label class="row note" style="gap:4px">Нөөц<input data-cfg="target" value="${C.target}" style="width:56px"> 7 хоног</label><label class="row note" style="gap:4px">Хамгийн багадаа зарагдсан<input data-cfg="minSold" value="${C.minSold}" style="width:56px"> ш</label>` : '';
   }
-  else { L = P.dead.filter(F); H = '<tr><th>Бараа</th><th>Код</th><th>Нийлүүлэгч</th><th class="n">Дэлгүүрт үлдэгдэл</th><th class="n">Агуулахад</th><th>Хаана</th></tr>';
-    B = L.slice(0, 400).map(d => `<tr><td>${esc(d.name)}<div class="note">${esc(d.grp)}</div></td><td class="mono">${esc(d.c)}</td><td class="note">${esc(d.sup)}</td><td class="n"><b>${d.st}</b></td><td class="n">${d.wst || ''}</td><td class="note">${esc(d.where || '')}</td></tr>`).join(''); }
+  else { L = P.mark.filter(F); H = '<tr><th>Бараа</th><th>Код</th><th>Нийлүүлэгч</th><th class="n">Дэлгүүрт</th><th class="n">Зарсан</th><th class="n">Хүрэлцэх (7 хоног)</th><th class="n">90+ хоног</th><th class="n">Хөлдсөн ₮ (өртөг)</th><th class="n">Кассын үнээр ₮</th><th class="n">Одоо хямдарсан</th><th class="n">Санал</th><th>Хаана</th></tr>';
+    B = L.slice(0, 400).map(d => `<tr><td>${esc(d.name)}<div class="note">${esc(d.grp)}</div></td><td class="mono">${esc(d.c)}</td><td class="note">${esc(d.sup)}</td><td class="n"><b>${d.st}</b></td><td class="n">${d.q || '—'}</td><td class="n">${isFinite(d.cover) ? cov(d.cover) : '∞'}</td><td class="n">${d.old || ''}</td><td class="n">${d.val ? n0(d.val) : '?'}</td><td class="n">${d.kv ? n0(d.kv) : '?'}</td><td class="n">${d.rv > d.kv ? '−' + Math.round((1 - d.kv / d.rv) * 100) + '%' : ''}</td><td class="n"><span class="chip ${d.step >= 50 ? 'c-bad' : 'c-warn'}">−${d.step}%</span></td><td class="note">${esc(d.where || '')}</td></tr>`).join(''); }
   $('#rt-cfg').hidden = RT.t !== 'or' || !isOwner;
   $('#rt-head').innerHTML = H; $('#rt-body').innerHTML = B || '<tr><td colspan="8" class="empty">–</td></tr>';
   $('#rt-more').textContent = L.length > 400 ? `Эхний 400 / ${L.length} — бүгдийг Excel-ээр татна.` : L.length ? `${L.length} мөр` : '';
@@ -6178,20 +6283,67 @@ async function rotCfgSave(e){
   if (!(v >= 0)) return; const C = RT.cfg[sp] = Object.assign({lead: 4, target: 8, minSold: 3}, RT.cfg[sp] || {}); C[inp.dataset.cfg] = v;
   try{ await db.doc('config/rot').set({sup: RT.cfg}, {merge: true}); }catch(err){ console.warn(err); } RT.plan = null; renderRot();
 }
-function rotExcel(){
-  const P = RT.plan; if (!P || typeof XLSX === 'undefined') return;
-  const F = x => !RT.sup || x.sup === RT.sup, wb = XLSX.utils.book_new();
-  const add = (n, a, w) => { const ws = XLSX.utils.aoa_to_sheet(a); ws['!cols'] = w.map(x => ({wch: x})); if (a.length > 1) ws['!autofilter'] = {ref: XLSX.utils.encode_range({s: {r: 0, c: 0}, e: {r: a.length - 1, c: a[0].length - 1}})}; XLSX.utils.book_append_sheet(wb, ws, n); };
-  add('Шилжүүлэх', [['Бараа', 'Код', 'Нийлүүлэгч', 'Бүлэг', 'Хаанаас', 'Хаашаа', 'Тоо', 'Яагаад', 'Шилжүүлсэн ✓']].concat(P.moves.filter(F).map(m => [m.name, m.c, m.sup, m.grp, m.from, m.to, m.qty, m.why, ''])), [40, 16, 24, 18, 18, 18, 8, 70, 12]);
-  add('Захиалах', [['Нийлүүлэгч', 'Загвар', 'Бүлэг', 'Зарсан (' + P.W + ' 7 хоног)', '7 хоногт', 'Үлдэгдэл', 'Хүрэлцэх (7 хоног)', 'Захиалах', 'Код бүрээр']].concat(P.orders.filter(F).map(o => [o.sup, o.name, o.grp, o.sold, +o.avg.toFixed(1), o.st, isFinite(o.cover) ? +o.cover.toFixed(1) : '', o.qty, o.split.map(x => x.c + ': +' + x.add).join('; ')])), [24, 44, 18, 12, 10, 10, 12, 10, 60]);
-  add('Зарагдахгүй', [['Бараа', 'Код', 'Нийлүүлэгч', 'Бүлэг', 'Дэлгүүрт үлдэгдэл', 'Агуулахад', 'Хаана']].concat(P.dead.filter(F).map(d => [d.name, d.c, d.sup, d.grp, d.st, d.wst || 0, d.where || ''])), [40, 16, 24, 18, 12, 10, 40]);
-  add('Нийлүүлэгч', [['Нийлүүлэгч', 'Борлуулалт ₮', 'Зарсан ш', 'Үлдэгдэл ш', 'Хүрэлцэх (7 хоног)', 'Борлуулалтын хувь %', 'Зарагдаагүй код']].concat(P.bySup.map(b => [b.sup, Math.round(b.s), b.q, b.st, b.cover == null ? '' : +b.cover.toFixed(1), +b.thru.toFixed(1), b.sold0])), [30, 16, 10, 10, 12, 12, 12]);
-  XLSX.writeFile(wb, `Ergelt_${today()}.xlsx`);
+const LAT = {а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'j',з:'z',и:'i',й:'i',к:'k',л:'l',м:'m',н:'n',о:'o',ө:'u',п:'p',р:'r',с:'s',т:'t',у:'u',ү:'u',ф:'f',х:'h',ц:'ts',ч:'ch',ш:'sh',щ:'sh',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};
+const latin = t => String(t).replace(/[А-яЁёӨөҮү]/g, ch => { const l = LAT[ch.toLowerCase()] ?? ''; return ch === ch.toLowerCase() ? l : l.charAt(0).toUpperCase() + l.slice(1); });   // file names stay ASCII (some phones drop non-latin names)
+async function rotExcel(){
+  const P = RT.plan; if (!P) return; const X = typeof loadStyledXLSX === 'function' ? await loadStyledXLSX() : XLSX; if (!X) return;
+  const F = x => !RT.sup || x.sup === RT.sup, wb = X.utils.book_new(), MON = P.months || [], monQ = c => MON.map(m => Math.round(((P.mon || {})[c] || {})[m] || 0));
+  const HS = {font: {bold: true, color: {rgb: 'FFFFFF'}}, fill: {patternType: 'solid', fgColor: {rgb: '1F5F8B'}}, alignment: {wrapText: true, vertical: 'center'}};
+  const T1 = {font: {bold: true, sz: 14, color: {rgb: '1F3B57'}}}, T2 = {font: {bold: true, sz: 12, color: {rgb: '1F3B57'}}, border: {bottom: {style: 'medium', color: {rgb: '1F5F8B'}}}}, NOTE = {font: {italic: true, color: {rgb: '595959'}}};
+  const FILL = c => ({fill: {patternType: 'solid', fgColor: {rgb: c}}});
+  const add = (name, aoa, widths, o = {}) => { const ws = X.utils.aoa_to_sheet(aoa); ws['!cols'] = widths.map(w => ({wch: w}));
+    aoa.forEach((row, r) => row.forEach((v, c) => { const a = X.utils.encode_cell({r, c}), cell = ws[a]; if (!cell) return;
+      if ((o.heads || [0]).includes(r)) cell.s = HS; else if ((o.t1 || []).includes(r)) cell.s = T1; else if ((o.t2 || []).includes(r)) cell.s = T2; else if ((o.notes || []).includes(r)) cell.s = NOTE;
+      else { if (typeof v === 'number') { cell.z = Math.abs(v) < 100 && v % 1 ? '0.0' : '#,##0'; } const st = o.style && o.style(r, c, v, row); if (st) cell.s = st; } }));
+    const h = (o.heads || [0]).slice(-1)[0]; if (aoa.length > h + 1 && o.filter !== false) ws['!autofilter'] = {ref: X.utils.encode_range({s: {r: h, c: 0}, e: {r: aoa.length - 1, c: aoa[h].length - 1}})};
+    X.utils.book_append_sheet(wb, ws, name); };
+  const per = `${P.cut} – ${P.endD}`, U = P.sum, R0 = v => Math.round(v || 0);
+  // 1. summary — the answers on one page
+  const sm = [['Эргэлт, шилжүүлэг, захиалга, хямдрал'], [`Борлуулалт: ${P.first || P.cut} – ${P.last || P.endD} (${P.nDays} өдөр) · Үлдэгдэл: насжилтын тайлан ${RT.stockDate || '—'} · Үнэ, өртөг: ${RT.priceDate ? 'нягтлангийн үлдэгдлийн тайлан ' + RT.priceDate : 'борлуулалтаас (үнийн тайлан оруулаагүй)'} · Нийлүүлэгч: ${RT.sup || 'бүгд'}`],
+    [`«7 хоногт зарагдах» нь бүх хугацааны ба сүүлийн 4 долоо хоногийн (${P.recentFrom} –) дунджаас БАГА нь — улирал дууссан бараанд захиалга, шилжүүлэг санал болгохгүй.`], [],
+    ['Үзүүлэлт', 'Тоо', 'Өртгөөр ₮', 'Худалдах (үндсэн) үнээр ₮', 'Кассын үнээр ₮ (одоогийн хямдралтай)', 'Хугацаанд бодит зарагдсан үнээр ₮', 'Хүлээгдэх борлуулалт ₮ (LPP 1+1 тооцсон)'], ['Үлдэгдэл (бүх байршил)', R0(U.st), R0(U.val), R0(U.rv), R0(U.kv), R0(U.rva), R0(U.ev)], ['Шилжүүлэх', R0(U.moveQ), R0(P.moves.reduce((a, m) => a + m.val, 0))], ['Захиалах загвар (LPP-ээс бусад)', U.orders, R0(U.orderCost)],
+    ['Хямдруулах (хөлдсөн мөнгө)', R0(U.markQ), R0(U.markVal), R0(U.markRv), R0(U.markKv), R0(U.markRva), R0(U.markEv)], ['  үүнээс хамгийн их мөнгө хөлдөөсөн 100 код', ...['st', 'val', 'rv', 'kv', 'rva', 'ev'].map(k => R0(P.mark.slice(0, 100).reduce((a, m) => a + m[k], 0)))],
+    ['Хугацаанд зарсан', R0(U.q), '', '', '', R0(U.s)], [], ['Шилжүүлгийн чиглэл'], ['Хаанаас → Хаашаа', 'Мөр', 'Ширхэг']].concat(P.routes.map(r => [r.route, r.lines, r.qty]));
+  const s1 = sm.length; sm.push([], ['Нийлүүлэгч бүрээр'], ['Нийлүүлэгч', 'Борлуулалт ₮', 'Зарсан ш', 'Үлдэгдэл ш', 'Үлдэгдэл ₮ (өртөг)', 'Үлдэгдэл ₮ (кассын үнэ)', 'Үлдэгдэл ₮ (1+1 тооцсон)', 'Хүрэлцэх (7 хоног)', 'Борлуулалтын хувь %', 'Хямдруулах ₮ (өртөг)', 'Хямдруулах ₮ (кассын үнэ)', 'Захиалах загвар', 'Захиалга ₮ (өртөг)']);
+  for (const b of P.bySup.filter(F).filter(b => b.s > 0 || b.st > 0)) sm.push([b.sup + (b.lpp ? ' (трак)' : ''), R0(b.s), R0(b.q), R0(b.st), R0(b.val), R0(b.kv), R0(b.ev), b.cover == null ? '' : +b.cover.toFixed(1), +b.thru.toFixed(1), R0(b.markVal), R0(b.markKv), b.ord || '', R0(b.ordCost)]);
+  if (U.ageQ.some(v => v)){ sm.push([], ['Үлдэгдлийн нас (насжилтын тайлангаар)'], ['Нас (хоног)', 'Ширхэг', '%']); ROT.AGE.forEach((a, i) => sm.push([a, R0(U.ageQ[i]), U.st ? +(U.ageQ[i] / U.st * 100).toFixed(1) : 0])); }
+  const heads = [4, 13, s1 + 2], t2 = [12, s1 + 1]; if (U.ageQ.some(v => v)){ heads.push(sm.length - 6); t2.push(sm.length - 7); }
+  const hw = sm.length + 1; sm.push([], ['Хэрхэн уншиж, ашиглах вэ']); t2.push(hw);
+  ['1. «Шилжүүлэх» — чиглэлээр (Хаанаас → Хаашаа) эрэмбэлсэн. Нэг чиглэлийн мөрүүдийг нэг дор бэлдээд, хийсэн мөрөнд «✓» тавина.',
+   '2. «Захиалах» — загвараар (размер/өнгө = код). Сар бүрийн борлуулалт, 7 хоногийн хурд, үлдэгдлээр «ирэх хугацаа + нөөц» долоо хоногт хүрэлцэх тоо. LPP трак-аар ирдэг тул энд байхгүй.',
+   '3. «Хямдруулах» — хамгийн их мөнгө хөлдөөсөн бараа эхэнд. −50%: огт зарагдаагүй, ихэнх нь 90+ хоног; −30%: зарагдаагүй эсвэл 2+ жилийн нөөц; −20%: 1–2 жилийн нөөц.',
+   '4. «Сараар» — нийлүүлэгч бүрийн сар сарын борлуулалт (₮ ба ширхэг).',
+   `LPP (ORION, Network 360) 1+1 урамшуулал (хямд нь үнэгүй): «1+1 тооцсон» = кассын үнэ × ${RT.promo && RT.promo.pct > 0 ? RT.promo.pct + '% (гараар тогтоосон)' : 'урамшуулал эхэлснээс хойш бодитоор орсон хувь (нийлүүлэгч бүрээр)'}. Бусад нийлүүлэгч — кассын үнээр.`,
+   'Үнэ, өртөг: нягтлангийн «Үлдэгдэл» тайлангаас (Нэгж өртөг, Худалдах үнэ, Кассын үнэ = өнөөдрийн хямдралтай касс дээрх үнэ). «Бодит зарагдсан» = тухайн бараа сонгосон хугацаанд касс дээр дунджаар хэдээр зарагдсан (1+1, купон, нэмэлт хөнгөлөлтийн дараа); зарагдаагүй бараанд — нийлүүлэгчийн бусад барааны бодит/кассын үнийн харьцаагаар.',
+   '«Хүрэлцэх» = одоогийн үлдэгдэл хэдэн долоо хоногт зарагдаж дуусах. Улаан < 3, ногоон 3–26, шар > 26 долоо хоног.'].forEach(t => { sm.push([t]); });
+  const notesR = [1, 2]; for (let i = hw + 1; i < sm.length; i++) notesR.push(i);
+  add('Хураангуй', sm, [40, 16, 16, 16, 18, 16, 16, 14, 14, 16, 16, 12, 16], {heads, t1: [0], t2, notes: notesR, filter: false,
+    style: (r, c, v, row) => c === 7 && r > s1 + 2 && typeof v === 'number' ? (v < 3 ? FILL('F8D7DA') : v > 26 ? FILL('FFF3CD') : FILL('D4EDDA')) : null});
+  // 2. moves — by route, ready to pick
+  add('Шилжүүлэх', [['Хаанаас', 'Хаашаа', 'Бараа', 'Код', 'Бүлэг', 'Нийлүүлэгч', 'Тоо', 'Хүлээн авагч: 7 хоногт зарагдана', 'Хүлээн авагчийн үлдэгдэл', 'Илгээгчийн үлдэгдэл', 'Шалтгаан', 'Шилжүүлсэн ✓']]
+    .concat(P.moves.filter(F).map(m => [m.from, m.to, m.name, m.c, m.grp, m.sup, m.qty, +m.toRate.toFixed(1), m.toSt, m.fromSt, m.why, ''])), [14, 14, 44, 16, 16, 22, 8, 14, 12, 12, 22, 12],
+    {style: (r, c) => c === 6 ? {font: {bold: true}} : c === 11 ? FILL('FFFDE7') : null});
+  // 3. orders — by model, months side by side
+  add('Захиалах', [['Нийлүүлэгч', 'Загвар', 'Бүлэг', ...MON.map(m => m + ' ш'), 'Нийт зарсан', '7 хоногт зарагдана*', 'Үлдэгдэл', 'Хүрэлцэх (7 хоног)', 'Ирэх хугацаа + нөөц (7 хоног)', 'ЗАХИАЛАХ', 'Өртөг ₮ (ойролцоо)', 'Код бүрээр (+ширхэг)']]
+    .concat(P.orders.filter(F).map(o => [o.sup, o.name, o.grp, ...MON.map(m => o.codes.reduce((a, c) => a + Math.round(((P.mon || {})[c] || {})[m] || 0), 0)), o.sold, +o.rate.toFixed(1), o.st, isFinite(o.cover) ? +o.cover.toFixed(1) : '', o.lead + ' + ' + o.target, o.qty, R0(o.cost), o.split.map(x => x.c + ': +' + x.add).join('; ')])),
+    [20, 44, 16, ...MON.map(() => 9), 10, 11, 10, 10, 12, 11, 14, 50], {style: (r, c, v, row) => c === 3 + MON.length + 5 ? {font: {bold: true}, ...FILL('D4EDDA')} : c === 3 + MON.length + 3 && typeof v === 'number' && v < 2 ? FILL('F8D7DA') : null});
+  // 4. mark-downs — what freezes money, the biggest first
+  add('Хямдруулах', [['Бараа', 'Код', 'Нийлүүлэгч', 'Бүлэг', ...MON.map(m => m + ' ш'), 'Дэлгүүрт ш', 'Агуулахад ш', 'Хүрэлцэх (7 хоног)', '90+ хоног ш', 'Өртөг (нэгж)', 'Худалдах үнэ (нэгж)', 'Кассын үнэ (нэгж)', 'Одоо хямдарсан %', 'Хугацаанд зарагдсан дундаж үнэ', 'Хөлдсөн ₮ (өртөг)', 'Кассын үнээр ₮', 'Санал болгох хямдрал', 'Хаана']]
+    .concat(P.mark.filter(F).map(d => [d.name, d.c, d.sup, d.grp, ...monQ(d.c), d.st, d.wst || 0, isFinite(d.cover) ? +d.cover.toFixed(1) : 'зарагдаагүй', d.old || 0, d.uc ? R0(d.uc) : '', d.up ? R0(d.up) : '', d.kp ? R0(d.kp) : '', d.up > d.kp ? Math.round((1 - d.kp / d.up) * 100) : '', d.ap ? R0(d.ap) : '', R0(d.val), R0(d.kv), '−' + d.step + '%', d.where])),
+    [44, 16, 20, 16, ...MON.map(() => 9), 10, 10, 12, 10, 10, 11, 11, 10, 12, 14, 14, 12, 34], {style: (r, c, v) => c === 4 + MON.length + 12 && typeof v === 'string' ? (v === '−50%' ? FILL('F8D7DA') : FILL('FFF3CD')) : null});
+  // 5. months: sales per supplier by month (pieces and money)
+  const ms = {}; for (const R of P.rows){ if (!F(R)) continue; const M = ms[R.sup] = ms[R.sup] || {q: {}, s: {}}; for (const m of MON){ M.q[m] = (M.q[m] || 0) + (((P.mon || {})[R.c] || {})[m] || 0); M.s[m] = (M.s[m] || 0) + (((P.monS || {})[R.c] || {})[m] || 0); } }
+  const mrows = Object.entries(ms).map(([sp, M]) => [sp, ...MON.map(m => R0(M.s[m])), ...MON.map(m => R0(M.q[m]))]), tot = r => MON.reduce((x, m, i) => x + (r[i + 1] || 0), 0);
+  mrows.sort((a, b) => tot(b) - tot(a)); mrows.push(['НИЙТ', ...MON.map((m, i) => mrows.reduce((x, r) => x + r[i + 1], 0)), ...MON.map((m, i) => mrows.reduce((x, r) => x + r[i + 1 + MON.length], 0))]);
+  add('Сараар', [['Нийлүүлэгч', ...MON.map(m => m + ' ₮'), ...MON.map(m => m + ' ш')]].concat(mrows), [30, ...MON.map(() => 14), ...MON.map(() => 10)], {style: (r) => r === mrows.length ? {font: {bold: true}, ...FILL('E8EEF4')} : null});
+  const fn = `Ergelt_${P.cut}_${P.endD}${RT.sup ? '_' + latin(RT.sup).replace(/[^\w]+/g, '_').slice(0, 20) : ''}.xlsx`;
+  const blob = new Blob([X.write(wb, {bookType: 'xlsx', type: 'array'})], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = fn; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
 }
 // ---------- data status: what was uploaded, what is missing, who does what, undo, month close ----------
 const DS = {log: [], cov: {}, duty: null, closed: {}, month: '', sel: null, init: false};
 const DS_PRIVATE = new Set(['4002622637', '405097294', '5026747956']);   // private / brother's accounts — never required
-const DS_KIND = {sales: '🧾 Smart — бараагаар', pay: '💳 Smart — төлбөрийн хэлбэрээр', stmt: '🏦 Банкны хуулга', aging: '📦 Насжилтын тайлан', lpp: '🚚 LPP жагсаалт', inv: '📋 Тооллогын насжилт', payroll: '👥 Цалингийн жагсаалт'};
+const DS_KIND = {sales: '🧾 Smart — бараагаар', pay: '💳 Smart — төлбөрийн хэлбэрээр', stmt: '🏦 Банкны хуулга', aging: '📦 Насжилтын тайлан', price: '💲 Үлдэгдэл, үнийн тайлан (нягтлан)', lpp: '🚚 LPP жагсаалт', inv: '📋 Тооллогын насжилт', payroll: '👥 Цалингийн жагсаалт'};
 const dsAccLabel = a => (VIVI.ACC_NAME && VIVI.ACC_NAME[a] ? VIVI.ACC_NAME[a] + ' · ' : '') + a;
 // file fingerprint: the same file uploaded twice is recognised
 async function fileHash(buf){ try{ const h = await crypto.subtle.digest('SHA-256', buf); return [...new Uint8Array(h)].slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join(''); }catch(e){ return ''; } }
