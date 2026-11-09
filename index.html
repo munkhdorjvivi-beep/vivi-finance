@@ -143,6 +143,35 @@ body{margin:0;background:var(--bg)}
     <p class="note" id="gate-msg">Google бүртгэлээрээ нэвтэрнэ үү.</p>
     <button class="btn primary" id="gate-in">Google-ээр нэвтрэх</button>
     <button class="btn" id="gate-out" hidden>Өөр бүртгэлээр нэвтрэх</button>
+    <div id="gate-tel-box" style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px"><button class="btn" id="gate-tel" type="button">📱 Утасны дугаараар нэвтрэх (ажилтан)</button>
+      <form id="gate-tel-f" hidden style="display:grid;gap:8px;margin-top:10px;text-align:left"><label class="f">Утасны дугаар<input id="gate-ph" inputmode="numeric" data-nofmt autocomplete="tel" placeholder="99112233" maxlength="12"></label><label class="f">PIN (HR-аас авсан 6 оронтой)<input id="gate-pin" inputmode="numeric" data-nofmt type="password" autocomplete="current-password" maxlength="6"></label><button class="btn primary">Нэвтрэх</button><span class="note" id="gate-tel-msg"></span></form></div>
+  </div>
+  <!-- employee app (staff not in config/access, linked by HR via hrapp/{gmail}) -->
+  <div id="emp-app" hidden style="max-width:560px;margin:0 auto">
+    <div class="row" style="justify-content:space-between;align-items:center;margin:10px 0"><div><b style="font-size:18px">VIVI · Ирц</b><div class="note" id="emp-name"></div></div><button class="btn" type="button" id="emp-signout">Гарах</button></div>
+    <div class="filter chips" id="emp-tabs"><button data-t="home" aria-pressed="true">⏱ Өнөөдөр</button><button data-t="month" aria-pressed="false">📊 Миний цаг</button><button data-t="sch" aria-pressed="false">📅 Хуваарь</button><button data-t="req" aria-pressed="false">✉ Хүсэлт</button></div>
+    <div class="card" data-emp="home" style="margin-top:10px;text-align:center">
+      <div id="emp-status"></div>
+      <button class="btn primary" type="button" id="emp-in" style="font-size:20px;padding:16px 28px;margin-top:14px;width:100%">✅ Ирлээ</button>
+      <button class="btn" type="button" id="emp-out" hidden style="font-size:20px;padding:16px 28px;margin-top:14px;width:100%">🏁 Явлаа</button>
+      <p class="note" id="emp-msg" style="margin-top:10px">Дэлгүүрт байхдаа товч дараад хаалган дээрх QR-ийг уншуулна. Утасны байршил (GPS) асаалттай байх ёстой.</p>
+    </div>
+    <div class="card" data-emp="month" style="margin-top:10px" hidden><div id="emp-month"></div></div>
+    <div class="card" data-emp="sch" style="margin-top:10px" hidden><div id="emp-sch"></div></div>
+    <div class="card" data-emp="req" style="margin-top:10px" hidden>
+      <form id="emp-lv-form" class="grid" style="gap:8px">
+        <label class="f full">Төрөл<select id="emp-lv-kind"></select></label>
+        <label class="f">Эхлэх<input type="date" id="emp-lv-a" required></label>
+        <label class="f">Дуусах<input type="date" id="emp-lv-z"></label>
+        <label class="f full">Тайлбар<input id="emp-lv-note" placeholder="шалтгаан; ирц засуулахад — хэдэн цагт ирсэн/явсан"></label>
+        <div class="row full"><button class="btn primary">Илгээх</button><span class="note" id="emp-lv-msg"></span></div>
+      </form>
+      <div class="tbl" style="margin-top:10px"><table><thead><tr><th>Төрөл</th><th>Хугацаа</th><th>Тайлбар</th><th>Төлөв</th></tr></thead><tbody id="emp-lv-list"></tbody></table></div>
+    </div>
+    <div id="emp-cam" hidden style="position:fixed;inset:0;background:#000;z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <video id="emp-video" playsinline muted style="width:100%;max-height:80vh;object-fit:cover"></video>
+      <p style="color:#fff;margin:10px">QR кодыг хүрээнд оруулна уу</p><button class="btn" type="button" id="emp-cam-x">Болих</button>
+    </div>
   </div>
   <div id="app" hidden>
   <header class="top">
@@ -843,7 +872,7 @@ body{margin:0;background:var(--bg)}
     <div id="hr-alert"></div>
     <div class="kpis" id="hr-kpis"></div>
     <div class="card">
-      <div class="filter chips" id="hr-tabs"><button data-t="emp" aria-pressed="true">👤 Ажилтнууд</button><button data-t="sch" aria-pressed="false">📅 Хуваарь, ирц</button><button data-t="lv" aria-pressed="false">🌴 Чөлөө, амралт</button><button data-t="rec" aria-pressed="false">🧲 Шинэ ажилтан, гарсан</button></div>
+      <div class="filter chips" id="hr-tabs"><button data-t="emp" aria-pressed="true">👤 Ажилтнууд</button><button data-t="sch" aria-pressed="false">📅 Хуваарь, ирц</button><button data-t="lv" aria-pressed="false">🌴 Чөлөө, амралт</button><button data-t="rec" aria-pressed="false">🧲 Шинэ ажилтан, гарсан</button><button data-t="att" aria-pressed="false">⏱ Ирц (апп)</button></div>
 
       <!-- employees -->
       <div data-hr="emp" style="margin-top:10px">
@@ -883,6 +912,18 @@ body{margin:0;background:var(--bg)}
         </form>
         <div class="filter chips" id="hr-lv-f" style="margin-top:10px"><button data-f="pend" aria-pressed="true">Шийдвэрлээгүй</button><button data-f="now" aria-pressed="false">Одоо чөлөөтэй</button><button data-f="all" aria-pressed="false">Бүгд</button></div>
         <div class="tbl" style="margin-top:6px;max-height:520px;overflow:auto"><table><thead><tr><th>Ажилтан</th><th>Төрөл</th><th>Хугацаа</th><th class="n">Ажлын өдөр</th><th>Тайлбар</th><th>Төлөв</th><th></th></tr></thead><tbody id="hr-lv-list"></tbody></table></div>
+      </div>
+
+      <!-- the employee app: check-ins, sites (printed QR + GPS), shift start times -->
+      <div data-hr="att" style="margin-top:10px" hidden>
+        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label class="f" style="width:auto">Өдөр<input type="date" id="hr-att-d" style="width:auto"></label><label class="f" style="width:auto">Сар (нийт цаг)<input type="month" id="hr-att-m" style="width:auto"></label><button class="btn" type="button" id="hr-att-x">📥 Excel</button></div>
+        <h3 style="margin:12px 0 6px">Өдрийн ирц</h3><div class="tbl" style="overflow:auto"><table><thead><tr><th>Ажилтан</th><th>Салбар</th><th>Ээлж</th><th>Ирсэн</th><th>Явсан</th><th class="n">Цаг</th><th>Тэмдэглэл</th></tr></thead><tbody id="hr-att-day"></tbody></table></div>
+        <h3 style="margin:16px 0 6px">Сарын нийт</h3><div class="tbl" style="overflow:auto;max-height:420px"><table><thead><tr><th>Ажилтан</th><th class="n">Ирсэн өдөр</th><th class="n">Нийт цаг</th><th class="n">Хоцорсон</th><th class="n">Хоцролт (мин)</th><th class="n">Явахаа бүртгээгүй</th></tr></thead><tbody id="hr-att-mon"></tbody></table></div>
+        <h3 style="margin:16px 0 6px">Салбарууд — хэвлэсэн QR + GPS</h3>
+        <p class="note" style="margin:0 0 6px">Салбар бүрд QR хэвлэж ажилчдын орох хаалганд наана. Ажилтан утсаараа QR-ийг уншуулахад утасны GPS дэлгүүрийн радиус дотор байх ёстой. «📍 Энд байна» — дэлгүүр дотор зогсож байхдаа дарж байршлыг хадгална. QR алдагдсан/хуулагдсан бол «↻ QR шинэчлэх».</p>
+        <div id="hr-sites"></div>
+        <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap;align-items:flex-end"><label class="f" style="width:auto">Шинэ салбар<input id="hr-site-n" placeholder="Нийслэл" style="width:160px"></label><button class="btn" type="button" id="hr-site-add">＋ Нэмэх</button>
+          <span class="note" style="margin-left:12px">Ээлж эхлэх цаг:</span><label class="f" style="width:auto">Б<input id="hr-cfg-Б" type="time" style="width:auto"></label><label class="f" style="width:auto">Ө<input id="hr-cfg-Ө" type="time" style="width:auto"></label><label class="f" style="width:auto">О<input id="hr-cfg-О" type="time" style="width:auto"></label><label class="f" style="width:auto">Хоцролт тооцох (мин)<input id="hr-cfg-grace" type="number" min="0" style="width:70px"></label><button class="btn" type="button" id="hr-cfg-save">Хадгалах</button><span class="note" id="hr-cfg-msg"></span></div>
       </div>
 
       <!-- hiring and leaving -->
@@ -1091,7 +1132,20 @@ window.VIVIFB = (() => {
     throw e;
   });
   const signOut = () => auth.signOut();
-  return { db, user, assets, fileURL, start, signIn, signOut, OWNER, pushToken, pushSupported, isStandalone, isIOS };
+  // employees without Gmail: phone number + PIN. Under the hood an e-mail/password account {phone}.{v}@tel.vivi.mn;
+  // hrphone/{phone} = {v} tells which version is current (a new PIN = a new account, the old one loses access)
+  const PIN_DOM = 'tel.vivi.mn', pinPw = pin => 'vivi-' + pin;
+  const signInPin = async (phone, pin) => {
+    const ph = String(phone || '').replace(/\D/g, '').slice(-8), d = await db.doc('hrphone/' + ph).get().catch(() => null);
+    const v = d && d.exists ? d.data().v : 0; if (!v){ const e = new Error('no-phone'); e.code = 'no-phone'; throw e; }
+    return auth.signInWithEmailAndPassword(ph + '.' + v + '@' + PIN_DOM, pinPw(pin));
+  };
+  let sec = null;
+  const createPinLogin = async (phone, v, pin) => {      // HR: make the account in a second app instance, so HR stays signed in
+    sec = sec || firebase.initializeApp(cfg, 'pin-maker'); const a = sec.auth(), em = phone + '.' + v + '@' + PIN_DOM;
+    const r = await a.createUserWithEmailAndPassword(em, pinPw(pin)); const uid = r.user.uid; await a.signOut(); return {email: em, uid};
+  };
+  return { db, user, assets, fileURL, start, signIn, signOut, signInPin, createPinLogin, OWNER, pushToken, pushSupported, isStandalone, isIOS };
 })();
 
 </script>
@@ -6503,11 +6557,11 @@ document.addEventListener('click', async e => {
 });
 // ===================== HR: employee cards, maternity leave, schedule & attendance, leave, hiring and leaving =====================
 // hremp/{id} — the employee card · hrleave/{id} — leave · hrsched/{unit}_{YYYY-MM} — schedule (plan) and attendance (att) · hrrec/{id} — a vacancy with its candidates
-const HR = {emp: [], lv: [], sch: {}, rec: [], t: 'emp', q: '', unit: '', st: 'cur', open: '', edit: false, m: '', sunit: '', mode: 'plan', code: 'Б', lvF: 'pend', init: false};
+const HR = {att: [], sites: {}, cfg: {}, attD: '', attM: '', emp: [], lv: [], sch: {}, rec: [], t: 'emp', q: '', unit: '', st: 'cur', open: '', edit: false, m: '', sunit: '', mode: 'plan', code: 'Б', lvF: 'pend', init: false};
 const HR_UNITS = ['Фүүд сити', 'Драгон', 'Нийслэл', 'Онлайн дэлгүүр', 'Агуулах', 'Оффис', 'Бусад'];
 const HR_ST = {active: ['Ажиллаж буй', 'c-ok'], maternity: ['Декреттэй', 'c-acc'], leave: ['Урт хугацааны чөлөө', 'c-warn'], left: ['Гарсан', 'c-grey']};
 const HR_CT = ['Хөдөлмөрийн гэрээ (хугацаагүй)', 'Хөдөлмөрийн гэрээ (хугацаатай)', 'Туршилтын хугацаа', 'Хөлсөөр ажиллах гэрээ', 'Цагийн ажил'];
-const HR_LV = [['annual', 'Ээлжийн амралт'], ['sick', 'Өвчтэй (эмнэлгийн хуудас)'], ['paid', 'Чөлөө — цалинтай'], ['unpaid', 'Чөлөө — цалингүй'], ['other', 'Бусад']];
+const HR_LV = [['annual', 'Ээлжийн амралт'], ['sick', 'Өвчтэй (эмнэлгийн хуудас)'], ['paid', 'Чөлөө — цалинтай'], ['unpaid', 'Чөлөө — цалингүй'], ['fix', 'Ирц засуулах'], ['ot', 'Илүү цаг'], ['swap', 'Ээлж солих'], ['other', 'Бусад']];
 const HR_PLAN = [['Б', 'Б — бүтэн өдөр'], ['Ө', 'Ө — өглөөний ээлж'], ['О', 'О — оройн ээлж'], ['-', '− амрах өдөр'], ['', '(арилгах)']];
 const HR_ATT = [['✓', '✓ ирсэн'], ['Х', 'Х — хоцорсон'], ['Т', 'Т — тасалсан'], ['Ш', 'Ш — өвчтэй'], ['Э', 'Э — ээлжийн амралт / чөлөө'], ['', '(арилгах)']];
 const HR_OFF = [['calc', 'Цалин, тооцоо хийсэн'], ['items', 'Эд хөрөнгө, түлхүүр, дүрэмт хувцас хүлээлгэсэн'], ['debt', 'Өр, урьдчилгаа суутгасан'], ['ndsh', 'НДШ-ийн дэвтэр / тодорхойлолт өгсөн'], ['acc', 'Smart, системийн эрх хаасан']];
@@ -6544,7 +6598,7 @@ function renderHR(){
     + `<div class="kpi"><div class="l">Өнөөдөр чөлөөтэй</div><div class="v">${nowOff.length}</div><div class="s">${nowOff.slice(0, 4).map(l => esc(hrName(hrById(l.emp)))).join(' · ') || '—'}</div></div>`
     + `<div class="kpi"><div class="l">${y} онд гарсан / орсон</div><div class="v">${HR.emp.filter(e => String(e.end || '').startsWith(y)).length} / ${HR.emp.filter(e => String(e.start || '').startsWith(y)).length}</div><div class="s">сул орон тоо: ${HR.rec.filter(v => v.status !== 'closed').reduce((s, v) => s + (+v.n || 1), 0)}</div></div>`;
   $$('#hr-tabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.t === HR.t))); $$('[data-hr]').forEach(x => x.hidden = x.dataset.hr !== HR.t);
-  if (HR.t === 'emp') hrRenderEmp(); else if (HR.t === 'sch') hrRenderSch(); else if (HR.t === 'lv') hrRenderLv(); else hrRenderRec();
+  if (HR.t === 'emp') hrRenderEmp(); else if (HR.t === 'sch') hrRenderSch(); else if (HR.t === 'lv') hrRenderLv(); else if (HR.t === 'att') hrRenderAtt(); else hrRenderRec();
 }
 // ---------- employees ----------
 function hrRenderEmp(){
@@ -6572,7 +6626,7 @@ function hrRenderCard(){
     <div class="grid" style="margin-top:8px">
       ${inp('ovog', 'Овог')}${inp('name', 'Нэр *')}${inp('reg', 'Регистрийн дугаар')}${inp('phone', 'Утас', 'tel')}${inp('pos', 'Албан тушаал')}${sel('unit', 'Салбар', HR_UNITS)}
       ${inp('start', 'Ажилд орсон', 'date')}${sel('ct', 'Гэрээний төрөл', [''].concat(HR_CT))}${inp('ctTo', 'Гэрээ дуусах', 'date')}${inp('trialTo', 'Туршилт дуусах', 'date')}
-      ${inp('salary', 'Үндсэн цалин ₮', 'text', 'inputmode="decimal"')}${inp('lvDays', 'Ээлжийн амралт (ажлын өдөр / жил)', 'number')}
+      ${inp('appEmail', '📱 Ирцийн апп — Gmail', 'email', 'placeholder="ажилтны Gmail"')}${inp('salary', 'Үндсэн цалин ₮', 'text', 'inputmode="decimal"')}${inp('lvDays', 'Ээлжийн амралт (ажлын өдөр / жил)', 'number')}
       ${sel('status', 'Төлөв', Object.entries(HR_ST).map(([k, x]) => [k, x[0]]))}
       <div class="full" data-hr-mat ${e.status === 'maternity' ? '' : 'hidden'}><div class="row" style="gap:8px;flex-wrap:wrap">${inp('matFrom', '👶 Декрет эхэлсэн', 'date')}${inp('matTo', '👶 Декрет дуусах (ажилд гарах)', 'date')}</div></div>
       <div class="full" data-hr-left ${e.status === 'left' ? '' : 'hidden'}><div class="row" style="gap:8px;flex-wrap:wrap">${inp('end', 'Гарсан огноо', 'date')}${sel('endWhy', 'Шалтгаан', ['', 'Өөрийн хүсэлтээр', 'Гэрээ дууссан', 'Ажил олгогчийн санаачилгаар', 'Сахилгын шийтгэл', 'Бусад'])}</div></div>
@@ -6585,6 +6639,10 @@ function hrRenderCard(){
       <div style="flex:1;min-width:240px"><b>Цалингийн түүх</b><div class="note" style="margin-top:4px">${sal.map(s => `${esc(s.from)}: <b>${fmt(s.amt)} ₮</b>${s.by ? ' · ' + esc(nameOf(s.by)) : ''}`).join('<br>') || '—'}</div></div>
       <div style="flex:1;min-width:240px"><b>Чөлөө, амралт</b> <span class="note">ээлжийн амралт үлдсэн: ${hrLeaveLeft(e)} өдөр</span><div class="note" style="margin-top:4px">${lvs.slice(0, 8).map(l => `${esc(l.a)} – ${esc(l.z)} · ${esc((HR_LV.find(x => x[0] === l.kind) || ['', l.kind])[1])} · ${l.days} өдөр${l.status !== 'approved' ? ' · ' + (l.status === 'pending' ? '⏳' : '✗') : ''}`).join('<br>') || '—'}</div></div>
     </div>`}
+    ${e.id !== 'new' && e.status !== 'left' ? `<div style="margin-top:10px;padding:8px 10px;background:var(--sunk);border-radius:8px"><b>📱 Ирцийн апп-д нэвтрэх</b>
+      <div class="note" style="margin-top:4px">Gmail: ${e.appEmail ? '<b>' + esc(e.appEmail) + '</b> ✓' : '—'} · Утас + PIN: ${e.appPinPhone ? '<b>' + esc(e.appPinPhone) + '</b> ✓ (' + esc(String(e.appPinAt || '').slice(0, 10)) + ')' : '—'}</div>
+      <div class="row" style="gap:8px;margin-top:6px;flex-wrap:wrap"><button class="btn" type="button" id="hr-pin">🔑 ${e.appPinPhone ? 'PIN шинэчлэх' : 'Утас + PIN олгох'}</button>${e.appPinPhone ? '<button class="btn" type="button" id="hr-pin-off">Хаах</button>' : ''}<span id="hr-pin-out"></span></div>
+      <div class="note" style="margin-top:4px">Gmail-гүй ажилтанд: картын «Утас» дугаараар PIN үүсгэнэ. PIN-ийг зөвхөн нэг удаа харуулна — ажилтанд өөрт нь хэлж өгнө үү.</div></div>` : ''}
     ${e.status === 'left' && e.id !== 'new' ? `<div style="margin-top:10px"><b>Гарах үеийн тооцоо</b><div class="row" style="gap:14px;flex-wrap:wrap;margin-top:4px">${HR_OFF.map(([k, l]) => `<label class="row" style="gap:6px;width:auto"><input type="checkbox" style="width:auto" data-hr-off="${k}" ${(e.off || {})[k] ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div></div>` : ''}
     <span class="note" id="hr-msg"></span></div>`;
 }
@@ -6595,7 +6653,13 @@ async function hrSave(){
   const old = HR.open === 'new' ? null : hrById(HR.open), now = new Date().toISOString();
   const salHist = (old && old.salHist || []).slice(); if (o.salary !== '' && (!old || +old.salary !== +o.salary)) salHist.push({from: today(), amt: o.salary, by: me});
   const hist = old ? (old.hist || []).concat([{at: now, by: me, was: Object.fromEntries(Object.keys(o).filter(k => String(old[k] ?? '') !== String(o[k] ?? '')).map(k => [k, old[k] ?? '']))}]).slice(-30) : [];
-  try{ const doc = {...o, salHist, hist, by: me, at: now}; if (old){ await db.doc('hremp/' + old.id).set(doc, {merge: true}); } else { const r = db.collection('hremp').doc(); await r.set({...doc, createdBy: me, createdAt: now, docs: []}); HR.open = r.id; }
+  o.appEmail = String(o.appEmail || '').trim().toLowerCase();
+  try{ const doc = {...o, salHist, hist, by: me, at: now}; let id; if (old){ id = old.id; await db.doc('hremp/' + old.id).set(doc, {merge: true}); } else { const r = db.collection('hremp').doc(); await r.set({...doc, createdBy: me, createdAt: now, docs: []}); HR.open = id = r.id; }
+    // the employee app: hrapp/{gmail} links the Google account to this card (removed when the e-mail changes or the person leaves)
+    const was = old && old.appEmail ? String(old.appEmail).toLowerCase() : '';
+    if (was && (was !== o.appEmail || o.status === 'left')) await db.doc('hrapp/' + was).delete().catch(() => {});
+    if (old && old.appPinEmail && o.status === 'left'){ await db.doc('hrapp/' + old.appPinEmail).delete().catch(() => {}); await db.doc('hrphone/' + old.appPinPhone).delete().catch(() => {}); await db.doc('hremp/' + id).set({appPinEmail: '', appPinPhone: ''}, {merge: true}); }
+    if (o.appEmail && o.status !== 'left') await db.doc('hrapp/' + o.appEmail).set({emp: id, name: ((o.ovog ? o.ovog.slice(0, 1) + '.' : '') + o.name), unit: o.unit || '', by: me, at: now});
     HR.edit = false; hrRenderEmp(); }
   catch(err){ $('#hr-msg').textContent = 'Хадгалж чадсангүй: ' + (err.code || err.message); }
 }
@@ -6619,7 +6683,8 @@ function hrRenderSch(){
   $('#hr-sch-body').innerHTML = E.length ? E.map(e => { const P = (D.plan || {})[e.id] || {}, A = (D.att || {})[e.id] || {}; let w = 0, late = 0, abs = 0;
     const cells = Array.from({length: n}, (_, i) => { const dd = String(i + 1).padStart(2, '0'), d = m + '-' + dd, lv = HR.lv.find(l => l.emp === e.id && l.status === 'approved' && l.a <= d && l.z >= d);
       const mat = e.status === 'maternity' && (!e.matFrom || e.matFrom <= d) && (!e.matTo || e.matTo >= d);
-      const p = mat ? 'Д' : lv ? 'Э' : P[dd] || '', a = A[dd] || ''; if (/[БӨО]/.test(p)) w++; if (a === 'Х') late++; if (a === 'Т') abs++;
+      const ap = !A[dd] && HR.att.length ? hrAttOf(HR.m)[e.id + '|' + d] : null, ai = ap && ap.ins.sort()[0];
+      const p = mat ? 'Д' : lv ? 'Э' : P[dd] || '', a = A[dd] || (ai ? (hrLate(e.id, e.unit, d, ai) ? 'Х' : '✓') : ''); if (/[БӨО]/.test(p)) w++; if (a === 'Х') late++; if (a === 'Т') abs++;
       const show = HR.mode === 'plan' ? p : (a || (lv ? 'Э' : mat ? 'Д' : ''));
       const cls = mat ? 'hr-mat' : lv ? 'hr-lv' : HR.mode === 'att' ? ({'✓': 'hr-ok', 'Х': 'hr-late', 'Т': 'hr-abs', 'Ш': 'hr-sick', 'Э': 'hr-lv'}[a] || (/[БӨО]/.test(p) && d < t ? 'hr-miss' : '')) : (p === '-' ? 'hr-off' : p ? 'hr-on' : '');
       return `<td class="hr-c ${cls}" data-hr-cell="${esc(e.id)}|${dd}"${mat || lv ? ' data-lock="1"' : ''} title="${esc(hrName(e))} ${d}${HR.mode === 'att' && p ? ' · хуваарь: ' + p : ''}">${esc(show)}</td>`; }).join('');
@@ -6639,10 +6704,58 @@ function hrRenderLv(){
   $$('#hr-lv-f button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === HR.lvF)));
   const ST = {pending: ['⏳ Хүлээгдэж буй', 'c-warn'], approved: ['✓ Зөвшөөрсөн', 'c-ok'], rejected: ['✗ Татгалзсан', 'c-bad']};
   $('#hr-lv-list').innerHTML = L.length ? L.map(l => { const e = hrById(l.emp), s = ST[l.status] || ST.pending;
-    return `<tr><td>${esc(hrName(e))}<div class="note">${esc(e ? e.unit || '' : '')}</div></td><td>${esc((HR_LV.find(x => x[0] === l.kind) || ['', l.kind])[1])}</td><td class="mono">${esc(l.a)} – ${esc(l.z)}</td><td class="n">${l.days}</td><td class="note">${esc(l.note || '')}<div>${esc(nameOf(l.by))}</div></td>
+    return `<tr><td>${esc(hrName(e))}<div class="note">${esc(e ? e.unit || '' : '')}</div></td><td>${esc((HR_LV.find(x => x[0] === l.kind) || ['', l.kind])[1])}</td><td class="mono">${esc(l.a)} – ${esc(l.z)}</td><td class="n">${l.days}</td><td class="note">${esc(l.note || '')}<div>${esc((String(l.by).startsWith('app:') ? '📱 өөрөө (апп)' : nameOf(l.by)))}</div></td>
       <td><span class="chip ${s[1]}">${s[0]}</span>${l.dBy ? `<div class="note">${esc(nameOf(l.dBy))}</div>` : ''}</td><td style="white-space:nowrap">${l.status === 'pending' ? `<button class="btn" type="button" data-hr-lv="${esc(l.id)}|approved" style="padding:2px 8px">✓</button> <button class="btn bad" type="button" data-hr-lv="${esc(l.id)}|rejected" style="padding:2px 8px">✗</button>` : isOwner ? `<button class="btn" type="button" data-hr-lv="${esc(l.id)}|del" style="padding:2px 8px" title="Устгах">🗑</button>` : ''}</td></tr>`; }).join('')
     : `<tr><td colspan="7" class="empty">${HR.lvF === 'pend' ? 'Шийдвэрлээгүй хүсэлт алга.' : 'Бүртгэл алга.'}</td></tr>`;
 }
+// ---------- phone + PIN login for employees without Gmail ----------
+async function hrPin(e, off){
+  const out = $('#hr-pin-out'), ph = String(e.phone || '').replace(/\D/g, '').slice(-8);
+  if (off){ if (!confirm('Энэ ажилтны утас + PIN нэвтрэлтийг хаах уу?')) return; await db.doc('hrapp/' + e.appPinEmail).delete().catch(() => {}); await db.doc('hrphone/' + e.appPinPhone).delete().catch(() => {}); await db.doc('hremp/' + e.id).set({appPinEmail: '', appPinPhone: '', by: me}, {merge: true}); return; }
+  if (ph.length !== 8){ out.innerHTML = '<b style="color:var(--bad)">Картанд 8 оронтой утасны дугаар оруулна уу («✏️ Засах» → Утас).</b>'; return; }
+  const dup = HR.emp.find(x => x.id !== e.id && x.appPinPhone === ph && x.status !== 'left'); if (dup){ out.innerHTML = `<b style="color:var(--bad)">Энэ дугаар ${esc(hrName(dup))}-д олгогдсон байна.</b>`; return; }
+  if (e.appPinPhone && !confirm('Шинэ PIN үүсгэх үү? Хуучин PIN ажиллахаа болино.')) return;
+  out.textContent = 'Үүсгэж байна…';
+  try{ const cur = await db.doc('hrphone/' + ph).get(), v = ((cur.exists && +cur.data().v) || 0) + 1, pin = String(100000 + Math.floor(Math.random() * 900000));
+    const acc = await VIVIFB.createPinLogin(ph, v, pin), now = new Date().toISOString();
+    await db.doc('hrapp/' + acc.email).set({emp: e.id, name: (e.ovog ? e.ovog.slice(0, 1) + '.' : '') + e.name, unit: e.unit || '', pinUid: acc.uid, phone: ph, by: me, at: now});
+    await db.doc('hrphone/' + ph).set({v, by: me, at: now});
+    if (e.appPinEmail && e.appPinEmail !== acc.email) await db.doc('hrapp/' + e.appPinEmail).delete().catch(() => {});
+    await db.doc('hremp/' + e.id).set({appPinEmail: acc.email, appPinPhone: ph, appPinAt: now, by: me}, {merge: true});
+    setTimeout(() => { const o = $('#hr-pin-out'); if (o) o.innerHTML = `<span style="font-size:18px">Утас <b>${ph}</b> · PIN <b class="mono" style="font-size:22px;letter-spacing:3px">${pin}</b></span> <span class="note">— ажилтанд хэлж өгнө үү, дахин харагдахгүй.</span>`; }, 400);
+  }catch(err){ out.innerHTML = '<b style="color:var(--bad)">Үүсгэж чадсангүй: ' + esc(err.code === 'auth/operation-not-allowed' ? 'Firebase-д Email/Password нэвтрэлт асаагаагүй байна (эзэмшигч асаана).' : err.code || err.message) + '</b>'; }
+}
+document.addEventListener('click', e => { if (e.target.closest('#hr-pin')) hrPin(hrById(HR.open)); else if (e.target.closest('#hr-pin-off')) hrPin(hrById(HR.open), true); });
+// ---------- ⏱ the employee app: check-ins per day / month, sites (printed QR + GPS), shift start times ----------
+const hrLocal = iso => new Date(new Date(iso).getTime() + 8 * 3600e3).toISOString();
+let hrAttC = {}; function hrAttOf(m){ const ck = m + '|' + HR.att.length + '|' + (HR.att._v || 0); if (hrAttC.k === ck) return hrAttC.v; const by = {}; for (const a of HR.att){ const L = hrLocal(a.at), d = L.slice(0, 10); if (m && !d.startsWith(m)) continue; const k = (a.emp || a.email) + '|' + d, o = by[k] = by[k] || {emp: a.emp, email: a.email, name: a.name, unit: a.unit, d, ins: [], outs: [], devs: new Set(), far: 0};
+    (a.type === 'in' ? o.ins : o.outs).push(L.slice(11, 16)); o.devs.add(a.dev); } hrAttC = {k: ck, v: by}; return by; }
+function hrSchLoad(unit, m){ const id = (unit + '_' + m).replace(/[\/.#$\[\]]/g, '_'); if (!unit || HR.sch[id] || !db || HR['_l' + id]) return; HR['_l' + id] = true; db.doc('hrsched/' + id).onSnapshot(d => { HR.sch[id] = d.exists ? d.data() : {plan: {}, att: {}}; if (HR.t === 'att') hrRenderAtt(); else if (HR.t === 'sch') hrRenderSch(); }, e => console.warn(e)); }
+function hrPlanOf(empId, unit, d){ const D = HR.sch[(unit + '_' + d.slice(0, 7)).replace(/[\/.#$\[\]]/g, '_')] || {}; return ((D.plan || {})[empId] || {})[d.slice(8)] || ''; }
+function hrLate(empId, unit, d, first){ const p = hrPlanOf(empId, unit, d), st = p && HR.cfg[p]; if (!st || !first) return 0; const [h, mi] = st.split(':').map(Number), [h2, m2] = first.split(':').map(Number), late = (h2 * 60 + m2) - (h * 60 + mi); return late > (+HR.cfg.grace || 0) ? late : 0; }
+function hrRenderAtt(){
+  if (!HR.attD) HR.attD = today(); if (!HR.attM) HR.attM = today().slice(0, 7); $('#hr-att-d').value = HR.attD; $('#hr-att-m').value = HR.attM;
+  for (const k of ['Б', 'Ө', 'О', 'grace']) if (document.activeElement !== $('#hr-cfg-' + k)) $('#hr-cfg-' + k).value = HR.cfg[k] || (k === 'grace' ? '10' : '');
+  for (const u of new Set(HR.emp.filter(e => e.status === 'active').map(e => e.unit))){ hrSchLoad(u, HR.attD.slice(0, 7)); hrSchLoad(u, HR.attM); }
+  const D = Object.values(hrAttOf(HR.attD.slice(0, 7))).filter(o => o.d === HR.attD), byEmp = Object.fromEntries(D.map(o => [o.emp || o.email, o]));
+  const act = HR.emp.filter(e => e.status === 'active' || byEmp[e.id]);
+  const rows = act.map(e => { const o = byEmp[e.id], p = hrPlanOf(e.id, e.unit, HR.attD), i = o && o.ins.sort()[0], u = o && o.outs.sort().at(-1), late = o ? hrLate(e.id, e.unit, HR.attD, i) : 0, h = i && u && u > i ? ((+u.slice(0, 2) * 60 + +u.slice(3)) - (+i.slice(0, 2) * 60 + +i.slice(3))) / 60 : 0;
+    const note = [!e.appEmail ? 'апп-д холбогдоогүй' : '', /[БӨО]/.test(p) && !o && HR.attD <= today() ? '<b style="color:var(--bad)">ирээгүй</b>' : '', late ? `<b style="color:var(--warn)">${late} мин хоцорсон</b>` : '', o && o.devs.size > 1 ? 'өөр утаснаас' : '', o && i && !u && HR.attD < today() ? 'явахаа бүртгээгүй' : ''].filter(Boolean).join(' · ');
+    return [e, `<tr><td>${esc(hrName(e))}</td><td>${esc(e.unit || '')}</td><td>${esc(p)}</td><td class="mono">${i || '—'}</td><td class="mono">${u || '—'}</td><td class="n">${h ? h.toFixed(1) : ''}</td><td class="note">${note}</td></tr>`, o ? 0 : /[БӨО]/.test(p) ? 1 : 2]; })
+    .sort((a, b) => a[2] - b[2] || String(a[0].unit).localeCompare(String(b[0].unit))).map(x => x[1]).join('');
+  $('#hr-att-day').innerHTML = rows || '<tr><td colspan="7" class="empty">—</td></tr>';
+  const M = Object.values(hrAttOf(HR.attM)), sum = {}; for (const o of M){ const k = o.emp || o.email, S = sum[k] = sum[k] || {name: o.name, unit: o.unit, days: 0, h: 0, late: 0, lateMin: 0, noOut: 0}; S.days++; const i = o.ins.sort()[0], u = o.outs.sort().at(-1);
+    if (i && u && u > i) S.h += ((+u.slice(0, 2) * 60 + +u.slice(3)) - (+i.slice(0, 2) * 60 + +i.slice(3))) / 60; else if (i && o.d < today()) S.noOut++; const l = hrLate(o.emp, o.unit, o.d, i); if (l){ S.late++; S.lateMin += l; } }
+  $('#hr-att-mon').innerHTML = Object.entries(sum).sort((a, b) => String(a[1].unit + a[1].name).localeCompare(b[1].unit + b[1].name)).map(([k, S]) => `<tr><td>${esc(S.name || k)}<div class="note">${esc(S.unit || '')}</div></td><td class="n">${S.days}</td><td class="n"><b>${S.h.toFixed(1)}</b></td><td class="n">${S.late || ''}</td><td class="n">${S.lateMin || ''}</td><td class="n">${S.noOut || ''}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Энэ сард аппаар бүртгүүлсэн ирц алга.</td></tr>';
+  const SI = Object.values(HR.sites).sort((a, b) => String(a.name).localeCompare(b.name));
+  $('#hr-sites').innerHTML = SI.length ? `<div class="tbl"><table><thead><tr><th>Салбар</th><th>Байршил</th><th class="n">Радиус (м)</th><th></th></tr></thead><tbody>${SI.map(x => `<tr><td><b>${esc(x.name)}</b> <span class="note mono">${esc(x.id)}</span></td><td class="note">${x.lat ? x.lat.toFixed(5) + ', ' + x.lng.toFixed(5) + ` <a href="https://maps.google.com/?q=${x.lat},${x.lng}" target="_blank" rel="noopener">газрын зураг</a>` : '<b style="color:var(--bad)">тохируулаагүй</b>'}</td>
+      <td class="n"><input data-site-r="${esc(x.id)}" type="number" min="30" value="${+x.r || 150}" style="width:80px"></td><td style="white-space:nowrap"><button class="btn" type="button" data-site-here="${esc(x.id)}" style="padding:2px 8px">📍 Энд байна</button> <button class="btn" type="button" data-site-qr="${esc(x.id)}" style="padding:2px 8px">🖨 QR</button> <button class="btn" type="button" data-site-tok="${esc(x.id)}" style="padding:2px 8px">↻ QR шинэчлэх</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="note">Салбар нэмээгүй байна.</p>';
+}
+let qrLibP = null; const loadQRLib = () => qrLibP || (qrLibP = new Promise((ok, no) => { if (window.qrcode) return ok(window.qrcode); const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js'; sc.onload = () => ok(window.qrcode); sc.onerror = () => { qrLibP = null; no(new Error('QR library')); }; document.head.appendChild(sc); }));
+async function hrSiteQR(x){ const q = (await loadQRLib())(0, 'M'); q.addData('VIVI-ATT|' + x.id + '|' + x.token); q.make();
+  printHTML(`<!doctype html><html><head><meta charset="utf-8"><title>QR ${esc(x.name)}</title><style>@page{size:A4;margin:18mm} body{font:16px Arial,sans-serif;text-align:center} h1{font-size:30px;margin:10px 0} svg{width:120mm;height:120mm} .n{color:#555;font-size:13px}</style></head><body>
+    <img src="${BRAND_LOGO}" alt="" style="height:44px"><h1>${esc(x.name)} — ИРЦ</h1><p>Ирэхдээ ба явахдаа «VIVI» апп-аа нээж <b>«Ирлээ / Явлаа»</b> дараад энэ кодыг уншуулна уу.</p>${q.createSvgTag({cellSize: 8, margin: 2, scalable: true})}
+    <p class="n">Утасны GPS асаалттай байх ёстой · Энэ кодыг зурж авч гадуур ашиглах боломжгүй (байршлаар шалгана)</p></body></html>`); }
 // ---------- hiring and leaving ----------
 function hrRenderRec(){
   const STG = [['new', 'Шинэ'], ['int', 'Ярилцлага'], ['offer', 'Санал тавьсан'], ['hired', 'Ажилд авсан'], ['no', 'Татгалзсан']];
@@ -6703,6 +6816,22 @@ document.addEventListener('change', async e => {
     catch(err){ $('#hr-doc-msg').textContent = err && err.code === 'too_big' ? 'Файл хэт том (15 MB хүртэл).' : err && err.code === 'type' ? 'Зөвхөн зураг эсвэл PDF.' : 'Алдаа: ' + (err.code || err.message); } t.value = ''; }
 });
 document.addEventListener('input', e => { if (e.target.id === 'hr-q'){ HR.q = e.target.value; hrRenderEmp(); } });
+document.addEventListener('change', async e => { const t = e.target; if (!t.closest || !t.closest('[data-hr="att"]')) return;
+  if (t.id === 'hr-att-d'){ HR.attD = t.value || today(); hrRenderAtt(); } else if (t.id === 'hr-att-m'){ HR.attM = t.value || today().slice(0, 7); hrRenderAtt(); }
+  else if (t.dataset.siteR) await db.doc('hrsites/' + t.dataset.siteR).set({r: Math.max(30, +t.value || 150), by: me}, {merge: true}); });
+document.addEventListener('click', async e => { if (!e.target.closest('[data-hr="att"]')) return;
+  const tok = () => Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 8);
+  if (e.target.closest('#hr-site-add')){ const n = $('#hr-site-n').value.trim(); if (!n) return; const id = (STORE_CODE && STORE_CODE[n]) || n.replace(/[^\wА-яӨөҮүЁё]+/g, '_').slice(0, 20); await db.doc('hrsites/' + id).set({name: n, token: tok(), r: 150, by: me, at: new Date().toISOString()}, {merge: true}); $('#hr-site-n').value = ''; return; }
+  const hb = e.target.closest('[data-site-here]'); if (hb){ hb.disabled = true; hb.textContent = 'Байршил…'; try{ const p = await new Promise((ok, no) => navigator.geolocation.getCurrentPosition(ok, no, {enableHighAccuracy: true, timeout: 20000, maximumAge: 0}));
+      if (confirm(`Энэ салбарын байршлыг одоо таны байгаа газраар (нарийвчлал ${Math.round(p.coords.accuracy)} м) хадгалах уу?`)) await db.doc('hrsites/' + hb.dataset.siteHere).set({lat: p.coords.latitude, lng: p.coords.longitude, accSet: Math.round(p.coords.accuracy), by: me, at: new Date().toISOString()}, {merge: true}); }
+    catch(err){ alert('Байршил олдсонгүй: ' + (err.message || err.code)); } hb.disabled = false; hb.textContent = '📍 Энд байна'; return; }
+  const qb = e.target.closest('[data-site-qr]'); if (qb){ const x = HR.sites[qb.dataset.siteQr]; if (x) hrSiteQR(x).catch(err => alert(err.message)); return; }
+  const tb = e.target.closest('[data-site-tok]'); if (tb && confirm('Шинэ QR үүсгэх үү? Хуучин хэвлэсэн QR ажиллахаа болино — шинийг хэвлэж солих хэрэгтэй.')){ await db.doc('hrsites/' + tb.dataset.siteTok).set({token: tok(), by: me}, {merge: true}); return; }
+  if (e.target.closest('#hr-cfg-save')){ const c = {}; for (const k of ['Б', 'Ө', 'О']) c[k] = $('#hr-cfg-' + k).value || ''; c.grace = +$('#hr-cfg-grace').value || 0; await db.doc('hrsites/_cfg').set({...c, by: me}, {merge: true}); $('#hr-cfg-msg').textContent = '✓'; return; }
+  if (e.target.closest('#hr-att-x') && typeof XLSX !== 'undefined'){ const M = Object.values(hrAttOf(HR.attM)).sort((a, b) => (a.unit + a.name + a.d).localeCompare(b.unit + b.name + b.d));
+    const aoa = [['Ажилтан', 'Салбар', 'Өдөр', 'Ээлж', 'Ирсэн', 'Явсан', 'Цаг', 'Хоцролт (мин)']].concat(M.map(o => { const i = o.ins.sort()[0], u = o.outs.sort().at(-1), h = i && u && u > i ? ((+u.slice(0, 2) * 60 + +u.slice(3)) - (+i.slice(0, 2) * 60 + +i.slice(3))) / 60 : ''; return [o.name, o.unit, o.d, hrPlanOf(o.emp, o.unit, o.d), i || '', u || '', h === '' ? '' : +h.toFixed(2), hrLate(o.emp, o.unit, o.d, i) || '']; }));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'Ирц'); XLSX.writeFile(wb, 'VIVI_irts_' + HR.attM + '.xlsx'); }
+});
 document.addEventListener('submit', async e => {
   if (e.target.id === 'hr-lv-form'){ e.preventDefault(); const emp = $('#hr-lv-emp').value, a = $('#hr-lv-a').value, z = $('#hr-lv-z').value; if (!emp || !a || !z || z < a){ $('#hr-lv-msg').textContent = 'Огноогоо шалгана уу.'; return; }
     const kind = $('#hr-lv-kind').value, days = hrWork(a, z), x = hrById(emp);
@@ -6710,6 +6839,91 @@ document.addEventListener('submit', async e => {
     try{ await db.collection('hrleave').add({emp, kind, a, z, days, note: $('#hr-lv-note').value.trim(), status: 'pending', by: me, at: new Date().toISOString()}); $('#hr-lv-msg').textContent = `✓ бүртгэлээ (${days} ажлын өдөр) — зөвшөөрөхийг хүлээж байна`; $('#hr-lv-note').value = ''; }
     catch(err){ $('#hr-lv-msg').textContent = 'Алдаа: ' + (err.code || err.message); } }
   if (e.target.id === 'hr-vac-form'){ e.preventDefault(); try{ await db.collection('hrrec').add({title: $('#hr-vac-t').value.trim(), unit: $('#hr-vac-u').value, n: +$('#hr-vac-n').value || 1, status: 'open', cands: [], by: me, at: new Date().toISOString()}); $('#hr-vac-t').value = ''; }catch(err){ alert('Алдаа: ' + (err.code || err.message)); } }
+});
+// ===================== employee app: check in / out (printed QR of the store + GPS), my hours, my schedule, my requests =====================
+// an employee signs in with Google; the HR card holds that Gmail (hrapp/{email} → the hremp card). Not in config/access → this screen only.
+// hrsites/{code}: {name, lat, lng, r, token} · hrsites/_cfg: shift start times · hratt/{id}: one check-in / check-out
+const EMP = {db: null, email: '', me: null, sites: {}, cfg: {}, att: [], lv: [], sch: {}, busy: false, tab: 'home'};
+const EMP_DEV = (() => { try{ let d = localStorage.getItem('vivi_dev'); if (!d){ d = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); localStorage.setItem('vivi_dev', d); } return d; }catch(e){ return 'nostorage'; } })();
+const EMP_LV = [['annual', 'Ээлжийн амралт'], ['sick', 'Өвчтэй (эмнэлгийн хуудас)'], ['paid', 'Чөлөө — цалинтай'], ['unpaid', 'Чөлөө — цалингүй'], ['fix', 'Ирц засуулах (мартсан, алдаа)'], ['ot', 'Илүү цаг'], ['swap', 'Ээлж солих'], ['other', 'Бусад']];
+const empDist = (a, b, c, d) => { const R = 6371000, r = x => x * Math.PI / 180, dl = r(c - a), dg = r(d - b), h = Math.sin(dl / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(dg / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); };
+const empDay = () => new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);   // Ulaanbaatar day
+const empHM = iso => { const x = new Date(new Date(iso).getTime() + 8 * 3600e3); return String(x.getUTCHours()).padStart(2, '0') + ':' + String(x.getUTCMinutes()).padStart(2, '0'); };
+const empLocal = iso => new Date(new Date(iso).getTime() + 8 * 3600e3).toISOString().slice(0, 10);
+async function empStart(email){
+  const db = VIVIFB.db, em = String(email || '').toLowerCase(); let link = null;
+  try{ const d = await db.doc('hrapp/' + em).get(); if (d.exists) link = d.data(); }catch(e){ return false; }
+  if (!link) return false;
+  EMP.db = db; EMP.email = em; EMP.me = link; $('#gate').hidden = true; $('#app').hidden = true; $('#emp-app').hidden = false;
+  $('#emp-lv-kind').innerHTML = EMP_LV.map(x => `<option value="${x[0]}">${esc(x[1])}</option>`).join(''); $('#emp-lv-a').value = empDay();
+  $('#emp-name').textContent = (link.name || em) + (link.unit ? ' · ' + link.unit : '');
+  db.collection('hrsites').onSnapshot(s => { EMP.sites = {}; EMP.cfg = {}; s.docs.forEach(d => { if (d.id === '_cfg') EMP.cfg = d.data(); else EMP.sites[d.id] = {id: d.id, ...d.data()}; }); empRender(); }, e => console.warn(e));
+  db.collection('hratt').where('email', '==', em).onSnapshot(s => { EMP.att = s.docs.map(d => ({id: d.id, ...d.data()})).sort((a, b) => String(b.at).localeCompare(String(a.at))); empRender(); }, e => console.warn(e));
+  db.collection('hrleave').where('email', '==', em).onSnapshot(s => { EMP.lv = s.docs.map(d => ({id: d.id, ...d.data()})).sort((a, b) => String(b.at).localeCompare(String(a.at))); empRender(); }, e => console.warn(e));
+  const m = empDay().slice(0, 7); if (link.unit) db.doc('hrsched/' + (link.unit + '_' + m).replace(/[\/.#$\[\]]/g, '_')).onSnapshot(d => { EMP.sch = d.exists ? d.data() : {}; empRender(); }, () => {});
+  empRender(); return true;
+}
+function empRender(){
+  if (!EMP.me) return; const t = empDay(), today = EMP.att.filter(a => empLocal(a.at) === t).sort((a, b) => String(a.at).localeCompare(String(b.at))), last = today.at(-1), isIn = last && last.type === 'in';
+  $$('#emp-tabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.t === EMP.tab))); $$('[data-emp]').forEach(x => x.hidden = x.dataset.emp !== EMP.tab);
+  const plan = ((EMP.sch.plan || {})[EMP.me.emp] || {})[t.slice(8)] || '', start = plan && EMP.cfg[plan] ? EMP.cfg[plan] : '';
+  $('#emp-status').innerHTML = `<div style="font-size:15px">${t} · ${plan ? 'Өнөөдрийн ээлж: <b>' + esc(plan) + '</b>' + (start ? ' (' + esc(start) + '-аас)' : '') : 'Өнөөдөр хуваарьт ээлж алга'}</div>
+    <div style="font-size:22px;margin:10px 0">${isIn ? '🟢 Ажил дээр — ' + empHM(last.at) + '-аас' : last ? '⚪ Явсан — ' + empHM(last.at) : '⚪ Өнөөдөр бүртгэл алга'}</div>`;
+  $('#emp-in').hidden = !!isIn; $('#emp-out').hidden = !isIn;
+  // my month
+  const m = t.slice(0, 7), days = {}; for (const a of EMP.att.filter(a => empLocal(a.at).startsWith(m))){ const d = empLocal(a.at), o = days[d] = days[d] || {ins: [], outs: []}; (a.type === 'in' ? o.ins : o.outs).push(a.at); }
+  let tot = 0; const rows = Object.keys(days).sort().reverse().map(d => { const o = days[d], i = o.ins.sort()[0], u = o.outs.sort().at(-1), h = i && u && u > i ? (new Date(u) - new Date(i)) / 36e5 : 0; tot += h;
+    return `<tr><td class="mono">${d.slice(5)}</td><td>${i ? empHM(i) : '—'}</td><td>${u ? empHM(u) : '—'}</td><td class="n">${h ? h.toFixed(1) : ''}</td></tr>`; }).join('');
+  $('#emp-month').innerHTML = `<p class="note">${m} сард нийт <b>${tot.toFixed(1)}</b> цаг · ${Object.keys(days).length} өдөр</p><div class="tbl"><table><thead><tr><th>Өдөр</th><th>Ирсэн</th><th>Явсан</th><th class="n">Цаг</th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="empty">—</td></tr>'}</tbody></table></div>`;
+  // my schedule
+  const P = (EMP.sch.plan || {})[EMP.me.emp] || {}, n = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).getUTCDate(), WD = ['Ня', 'Да', 'Мя', 'Лх', 'Пү', 'Ба', 'Бя'];
+  $('#emp-sch').innerHTML = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">${Array.from({length: n}, (_, i) => { const dd = String(i + 1).padStart(2, '0'), d = m + '-' + dd, w = new Date(d + 'T00:00:00Z').getUTCDay(), c = P[dd] || '';
+    return `<div style="border:1px solid var(--line);border-radius:6px;padding:4px;text-align:center;${d === t ? 'outline:2px solid #1f5f8b;' : ''}${c === '-' || !c ? 'opacity:.6' : 'background:#dbe9f6'}"><div class="note">${i + 1} ${WD[w]}</div><b>${esc(c || '')}</b></div>`; }).join('')}</div><p class="note">Б — бүтэн өдөр, Ө — өглөө, О — орой, − амралт${Object.keys(EMP.cfg).length ? ' · эхлэх цаг: ' + ['Б', 'Ө', 'О'].filter(k => EMP.cfg[k]).map(k => k + ' ' + EMP.cfg[k]).join(', ') : ''}</p>`;
+  // my requests
+  const ST = {pending: ['⏳ хүлээгдэж байна', 'c-warn'], approved: ['✓ зөвшөөрсөн', 'c-ok'], rejected: ['✗ татгалзсан', 'c-bad']};
+  $('#emp-lv-list').innerHTML = EMP.lv.slice(0, 30).map(l => `<tr><td>${esc((EMP_LV.find(x => x[0] === l.kind) || ['', l.kind])[1])}</td><td class="mono">${esc(l.a)}${l.z !== l.a ? ' – ' + esc(l.z) : ''}</td><td class="note">${esc(l.note || '')}</td><td><span class="chip ${(ST[l.status] || ST.pending)[1]}">${(ST[l.status] || ST.pending)[0]}</span></td></tr>`).join('') || '<tr><td colspan="4" class="empty">—</td></tr>';
+}
+// GPS: the best fix within ~12 s
+function empGPS(){ return new Promise((ok, no) => { if (!navigator.geolocation) return no(new Error('Энэ утсанд байршил тодорхойлох боломжгүй.')); let best = null, done = false;
+  const fin = () => { if (done) return; done = true; navigator.geolocation.clearWatch(w); best ? ok(best) : no(new Error('Байршил олдсонгүй. GPS (Location) асаалттай эсэхийг шалгаад дахин оролдоно уу.')); };
+  const w = navigator.geolocation.watchPosition(p => { if (!best || p.coords.accuracy < best.coords.accuracy) best = p; if (p.coords.accuracy <= 30) fin(); }, e => { done = true; navigator.geolocation.clearWatch(w); no(new Error(e.code === 1 ? 'Байршлын зөвшөөрөл өгөөгүй байна — утасны тохиргооноос энэ сайтад Location зөвшөөрнө үү.' : 'Байршил олдсонгүй.')); }, {enableHighAccuracy: true, maximumAge: 0, timeout: 15000});
+  setTimeout(fin, 12000); }); }
+// QR: the camera reads the printed store code (jsQR, loaded on demand)
+let jsQRp = null; const loadJsQR = () => jsQRp || (jsQRp = new Promise((ok, no) => { if (window.jsQR) return ok(window.jsQR); const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'; s.onload = () => ok(window.jsQR); s.onerror = () => { jsQRp = null; no(new Error('QR уншигч ачаалсангүй — интернэтээ шалгана уу.')); }; document.head.appendChild(s); }));
+function empScan(){ return new Promise(async (ok, no) => {
+  const box = $('#emp-cam'), v = $('#emp-video'), c = document.createElement('canvas'); let stream = null, stop = false;
+  const end = (err, val) => { stop = true; if (stream) stream.getTracks().forEach(t => t.stop()); box.hidden = true; $('#emp-cam-x').onclick = null; err ? no(err) : ok(val); };
+  try{ const jsQR = await loadJsQR(); stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}, audio: false}); v.srcObject = stream; v.setAttribute('playsinline', ''); await v.play(); box.hidden = false;
+    $('#emp-cam-x').onclick = () => end(new Error('Цуцаллаа.'));
+    const tick = () => { if (stop) return; if (v.readyState >= 2){ c.width = v.videoWidth; c.height = v.videoHeight; const g = c.getContext('2d', {willReadFrequently: true}); g.drawImage(v, 0, 0); const r = jsQR(g.getImageData(0, 0, c.width, c.height).data, c.width, c.height); if (r && /^VIVI-ATT\|/.test(r.data)) return end(null, r.data); } requestAnimationFrame(tick); };
+    tick(); setTimeout(() => !stop && end(new Error('QR код уншигдсангүй — камераа кодонд ойртуулаад дахин оролдоно уу.')), 45000);
+  }catch(e){ end(e && e.name === 'NotAllowedError' ? new Error('Камерын зөвшөөрөл өгөөгүй байна — утасны тохиргооноос зөвшөөрнө үү.') : e); } }); }
+async function empClock(type){
+  if (EMP.busy) return; EMP.busy = true; const msg = $('#emp-msg'); msg.className = 'note'; msg.textContent = 'Дэлгүүрийн QR кодыг уншуулна уу…';
+  try{
+    const qr = await empScan(), [, code, token] = qr.split('|'), S = EMP.sites[code];
+    if (!S || S.token !== token) throw new Error('Энэ QR код хүчингүй (хуучин эсвэл өөр байгууллагын). Менежерт хандана уу.');
+    if (!(S.lat && S.lng)) throw new Error('Дэлгүүрийн байршил тохируулаагүй байна — менежерт хандана уу.');
+    msg.textContent = 'Байршил шалгаж байна…'; const p = await empGPS(), dist = Math.round(empDist(S.lat, S.lng, p.coords.latitude, p.coords.longitude)), acc = Math.round(p.coords.accuracy), lim = (+S.r || 150) + Math.min(acc, 100);
+    if (dist > lim) throw new Error(`Та ${S.name || code}-оос ${dist} м зайтай байна (зөвшөөрөх ${S.r || 150} м). Дэлгүүр дотроос дахин оролдоно уу.`);
+    const now = new Date().toISOString();
+    await EMP.db.collection('hratt').add({email: EMP.email, emp: EMP.me.emp || '', name: EMP.me.name || '', unit: EMP.me.unit || '', site: code, siteName: S.name || code, type, at: now, sat: firebase.firestore.FieldValue.serverTimestamp(), lat: +p.coords.latitude.toFixed(6), lng: +p.coords.longitude.toFixed(6), acc, dist, dev: EMP_DEV, ua: navigator.userAgent.slice(0, 120)});
+    msg.className = 'note'; msg.innerHTML = `<b style="color:var(--ok)">✓ ${type === 'in' ? 'Ирсэн' : 'Явсан'} — ${empHM(now)}</b> · ${esc(S.name || code)} (${dist} м)`;
+  }catch(e){ msg.innerHTML = `<b style="color:var(--bad)">${esc(e.message || String(e))}</b>`; }
+  finally { EMP.busy = false; }
+}
+document.addEventListener('click', e => {
+  if (!EMP.me) return;
+  if (e.target.closest('#emp-in')) return empClock('in'); if (e.target.closest('#emp-out')) return empClock('out');
+  const tb = e.target.closest('#emp-tabs button'); if (tb){ EMP.tab = tb.dataset.t; empRender(); }
+  if (e.target.closest('#emp-signout')) VIVIFB.signOut();
+});
+document.addEventListener('submit', async e => {
+  if (e.target.id !== 'emp-lv-form' || !EMP.me) return; e.preventDefault(); const a = $('#emp-lv-a').value, z = $('#emp-lv-z').value || a, kind = $('#emp-lv-kind').value, note = $('#emp-lv-note').value.trim();
+  if (!a || z < a){ $('#emp-lv-msg').textContent = 'Огноогоо шалгана уу.'; return; } if ((kind === 'fix' || kind === 'ot' || kind === 'other') && !note){ $('#emp-lv-msg').textContent = 'Тайлбар бичнэ үү (хэдэн цагт ирсэн/явсан г.м.).'; return; }
+  let days = 0; for (let d = a, k = 0; d <= z && k < 400; k++){ const w = new Date(d + 'T00:00:00Z').getUTCDay(); if (w && w !== 6) days++; d = new Date(Date.parse(d + 'T00:00:00Z') + 864e5).toISOString().slice(0, 10); }
+  try{ await EMP.db.collection('hrleave').add({email: EMP.email, emp: EMP.me.emp || '', name: EMP.me.name || '', kind, a, z, days, note, status: 'pending', by: 'app:' + EMP.email, at: new Date().toISOString(), hrNotified: false});
+    $('#emp-lv-msg').textContent = '✓ Илгээлээ — HR менежер шийднэ.'; $('#emp-lv-note').value = ''; }catch(err){ $('#emp-lv-msg').textContent = 'Илгээж чадсангүй: ' + (err.code || err.message); }
 });
 // ===================== revenue control: closing differences (charge a cashier, another day / store, wrong form, bank fee, other) =====================
 // revfix/{id}: {run, key, link?, store, d, ch, diff, act, amt, kas, note, status: done (< 100 000, the accountant closes) | pending → approved / rejected (the owner), by, at, dBy, dAt, dNote, ded?}
@@ -7542,6 +7756,10 @@ $('#imp-file').addEventListener('change', async e => {
 
 // ---------- boot ----------
 render();
+$('#gate-tel').addEventListener('click', () => { $('#gate-tel-f').hidden = false; $('#gate-tel').hidden = true; $('#gate-ph').focus(); });
+$('#gate-tel-f').addEventListener('submit', async e => { e.preventDefault(); const m = $('#gate-tel-msg'); m.textContent = 'Шалгаж байна…';
+  try{ await VIVIFB.signInPin($('#gate-ph').value, $('#gate-pin').value.replace(/\D/g, '')); m.textContent = ''; }
+  catch(err){ m.innerHTML = '<b style="color:var(--bad)">' + (err.code === 'no-phone' ? 'Энэ дугаарт нэвтрэх эрх олгоогүй байна — HR-т хандана уу.' : /too-many/.test(err.code || '') ? 'Олон удаа буруу оруулсан — хэсэг хугацааны дараа оролдоно уу.' : 'Дугаар эсвэл PIN буруу байна.') + '</b>'; } });
 $('#gate-in').addEventListener('click', () => VIVIFB.signIn().catch(e => { $('#gate-msg').textContent = 'Нэвтэрч чадсангүй: ' + (e.code || e.message || ''); }));
 $('#gate-out').addEventListener('click', () => VIVIFB.signOut());
 $('#sign-out').addEventListener('click', () => VIVIFB.signOut());
@@ -7578,7 +7796,9 @@ else VIVIFB.start(async () => {
   (isOwner ? db.collection('chats') : db.collection('chats').where('members', 'array-contains', me)).onSnapshot(s => { CH.chats = s.docs.map(d => ({id: d.id, ...d.data()})); CH.loaded = true; render(); }, onErr);
   if (ALLOW.contr) db.collection('contracts').onSnapshot(s => { CT.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.rev || ALLOW.cash || ALLOW.pay) db.collection('revfix').onSnapshot(s => { FIX.list = s.docs.map(d => ({id: d.id, ...d.data()})); resolveNames(FIX.list.map(x => x.by)); render(); }, onErr);
-  if (ALLOW.hr){ db.collection('hremp').onSnapshot(s => { HR.emp = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); db.collection('hrleave').onSnapshot(s => { HR.lv = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); db.collection('hrrec').onSnapshot(s => { HR.rec = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); }
+  if (ALLOW.hr){ db.collection('hremp').onSnapshot(s => { HR.emp = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); db.collection('hrleave').onSnapshot(s => { HR.lv = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); db.collection('hrrec').onSnapshot(s => { HR.rec = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+    db.collection('hratt').where('at', '>=', new Date(Date.now() - 75 * 864e5).toISOString()).onSnapshot(s => { HR.att = s.docs.map(d => d.data()); HR.att._v = Date.now(); render(); }, onErr);
+    db.collection('hrsites').onSnapshot(s => { HR.sites = {}; HR.cfg = {}; s.docs.forEach(d => { if (d.id === '_cfg') HR.cfg = d.data(); else HR.sites[d.id] = {id: d.id, ...d.data()}; }); render(); }, onErr); }
   if (ALLOW.inv) db.collection('inv').onSnapshot(s => { IV.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.wh || ALLOW.rcv) db.doc('config/wh').onSnapshot(d => { WS.cfg = d.exists ? d.data() : null; render(); }, onErr);
   if (ALLOW.wh){
@@ -7671,7 +7891,7 @@ else VIVIFB.start(async () => {
   }
   if (isOwner) db.doc('config/access').onSnapshot(d => { const x = d.exists ? d.data() : {}; ACCESS = {emails: x.emails || [], perms: x.perms || {}}; renderAccess(); }, onErr);
 }, () => { if (booted){ location.reload(); return; } gate('Google бүртгэлээрээ нэвтэрнэ үү.'); },
-   (email) => gate(`<b>${esc(email)}</b> бүртгэлд эрх олгогдоогүй байна. Эзэмшигчээс энэ имэйлийг «Тохиргоо» хэсэгт нэмүүлнэ үү.`, true));
+   async (email) => { if (await empStart(email)) return; gate(`<b>${esc(email)}</b> бүртгэлд эрх олгогдоогүй байна. Эзэмшигчээс энэ имэйлийг «Тохиргоо» хэсэгт нэмүүлнэ үү.`, true); });
 })();
 </script>
 </body>
