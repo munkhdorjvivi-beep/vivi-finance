@@ -4757,7 +4757,7 @@ function plTx(a, z){
   for (const {per} of plMonths(a, z)){ const P = PLS.months[per]; if (!P) continue; covered[per] = new Set((P.stmtAccs || []).map(String));
     for (const t of (P.stmtTx || [])){ const d = String(t.dt).slice(0, 10); if (d >= a && d <= z) out.push(t); } }
   for (const t of drFlowTx(a, z)){ const cov = covered[t.date.slice(0, 7)];
-    if (cov && (cov.has(String(t.fromAcc)) || cov.has(N2O[String(t.fromAcc)] || ''))) continue;
+    if (cov && (cov.has(String(t.fromAcc)) || cov.has(N2O[String(t.fromAcc)] || ''))) continue;   // (drFlowTx already brings the statements of revenue control, day by day)
     if (t.cat === 'internal') continue;
     const m = mt[t.id], req = m && m.req ? S.requests.find(x => x.id === m.req) : null;
     out.push({dt: String(t.dt).slice(0, 16), acc: String(t.fromAcc), cp: VIVI.norm(t.toAcc), name: t.toName || '', desc: t.desc || '', amount: t.amount, cat: t.cat, src: 'email', store: req && req.store || '', alloc: req && req.alloc || ''}); }
@@ -5162,8 +5162,15 @@ function drFlowTx(a, z){
   if (a < since){ const key = a + '|' + z;
     if (!DR.txExtra[key]){ DR.txExtra[key] = {tx: []}; db.collection('banktx').where('dt', '>=', a).where('dt', '<', shiftDay(z, 1)).get().then(s => { DR.txExtra[key] = {tx: s.docs.map(d => ({id: d.id, ...d.data()}))}; render(); }).catch(e => console.warn(e)); }
     const seen = new Set(tx.map(t => t.id)); tx = tx.concat(DR.txExtra[key].tx.filter(t => !seen.has(t.id))); }
-  return tx.filter(t => { const d = String(t.dt || '').slice(0, 10), to = VIVI.norm(t.toAcc); return d >= a && d <= z && +t.amount > 0 && (!VIVI.OWN.has(to) || DR_OUTSIDE.has(to)) && !DR_OUTSIDE.has(VIVI.norm(t.fromAcc)) && String(t.fromAcc) !== '5026747956'; })
-    .map(t => ({...t, date: String(t.dt).slice(0, 10), amount: +t.amount, cat: VIVI.outCat({desc: t.desc, cpName: t.toName, cp: t.toAcc, dr: +t.amount})}));
+  const al = x => { const n = VIVI.norm(x); return VIVI.accAlias ? VIVI.accAlias(n) : n; };
+  const cov = (acc, d) => { const S_ = (DR.stmt || {})[acc + '_' + d.slice(0, 7)]; return !!(S_ && S_.days && S_.days[d.slice(8)]); };
+  const fromMail = tx.filter(t => { const d = String(t.dt || '').slice(0, 10), to = VIVI.norm(t.toAcc), fr = al(t.fromAcc); return d >= a && d <= z && +t.amount > 0 && (!VIVI.OWN.has(to) || DR_OUTSIDE.has(to)) && !DR_OUTSIDE.has(fr) && String(t.fromAcc) !== '5026747956' && !cov(fr, d); })
+    .map(t => ({...t, date: String(t.dt).slice(0, 10), amount: +t.amount, src: 'mail', cat: VIVI.outCat({desc: t.desc, cpName: t.toName, cp: t.toAcc, dr: +t.amount})}));
+  // uploaded statements: every debit of the covered days (card purchases, fees, cash withdrawals… that never come by e-mail)
+  const fromStmt = []; for (const D of Object.values(DR.stmt || {})){ if (DR_OUTSIDE.has(D.acc) || D.acc === '5026747956') continue;
+    for (const t of (D.tx || [])) if (t.d >= a && t.d <= z) fromStmt.push({id: 's_' + D.acc + '_' + t.dt + '_' + t.amount, dt: t.dt, date: t.d, amount: +t.amount, fromAcc: D.acc, toAcc: t.cp, toName: t.name, desc: t.desc, cat: t.cat, src: 'stmt'}); }
+  const M = DR.marks || {};
+  return fromMail.concat(fromStmt).map(t => M[t.id] && M[t.id].own ? {...t, cat: 'own_md', mine: true} : t);
 }
 // why the expected and the recorded balance differ: each likely cause with its amount
 function drDiag(F, E, outAll){
@@ -5184,9 +5191,13 @@ function drDiag(F, E, outAll){
   // d) transfers to private accounts outside the balance (now counted as money out)
   const priv = outAll.filter(t => t.date >= E.from && t.date < c.date && DR_OUTSIDE.has(VIVI.norm(t.toAcc))).reduce((q, t) => q + t.amount, 0);
   if (priv) L.push(['ok', `Үлдэгдэлд ордоггүй хувийн данс руу шилжүүлсэн <b>${fmt(priv)} ₮</b> — гарсан мөнгөнд тооцсон.`]);
+  // d2) the real money in by the statements (covered accounts) vs what Smart says should arrive
+  const st = {}; for (const D of Object.values(DR.stmt || {})){ if (DR_OUTSIDE.has(D.acc) || D.acc === '5026747956') continue; for (const d of days.concat([c.date])){ if (d.slice(0, 7) !== D.per) continue; const x = (D.days || {})[d.slice(8)]; if (!x) continue; const o = st[d] = st[d] || {in: 0, out: 0, accs: new Set()}; o.in += x.in; o.out += x.out; o.accs.add(ACC_LABEL[D.acc] || D.acc); } }
+  if (Object.keys(st).length) L.push(['warn', `Банкны хуулгаар (оруулсан данснууд): ${Object.entries(st).sort().map(([d, o]) => `${esc(d.slice(5))} — орсон <b>${fmt(o.in)}</b>, гарсан <b>${fmt(o.out)}</b> (${o.accs.size} данс)`).join(' · ')}. Smart-ын дагуу банкинд орох ёстой: ${days.map(d => esc(d.slice(5)) + ' ' + fmt(R(d).bank)).join(' · ')}.`]);
+  else L.push(['bad', `Энэ хугацааны банкны хуулга системд алга — хуулга оруулбал бүх зарлага (карт, шимтгэл, бэлэн авалт, имэйлгүй шилжүүлэг) болон бодит орлого өдөр бүрээр тооцогдоно.`]);
   // e) which accounts sent outflow e-mails: an account with outflows but no e-mails makes the expected balance too high
   const byAcc = {}; for (const t of outAll) if (t.date >= E.from && t.date < c.date){ const k = ACC_LABEL[VIVI.norm(t.fromAcc)] || t.fromAcc || '?'; byAcc[k] = (byAcc[k] || 0) + t.amount; }
-  L.push(['warn', `Гарсан шилжүүлгийн имэйл ирсэн данснууд: ${Object.entries(byAcc).sort((x, y) => y[1] - x[1]).map(([k, v]) => esc(k) + ' ' + fmt(v)).join(' · ') || '<b>алга</b>'} — энд байхгүй данснаас мөнгө гарсан бол (имэйл ирдэггүй/хүрээгүй) хүлээгдэж буй үлдэгдэл хэт өндөр гарна.`]);
+  L.push(['warn', `Гарсан мөнгө тооцсон данснууд (имэйл + хуулга): ${Object.entries(byAcc).sort((x, y) => y[1] - x[1]).map(([k, v]) => esc(k) + ' ' + fmt(v)).join(' · ') || '<b>алга</b>'} — энд байхгүй данснаас мөнгө гарсан бол (имэйл ирдэггүй/хүрээгүй) хүлээгдэж буй үлдэгдэл хэт өндөр гарна.`]);
   // f) the real change per account between the two recorded balances
   const ch = b0 && b1 ? BAL_ACCS.map(([k, l]) => [l, (+((b1.items || {})[k]) || 0) - (+((b0.items || {})[k]) || 0), +((b0.items || {})[k]) || 0, +((b1.items || {})[k]) || 0]).filter(x => x[2] || x[3]) : [];
   const exp = c.expected - E.open;
@@ -5198,6 +5209,7 @@ function renderFlow(a, z){
   const bals = S.balances.map(b => ({date: b.date, total: BAL_ACCS.reduce((q, [k]) => q + (+((b.items || {})[k]) || 0), 0)}));
   // the expected balance rolls forward from the last recorded balance, so outflows are needed from that day on
   const openD = (bals.filter(b => b.date <= a).sort((x, y) => x.date.localeCompare(y.date)).pop() || {}).date || a;
+  if (typeof stmtFromRuns === 'function') stmtFromRuns(openD < a ? openD : a, z);   // statements of saved revenue controls
   const outAll = drFlowTx(openD < a ? openD : a, z), out = outAll.filter(t => t.date >= a);
   const pkRun = (S.runs || []).filter(r => r.waterfall && r.waterfall.credit && r.waterfall.credit.smart > 0 && r.waterfall.credit.pk != null).sort((x, y) => String(y.d1).localeCompare(String(x.d1)))[0];
   const F = DAILY.flow(Object.values(DR.days), outAll, bals, a, z, pkRun ? Math.min(1, pkRun.waterfall.credit.pk / pkRun.waterfall.credit.smart) : 0), T = F.tot;
@@ -5211,8 +5223,12 @@ function renderFlow(a, z){
     + (F.checks.length ? `<div class="tbl" style="margin-top:8px"><table><thead><tr><th>Өдөр (өглөө)</th><th class="n">Хүлээгдэж буй</th><th class="n">Бүртгэсэн бодит</th><th class="n">Зөрүү</th></tr></thead><tbody>${F.checks.map(c => `<tr class="${Math.abs(c.diff) > 100000 ? 'sev-bad' : 'sev-ok'}"><td class="mono">${esc(c.date)}</td><td class="n">${fmt(c.expected)}</td><td class="n">${fmt(c.actual)}</td><td class="n">${Math.abs(c.diff) > 100000 ? `<span class="chip c-bad">${sgn(c.diff)}</span>` : sgn(c.diff)}</td></tr>`).join('')}</tbody></table></div>` + drDiag(F, E, outAll) : '');
   $('#dr-flow').innerHTML = F.rows.slice().reverse().map(r => `<tr><td class="mono">${esc(r.date)}${r.has ? '' : ' <span class="chip c-warn">тайлангүй</span>'}</td><td class="n">${fmt(r.bank)}</td><td class="n">${fmt(r.cash)}</td><td class="n">${fmt(r.credit)}${r.crIn >= 1 ? `<div class="note">орсон ${fmt(Math.round(r.crIn))}</div>` : ''}</td><td class="n">${r.out ? '−' + fmt(r.out) : '0'}</td><td class="n"><b>${sgn(r.net)}</b></td></tr>`).join('');
   $('#dr-out').innerHTML = F.cats.length ? F.cats.map(c => `<tr><td>${esc(VIVI_CAT_LABEL(c.cat))}</td><td class="n">${c.n}</td><td class="n">${fmt(c.a)}</td></tr>`).join('') + `<tr style="font-weight:700"><td>Нийт</td><td class="n">${out.length}</td><td class="n">${fmt(T.out)}</td></tr>` : '<tr><td colspan="3" class="empty">Гарсан шилжүүлэг алга (имэйл ирээгүй).</td></tr>';
-  $('#dr-outlist').innerHTML = out.sort((x, y) => String(y.dt).localeCompare(String(x.dt))).slice(0, 300).map(t => `<tr><td class="mono">${esc(String(t.dt).replace('T', ' ').slice(0, 16))}</td><td>${esc(ACC_LABEL[VIVI.norm(t.fromAcc)] || t.fromAcc)}</td><td>${esc(t.toName || '')}<div class="note mono">${esc(t.toAcc || '')}</div></td><td class="n">${fmt(t.amount)}</td><td>${esc(t.desc || '')}</td><td><span class="chip c-grey">${esc(VIVI_CAT_LABEL(t.cat))}</span></td></tr>`).join('');
+  $('#dr-outlist').innerHTML = out.sort((x, y) => String(y.dt).localeCompare(String(x.dt))).slice(0, 300).map(t => `<tr><td class="mono">${esc(String(t.dt).replace('T', ' ').slice(0, 16))}</td><td>${esc(ACC_LABEL[VIVI.norm(t.fromAcc)] || t.fromAcc)}</td><td>${esc(t.toName || '')}<div class="note mono">${esc(t.toAcc || '')}</div></td><td class="n">${fmt(t.amount)}</td><td>${esc(t.desc || '')}</td><td><span class="chip ${t.mine ? 'c-warn' : 'c-grey'}">${esc(t.mine ? '👤 Миний хувийн зардал' : VIVI_CAT_LABEL(t.cat))}</span> <span class="note">${t.src === 'stmt' ? 'хуулга' : 'имэйл'}</span>${isOwner ? ` <button class="btn" type="button" data-tx-mine="${esc(t.id)}" style="padding:1px 6px" title="${t.mine ? 'Хувийн зардал биш' : 'Миний хувийн зардал гэж тэмдэглэх'}">${t.mine ? '↺' : '👤'}</button>` : ''}</td></tr>`).join('');
 }
+
+document.addEventListener('click', async e => { const b = e.target.closest('[data-tx-mine]'); if (!b || !isOwner || !db) return; const id = b.dataset.txMine, on = !((DR.marks || {})[id] || {}).own;
+  DR.marks = DR.marks || {}; DR.marks[id] = {own: on}; render();
+  try{ await db.doc('txmark/' + id.replace(/\//g, '_')).set({own: on, by: me, at: new Date().toISOString()}); }catch(err){ alert('Хадгалж чадсангүй: ' + (err.code || err.message)); } });
 // ---------- recurring transfers (Давтамжит гүйлгээ) ----------
 // accountant adds / changes / removes; a new item or a change waits for the owner's approval;
 // only the approved version (appr) explains bank transfers and silences the «Хүсэлтгүй» alarm
@@ -7437,7 +7453,45 @@ async function regStmt(p, file, hash){
     await ref.set({acc, r: M.map(x => x[0] + '_' + x[1]), last: z, by: me, at: new Date().toISOString()});
     DS.cov[acc] = {acc, r: M.map(x => x[0] + '_' + x[1]), last: z};
   }catch(err){ console.warn('stmtcov', err); }
+  try{ await stmtDaySave(p, acc, a, z); }catch(err){ console.warn('stmtday', err); }
   await upLog({kind: 'stmt', file, hash: hash || '', acc, a, z, n: p.rows.length});
+}
+// every uploaded statement keeps its real money per day: in / out (and transfers between our own counted accounts apart) + each debit,
+// so «Хүлээгдэж буй үлдэгдэл» uses ALL outflows of the account (card purchases, fees, cash withdrawals, unapproved transfers), not only the e-mailed ones
+// one statement → {YYYY-MM: {days: {DD: {in, out, iin, iout, n}}, tx: [debits]}} for the days it covers
+function stmtDaysOf(p, acc, a, z){
+  const al = x => { const n = VIVI.norm(x); return VIVI.accAlias ? VIVI.accAlias(n) : n; }, OUTS = typeof DR_OUTSIDE !== 'undefined' ? DR_OUTSIDE : new Set();
+  const isInt = cp => { const c = al(cp); return !!c && c !== acc && VIVI.OWN.has(c) && !OUTS.has(c); };
+  const dayOf = t => typeof t === 'string' ? t.slice(0, 10) : t instanceof Date ? isoU(t.getTime()) : isoU(+t), byM = {};
+  for (let d = a, k = 0; d && d <= z && k < 400; d = shiftDay(d, 1), k++){ const M = byM[d.slice(0, 7)] = byM[d.slice(0, 7)] || {days: {}, tx: []}; M.days[d.slice(8)] = {in: 0, out: 0, iin: 0, iout: 0, n: 0}; }
+  for (const r of p.rows || []){ const d = dayOf(r.dt); if (!d || d < a || d > z) continue; const M = byM[d.slice(0, 7)], D = M.days[d.slice(8)];
+    const dt = typeof r.dt === 'string' ? r.dt.slice(0, 16) : new Date(r.dt instanceof Date ? r.dt.getTime() : +r.dt).toISOString().slice(0, 16); D.n++;
+    if (r.cr > 0){ if (isInt(r.cp)) D.iin += r.cr; else D.in += r.cr; }
+    if (r.dr > 0){ if (isInt(r.cp)) D.iout += r.dr; else { D.out += r.dr; M.tx.push({dt, d, amount: Math.round(r.dr * 100) / 100, cp: VIVI.norm(r.cp), name: String(r.cpName || '').slice(0, 60), desc: String(r.desc || '').slice(0, 100), cat: VIVI.outCat(r)}); } } }
+  for (const M of Object.values(byM)) for (const D of Object.values(M.days)) for (const k of ['in', 'out', 'iin', 'iout']) D[k] = Math.round(D[k] * 100) / 100;
+  return byM;
+}
+const stmtSpan = p => { const ds = (p.rows || []).map(t => typeof t.dt === 'string' ? t.dt.slice(0, 10) : isoU(t.dt instanceof Date ? t.dt.getTime() : +t.dt)).filter(Boolean).sort(); return p.per ? [p.per[0], p.per[1]] : [ds[0], ds[ds.length - 1]]; };
+async function stmtDaySave(p, acc, a, z){
+  for (const [per, M] of Object.entries(stmtDaysOf(p, acc, a, z))){ const ref = db.doc('stmtday/' + acc + '_' + per), o = await ref.get(), old = o.exists ? o.data() : {days: {}, tx: []};
+    const doc = {acc, per, days: {...(old.days || {}), ...M.days}, tx: (old.tx || []).filter(t => !M.days[String(t.d).slice(8)]).concat(M.tx).slice(-3000), by: me, at: new Date().toISOString()};
+    await ref.set(doc); DR.stmt = DR.stmt || {}; DR.stmt[acc + '_' + per] = doc; }
+}
+// statements already in the saved revenue controls (cashraw): read once, so nothing has to be uploaded again
+const STMT_RUNS = {done: {}, busy: false};
+async function stmtFromRuns(a, z){
+  if (STMT_RUNS.busy || !db || typeof loadRaw !== 'function') return; const todo = (S.runs || []).filter(r => r.rawN && r.id !== 'latest' && !STMT_RUNS.done[r.id] && r.d1 >= a && r.d0 <= z);
+  if (!todo.length) return; STMT_RUNS.busy = true;
+  try{ for (const r of todo.sort((x, y) => String(x.savedAt).localeCompare(String(y.savedAt)))){ STMT_RUNS.done[r.id] = true;
+      try{ const files = await loadRaw(r.rawN, r.id);
+        for (const f of files) if (f.type === 'bank' && (f.rows || []).length){ const acc = String(f.acc || f.rows[0].acc || ''); if (!acc) continue; const [fa, fz] = stmtSpan(f); if (!fa) continue;
+          for (const [per, M] of Object.entries(stmtDaysOf(f, acc, fa, fz))){ const k = acc + '_' + per, cur = DR.stmt && DR.stmt[k];
+            // an uploaded statement (stmtday) wins for its days; a run fills the other days
+            const days = {...M.days, ...((cur && cur.days) || {})}, tx = ((cur && cur.tx) || []).concat(M.tx.filter(t => !(cur && cur.days && cur.days[String(t.d).slice(8)])));
+            DR.stmt = DR.stmt || {}; DR.stmt[k] = {acc, per, days, tx, fromRun: r.id};
+            if (isOwner) db.doc('stmtday/' + k).set({acc, per, days, tx: tx.slice(-3000), by: me, at: new Date().toISOString(), fromRun: r.id}).catch(() => {}); } } }
+      catch(err){ console.warn('stmt from run', r.id, err); } }
+  } finally { STMT_RUNS.busy = false; } render();
 }
 const dsAlias = a => (VIVI.accAlias ? VIVI.accAlias(a) : a), dsIds = acc => [acc, ...Object.entries(VIVI.ACC_ALIAS || {}).filter(([, v]) => v === acc).map(([k]) => k)];
 const covHas = (acc, d) => dsIds(dsAlias(acc)).some(id => ((DS.cov[id] || {}).r || []).some(x => { const [a, z] = x.split('_'); return d >= a && d <= z; }));
@@ -7943,6 +7997,8 @@ else VIVIFB.start(async () => {
     db.collection('monthclose').onSnapshot(s => { DS.closed = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); }
   if (isOwner){ $('#aud-card').hidden = false; db.collection('audit').where('at', '>=', new Date(Date.now() - 60 * 864e5).toISOString()).onSnapshot(s => { AUD.list = s.docs.map(d => ({id: d.id, ...d.data()})); renderAudit(); }, onErr); }
   if (ALLOW.daily) db.collection('stocksnap').onSnapshot(s => { AN.snaps = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
+  if (isOwner || (ALLOW.bank && ALLOW.bal)){ db.collection('stmtday').where('per', '>=', new Date(Date.now() - 100 * 864e5).toISOString().slice(0, 7)).onSnapshot(s => { DR.stmt = {...Object.fromEntries(Object.entries(DR.stmt || {}).filter(([, v]) => v.fromRun)), ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; render(); }, onErr);
+    db.collection('txmark').onSnapshot(s => { DR.marks = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); }
   if (ALLOW.daily || ALLOW.rev) db.collection('daily').where('date', '>=', DR_FROM).onSnapshot(s => { const keep = Object.fromEntries(Object.entries(DR.days).filter(([d]) => d < DR_FROM)); DR.days = {...keep, ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; DR.live = true; render(); }, onErr);
   $('#cash-upload').hidden = !(isOwner || ALLOW.rev); window.REV_DAILY = isOwner || !!ALLOW.daily || !!ALLOW.rev;
   $('#dr-upload').hidden = !ALLOW.daily; DR.canFlow = isOwner || (ALLOW.bank && ALLOW.bal);
