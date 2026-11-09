@@ -1411,7 +1411,7 @@ const VIVI = (() => {
     const cashSales = {}, ncSales = {}, credit = {};
     const F = {}, W = {cash:{smart:0,bank:0}, pos:{smart:0,bank:0}, qpay:{smart:0,bank:0}, credit:{smart:0,bank:0,pk:0,sp:0,spPrev:0,sSp:0,sPk:0,sUnk:0,staff:{}}};
     const spA = addMonth(d0), spZ = addDays(addMonth(d1), 3);   // when this period's StorePay money arrives
-    const FD = opts.detail ? {} : null, fdP = (store, d, ch, side, x) => { if (!FD) return; const o = FD[store+'|'+d+'|'+ch] = FD[store+'|'+d+'|'+ch] || {s: [], b: []}; o[side].push(x); };   // the transactions behind each day × store × form (on request)
+    const LED = opts.detail ? [] : null, FD = opts.detail ? {} : null, fdP = (store, d, ch, side, x) => { if (!FD) return; const o = FD[store+'|'+d+'|'+ch] = FD[store+'|'+d+'|'+ch] || {s: [], b: []}; o[side].push(x); };   // the transactions behind each day × store × form (on request)
     const fAdd = (store, d, ch, k, v) => { const key = store+'|'+d+'|'+ch; const o = F[key] = F[key] || {store, d, ch, smart:0, bank:0}; o[k] += v; };
     for (const r of smart){
       if (!inWin(r.d)) continue;
@@ -1429,6 +1429,7 @@ const VIVI = (() => {
       const c = classifyCredit(t); if (!c) continue;
       totals[c.ch] = (totals[c.ch]||0) + t.cr;
       const d = iso(t.dt);
+      if (LED && d >= d0 && d <= d1 && ['cash', 'pos', 'qpay', 'transfer', 'storepay', 'pocket'].includes(c.ch)) LED.push({store: c.store || (c.ch === 'storepay' ? 'StorePay' : 'Pocket'), dt: t.dt, d, cr: t.cr, g: c.ch === 'qpay' ? c.g : t.cr, desc: t.desc, ch: c.ch, acc: t.acc});   // QPay booked gross (the fee separately)   // the ledger: every store receipt on its bank day
       if (c.ch === 'cash'){ if (d >= d0 && d <= addDays(d1,1)){ (deposits[c.store] = deposits[c.store] || []).push({d, dt:t.dt, cr:t.cr, desc:t.desc, acc:t.acc}); W.cash.bank += t.cr; } }
       else if (['pos','qpay','transfer'].includes(c.ch) && c.sd && inWin(c.sd)){ const k = c.store+'|'+c.sd; ncBank[k] = (ncBank[k]||0) + c.g; ncBankRows.push({...c, acc:t.acc, cr:t.cr, desc:t.desc}); const fc = c.ch === 'pos' ? 'pos' : 'qpay'; W[fc].bank += c.g; fdP(c.store, c.sd, c.ch === 'pos' ? 'pos' : 'qpay', 'b', {dt: t.dt, amt: c.g, cr: t.cr, desc: t.desc, acc: t.acc}); fAdd(c.store, c.sd, fc, 'bank', c.g); }
       else if (c.ch === 'pocket' && d >= d0 && d <= addDays(d1, 2)){ W.credit.bank += t.cr; W.credit.pk += t.cr; }
@@ -1464,7 +1465,7 @@ const VIVI = (() => {
     { const all = new Set(), wk = new Set(); for (const r of smart){ if (!inWin(r.d) || r.form === 'Бэлнээр') continue; all.add(r.d); if (r.kas) wk.add(r.d); }
       kas.cov = {days: all.size, withKas: wk.size, miss: [...all].filter(d => !wk.has(d)).sort()}; }
     const explain = explainDiffs({d0, d1, forms, smart, bank, ncBankRows, cash, W, kas});
-    return {d0, d1, summary, cash, noncash, deposits: allDeps, totals, forms, waterfall: W, kas, explain, nSmart: smart.length, nBank: bank.length, detail: FD};
+    return {d0, d1, summary, cash, noncash, deposits: allDeps, totals, forms, waterfall: W, kas, explain, nSmart: smart.length, nBank: bank.length, detail: FD, ledger: LED};
   }
   // ---------- why the forms differ: every day × store × form difference gets a reason ----------
   // words customers write in the transfer description → which shop (a pop-up's money often lands on a regular shop's account)
@@ -4069,6 +4070,30 @@ $('#rev-xlsx').addEventListener('click', async () => {
         for (const [k, D] of Object.entries(DT).filter(([k]) => k.endsWith('|credit')).sort()){ const [st, d] = k.split('|'); for (const r of D.s) cr.push([d, st, r.t || '', r.kas || '', r.pos || '', r.no || '', r.who || '(нэргүй)', /store\s*pay|сторпэй/i.test(r.who) ? 'StorePay' : /pocket|покет/i.test(r.who) ? 'Pocket' : r.who ? 'Хувь хүн' : '?', Math.round(r.amt)]); }
         if (cr.length > 3){ const ws4 = XS.utils.aoa_to_sheet(cr); ws4['!cols'] = [11, 16, 8, 18, 12, 14, 24, 12, 12].map(w => ({wch: w})); for (let c = 0; c < 9; c++){ const h = ws4[XS.utils.encode_cell({r: 2, c})]; if (h) h.s = {font: {bold: true, color: {rgb: 'FFFFFF'}}, fill: {patternType: 'solid', fgColor: {rgb: '1F5F8B'}}}; }
           ws4['!autofilter'] = {ref: XS.utils.encode_range({s: {r: 2, c: 0}, e: {r: cr.length - 1, c: 8}})}; XS.utils.book_append_sheet(wb, ws4, 'Зээлийн борлуулалт'); }
+        // «Дансны хуулга» for the accounting program: per store account (121224 …) — sales per day × cashier × form as debit, every bank receipt on its bank day as credit,
+        // the balance with formulas from an opening balance the accountant types in (yellow)
+        const ACCT = [[/food/i, '121224', 'Food city'], [/драгон|dragon/i, '121226', 'Драгон'], [/онлайн|online/i, '121227', 'Онлайн'], [/нийслэл/i, '121229', 'Нийслэл']];
+        const acOf = st => ACCT.find(([re]) => re.test(String(st || ''))), FN = {cash: 'Бэлэн', pos: 'Карт', qpay: 'QPay/шилж.', transfer: 'Шилжүүлэг', credit: 'Зээл', storepay: 'StorePay', pocket: 'Pocket'};
+        const ymd = d => String(d).replace(/-/g, '/'), docNo = t => { const x = String(t || ''); const m = x.match(/qpay\s+(\d{9,})/i) || x.match(/TRF=(\d+)/) || x.match(/хаалт:\s*(\d+):/i) || x.match(/ХААНААС:\s*(\d{6})/); return m ? m[1] : ''; };
+        const ent = {}; const add = (code, e) => (ent[code] = ent[code] || []).push(e);
+        for (const [k, D] of Object.entries(DT)){ const [st, d, ch] = k.split('|'), A = acOf(st); if (!A) continue; const g = {};
+          for (const r of D.s){ const kk = (r.kas || '') + '|' + ch; (g[kk] = g[kk] || {kas: r.kas || '', ch, amt: 0, n: 0}); g[kk].amt += r.amt; g[kk].n++; }
+          for (const o of Object.values(g)) add(A[1], {d, t: '0', no: '1', txt: `Дэлгүүрийн борлуулалт. ${st}. ${o.kas || '(кассчингүй)'}-${ymd(d)}`, dr: Math.round(o.amt * 100) / 100, cr: 0, form: FN[o.ch] || o.ch}); }
+        const other = [];
+        for (const x of (m2.ledger || [])){ const A = acOf(x.store), e = {d: x.d, t: '1' + new Date(x.dt).toISOString(), no: docNo(x.desc), txt: x.desc || '', dr: 0, cr: Math.round((x.g || x.cr) * 100) / 100, fee: Math.round(((x.g || x.cr) - x.cr) * 100) / 100, form: FN[x.ch] || x.ch, acc: x.acc, st: x.store}; if (A) add(A[1], e); else other.push(e); }
+        const L = [['', '', '', '', '', 'ВивекаВикториа ХХК'], ['Дансны хуулга'], ['', '', '', '', '', d0.replace(/-/g, '/') + ' - ' + d1.replace(/-/g, '/')], ['Баримтын №', 'Огноо', 'Гүйлгээний утга', 'Дебет', 'Кредит', 'Үлдэгдэл', 'Хэлбэр', 'Шимтгэл (QPay)']], sty = [];
+        const XL = (r, c) => XS.utils.encode_cell({r, c});
+        const sections = ACCT.map(([, code, nm]) => [code, nm]).concat(other.length ? [['—', 'Бусад данс (дэлгүүр тодорхойгүй)']] : []);
+        for (const [code, nm] of sections){ const E = (code === '—' ? other : ent[code] || []).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : a.t < b.t ? -1 : a.t > b.t ? 1 : 0); if (!E.length && code !== '121229') continue;
+          const h = L.length; L.push([code === '—' ? nm : `${code} - Дэлгүүрийн борлуулалт - ${nm}`, '', '', '', 'Эхний үлдэгдэл :', 0]); sty.push([h, 'sec']); let bal = 0, sd = 0, sc = 0;
+          const first = L.length; for (const e of E){ const r = L.length; bal += e.dr - e.cr; sd += e.dr; sc += e.cr; L.push([e.no, {xd: e.d}, e.txt, e.dr, e.cr, {f: `${XL(r - 1, 5)}+${XL(r, 3)}-${XL(r, 4)}`, v: bal}, e.form + (e.st && code === '—' ? ' · ' + e.st : ''), e.fee || '']); }
+          const last = L.length - 1, tr = L.length; L.push(['Дансны дүн', '', '', E.length ? {f: `SUM(${XL(first, 3)}:${XL(last, 3)})`, v: sd} : 0, E.length ? {f: `SUM(${XL(first, 4)}:${XL(last, 4)})`, v: sc} : 0, {f: E.length ? XL(last, 5) : XL(h, 5), v: bal}, '']); sty.push([tr, 'tot']); L.push([]); }
+        const ws5 = XS.utils.aoa_to_sheet([]); L.forEach((row, r) => row.forEach((v, c) => { if (v === '' || v == null) return; const cell = v && v.f ? {t: 'n', f: v.f, v: v.v || 0} : v && v.xd ? {t: 'n', v: (Date.parse(v.xd + 'T00:00:00Z') - Date.UTC(1899, 11, 30)) / 864e5, z: 'yyyy/mm/dd'} : typeof v === 'number' ? {t: 'n', v, z: '#,##0.00'} : {t: 's', v: String(v)}; if (cell.t === 'n' && c >= 3 && c !== 6) cell.z = '#,##0.00'; ws5[XL(r, c)] = cell; }));
+        ws5['!ref'] = XS.utils.encode_range({s: {r: 0, c: 0}, e: {r: L.length, c: 7}}); ws5['!cols'] = [18, 11, 62, 15, 15, 17, 12, 12].map(w => ({wch: w}));
+        const HB = {font: {bold: true, color: {rgb: 'FFFFFF'}}, fill: {patternType: 'solid', fgColor: {rgb: '1F5F8B'}}, alignment: {horizontal: 'center'}};
+        for (let c = 0; c < 7; c++){ const x = ws5[XL(3, c)]; if (x) x.s = HB; } if (ws5.A2) ws5.A2.s = {font: {bold: true, sz: 14}}; if (ws5.F1) ws5.F1.s = {font: {bold: true}};
+        for (const [r, k] of sty) for (let c = 0; c < 7; c++){ const x = ws5[XL(r, c)]; if (!x) continue; x.s = k === 'sec' ? {font: {bold: true}, fill: {patternType: 'solid', fgColor: {rgb: 'E8EEF4'}}} : {font: {bold: true}, border: {top: {style: 'thin'}}}; if (k === 'sec' && c === 5) x.s = {font: {bold: true}, fill: {patternType: 'solid', fgColor: {rgb: 'FFF3B0'}}, numFmt: '#,##0.00'}; }
+        XS.utils.book_append_sheet(wb, ws5, 'Дансны хуулга (НББ)');
       }catch(err){ console.warn('detail sheet', err); }
       XS.writeFile(wb, r.filename); }
     catch(err){ console.warn(err); alert('Excel үүсгэж чадсангүй: ' + (err.message || err)); }
