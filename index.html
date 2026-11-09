@@ -3024,6 +3024,19 @@ let balView = 'all';
 $('#bal-fields').innerHTML = BAL_GROUPS.map(([g, t, L]) => `<div class="f full" style="font-weight:600;margin-top:4px">${t}</div>` + L.map(([k,l]) => `<label class="f">${esc(l)}<input id="bal-${k}" inputmode="decimal" placeholder="0"></label>`).join('')).join('');
 document.addEventListener('click', e => { const b = e.target.closest('#bal-view button'); if (!b) return; balView = b.dataset.v; $$('#bal-view button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); renderBal(); });
 $('#bal-date').value = today();
+// edit: picking a date that already has a record (or ✏️ on a row) loads its numbers into the form; saving overwrites it (the old numbers stay in «засварласан» history)
+function balLoad(date){ const b = S.balances.find(x => x.date === date), it = (b && b.items) || {};
+  BAL_ACCS.forEach(([k]) => { $('#bal-' + k).value = it[k] == null || it[k] === '' ? '' : fmt(it[k]); });
+  $('#bal-msg').innerHTML = b ? `<b>${esc(date)}-ний бүртгэлийг засварлаж байна</b> — тоогоо засаад «Хадгалах» дарна уу.` : ''; }
+$('#bal-date').addEventListener('change', e => balLoad(e.target.value));
+document.addEventListener('click', async e => {
+  const ed = e.target.closest('[data-bal-edit]'), del = e.target.closest('[data-bal-del]');
+  if (ed){ $('#bal-date').value = ed.dataset.balEdit; balLoad(ed.dataset.balEdit); $('#bal-form').scrollIntoView({behavior: 'smooth', block: 'start'}); return; }
+  if (del && db && isOwner){ const d = del.dataset.balDel, b = S.balances.find(x => x.date === d); if (!b) return;
+    const tot = BAL_ACCS.reduce((q, [k]) => q + (+((b.items || {})[k]) || 0), 0);
+    if (!confirm(`${d}-ний дансны үлдэгдлийн бүртгэлийг (нийт ${fmt(tot)} ₮) устгах уу?`)) return;
+    try{ await db.doc('balances/' + d).delete(); }catch(err){ alert('Устгаж чадсангүй: ' + (err.code || err.message)); } }
+});
 
 // ---------- names ----------
 async function resolveNames(ids){
@@ -3328,7 +3341,7 @@ function renderBal(){
   const ncol = 2 + cols.reduce((n, [, , L]) => n + L.length + 1, 0) + (balView === 'all' ? 1 : 0);
   $('#bal-body').innerHTML = list.length ? list.map(b => { const it = b.items||{};
     const cells = cols.map(([g, t, L]) => L.map(([k]) => `<td class="n">${it[k] == null || it[k] === '' ? '–' : fmt(it[k])}</td>`).join('') + `<td class="n" style="background:var(--surface-2,#eef0ea)"><b>${fmt(sumG(it, g))}</b></td>`).join('');
-    return `<tr><td class="mono">${esc(b.date)}<div class="note">${b.at ? esc(fmtDT(b.at).slice(11)) : ''}${(b.hist || []).length ? ` · засварласан ${b.hist.length}` : ''}</div></td>${cells}${balView === 'all' ? `<td class="n"><b>${fmt(sumG(it, 'co') + sumG(it, 'pr'))}</b></td>` : ''}<td class="note">${esc(nameOf(b.by))}</td></tr>`; }).join('')
+    return `<tr><td class="mono">${esc(b.date)}<div class="note">${b.at ? esc(fmtDT(b.at).slice(11)) : ''}${(b.hist || []).length ? ` · засварласан ${b.hist.length}` : ''}</div></td>${cells}${balView === 'all' ? `<td class="n"><b>${fmt(sumG(it, 'co') + sumG(it, 'pr'))}</b></td>` : ''}<td class="note" style="white-space:nowrap">${esc(nameOf(b.by))} <button class="btn" type="button" data-bal-edit="${esc(b.date)}" title="Засах" style="padding:2px 8px">✏️</button>${isOwner ? ` <button class="btn bad" type="button" data-bal-del="${esc(b.date)}" title="Устгах" style="padding:2px 8px">🗑</button>` : ''}</td></tr>`; }).join('')
     : `<tr><td colspan="${ncol}" class="empty">Бүртгэл алга. Дээрх маягтыг бөглөнө үү.</td></tr>`;
 }
 
@@ -3489,7 +3502,7 @@ $('#bal-form').addEventListener('submit', async e => {
   const date = $('#bal-date').value || today(), items = {};
   for (const [k] of BAL_ACCS){ const v = $('#bal-'+k).value.trim(); if (v !== '') items[k] = parseAmt(v) || 0; }
   const old = S.balances.find(b => b.date === date); const hist = old ? (old.hist || []).concat([{items: old.items || {}, by: old.by || null, at: old.at || null}]).slice(-10) : [];
-  try{ await db.doc('balances/'+date).set({date, items, by: me, at: new Date().toISOString(), hist}); $('#bal-msg').textContent = 'Хадгаллаа.'; BAL_ACCS.forEach(([k]) => $('#bal-'+k).value = ''); }
+  try{ await db.doc('balances/'+date).set({date, items, by: me, at: new Date().toISOString(), hist}); $('#bal-msg').textContent = old ? 'Засварлаж хадгаллаа (хуучин тоо түүхэнд үлдсэн).' : 'Хадгаллаа.'; BAL_ACCS.forEach(([k]) => $('#bal-'+k).value = ''); }
   catch(err){ $('#bal-msg').textContent = err && err.code === 'invalid_argument' ? 'Хадгалах эрх алга.' : 'Хадгалж чадсангүй.'; }
 });
 
