@@ -870,6 +870,19 @@ body{margin:0;background:var(--bg)}
         <div class="filter chips" id="bal-view"><button data-v="all" aria-pressed="true">Бүгд</button><button data-v="co" aria-pressed="false">Компанийн данс</button><button data-v="pr" aria-pressed="false">Хувийн данс</button></div></div>
       <div class="tbl"><table><thead id="bal-head"></thead><tbody id="bal-body"><tr><td class="empty">Бүртгэл алга.</td></tr></tbody></table></div>
     </div>
+    <div class="card" id="cp-card">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px"><h2 style="margin:0">📈 Мөнгөний урсгалын прогноз</h2>
+        <div class="row" style="gap:8px;align-items:flex-end"><label class="f" style="width:auto">Хүртэл<input type="date" id="cp-end" style="width:auto"></label>
+          <label class="f" style="width:auto">Өдрийн дундаж орлого (хоосон = автомат)<input id="cp-avg" inputmode="decimal" placeholder="автомат" style="width:150px"></label></div></div>
+      <p class="note" style="margin:0 0 8px">Сүүлд бүртгэсэн дансны үлдэгдлээс эхэлж өдөр бүр: <b>+ орлого</b> (тайлантай өдөр — бодит борлуулалт: карт, QPay шимтгэлгүй + бэлэн; ирээдүйд — сүүлийн 4 долоо хоногийн ижил гарагийн дундаж; зээлээр зарсныг тооцоогүй) <b>− зарлага</b> (өнгөрсөн өдөр — банкнаас бодит гарсан (имэйлээр), ирээдүйд — доорх тогтмол зардал + батлагдсан, төлөгдөөгүй хүсэлтүүд).</p>
+      <div class="kpis" id="cp-kpis"></div>
+      <div id="cp-chart" style="margin:6px 0 10px"></div>
+      <details><summary style="cursor:pointer;font-weight:600">Өдөр бүрээр</summary><div class="tbl" style="max-height:480px;overflow:auto;margin-top:6px"><table><thead><tr><th>Огноо</th><th class="n">Өглөө</th><th class="n">+ Орлого</th><th class="n">− Зарлага</th><th>Юу</th><th class="n">Орой</th></tr></thead><tbody id="cp-days"></tbody></table></div></details>
+      <h3 style="margin:16px 0 6px">Тогтмол зардал (нягтлан засна)</h3>
+      <p class="note" style="margin:0 0 6px">Давтамж: <b>сар бүр</b> — сарын өдөр (хэд хэдэн бол «5 20»; 31 = сарын сүүлийн өдөр), <b>7 хоног бүр</b> — гараг (1 = Даваа … 7 = Ням), <b>өдөр бүр</b>, <b>нэг удаа</b> — огноо. «Хүртэл» хоосон бол хугацаагүй. Дүн өөрчлөгдвөл энд засаад хадгална.</p>
+      <div class="tbl" style="overflow:auto"><table><thead><tr><th>Нэр</th><th class="n">Дүн ₮</th><th>Давтамж</th><th>Өдөр / гараг / огноо</th><th>Хүртэл</th><th>Тайлбар</th><th></th></tr></thead><tbody id="cp-plan"></tbody></table></div>
+      <div class="row" style="margin-top:8px;gap:8px"><button class="btn" type="button" id="cp-add">＋ Мөр нэмэх</button><button class="btn primary" type="button" id="cp-save">Хадгалах</button><span class="note" id="cp-msg"></span></div>
+    </div>
   </section>
 </div>
 
@@ -2261,7 +2274,41 @@ const DAILY = (() => {
     }
     return {creditBy, rows, tot: Object.fromEntries(Object.entries(tot).map(([k, v]) => [k, r2(v)])), cats: Object.values(cats).map(c => ({...c, a: r2(c.a)})).sort((x, y) => y.a - x.a), exp, checks};
   }
-  const R = {flow, FEES, setNorm, salesDays, payDays, payList, parseList, sum, supplierTable, storeTable, payTable};
+  // ---- cash plan: from the last recorded balance, day by day — money in (real sales where the day is reported, else the average of the same weekday)
+  // and money out (real bank outflows for past days when known, else the planned costs + approved unpaid requests)
+  const nx = d => new Date(Date.parse(d + 'T00:00:00Z') + 86400e3).toISOString().slice(0, 10);
+  const wdOf = d => new Date(d + 'T00:00:00Z').getUTCDay();   // 0 = Sunday
+  const lastDom = d => new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7), 0)).getUTCDate();
+  function planDue(items, d){   // planned costs falling on day d
+    const out = [], dom = +d.slice(8), ld = lastDom(d), wd = wdOf(d) || 7;
+    for (const it of items || []){ const amt = +it.amt || 0; if (!amt) continue; if (it.from && d < it.from) continue; if (it.until && d > it.until) continue;
+      const f = it.freq || 'month'; let hit = false;
+      if (f === 'day') hit = !it.skipSun || wd !== 7;
+      else if (f === 'week') hit = String(it.day || '').split(/[ ,;]+/).map(Number).includes(wd);
+      else if (f === 'once') hit = it.date === d;
+      else hit = String(it.day || '').split(/[ ,;]+/).filter(Boolean).map(Number).some(x => Math.min(x, ld) === dom);   // «31» → the last day of a short month
+      if (hit) out.push({name: it.name || '—', amt}); }
+    return out; }
+  function cashPlan(o){
+    const {start, today, end} = o, byDay = {}; for (const D of o.days || []) byDay[D.date] = D;
+    const inOf = d => { const D = byDay[d]; if (!D || !D.pay) return null; let v = 0, cr = 0; for (const U of Object.values(D.pay)) for (const [f, F] of Object.entries(U)){ const k = KIND(f, F); if (k === 'cash') v += F.a; else if (k === 'credit') cr += F.a; else v += F.a * (1 - (FEES[f] || 0)); } return {v, cr}; };
+    // average money-in per weekday from the last 28 reported days before today
+    const W = {}, all = []; for (let d = today, k = 0; k < 60 && all.length < 28; k++){ d = new Date(Date.parse(d + 'T00:00:00Z') - 86400e3).toISOString().slice(0, 10); const x = inOf(d); if (!x) continue; all.push(x.v); (W[wdOf(d)] = W[wdOf(d)] || []).push(x.v); }
+    const avg = a => a && a.length ? a.reduce((p, q) => p + q, 0) / a.length : null, avgAll = o.avgIn > 0 ? o.avgIn : avg(all) || 0;
+    const avgWd = d => o.avgIn > 0 ? o.avgIn : avg(W[wdOf(d)]) ?? avgAll;
+    const outBy = {}; for (const t of o.out || []) (outBy[t.date] = outBy[t.date] || []).push(t);
+    const rows = []; let bal = +start.total || 0, d = start.date, minB = Infinity, minD = '', firstNeg = '';
+    while (d <= end){
+      const x = inOf(d), past = d < today, useAvg = !x;
+      const inV = x ? x.v : avgWd(d), outT = past && o.outKnown ? (outBy[d] || []) : null;
+      const items = outT ? (outT.length ? [{name: 'банкнаас гарсан (бодит, ' + outT.length + ' гүйлгээ)', amt: outT.reduce((p, t) => p + t.amount, 0)}] : []) : planDue(o.plan, d).concat(d === today && o.reqAmt ? [{name: 'батлагдсан, төлөгдөөгүй хүсэлт', amt: o.reqAmt}] : []);
+      const outV = items.reduce((p, i) => p + i.amt, 0), open = bal; bal = bal + inV - outV;
+      rows.push({date: d, wd: wdOf(d), open: r2(open), in: r2(inV), inSrc: x ? 'actual' : 'avg', out: r2(outV), outSrc: outT ? 'actual' : 'plan', items, close: r2(bal), past, missing: past && useAvg});
+      if (bal < minB){ minB = bal; minD = d; } if (bal < 0 && !firstNeg) firstNeg = d; d = nx(d); }
+    const todayRow = rows.find(r => r.date === today);
+    return {rows, avgAll: r2(avgAll), min: r2(minB), minD, firstNeg, todayOpen: todayRow ? todayRow.open : null, endBal: r2(bal), sumIn: r2(rows.filter(r => r.date >= today).reduce((p, r) => p + r.in, 0)), sumOut: r2(rows.filter(r => r.date >= today).reduce((p, r) => p + r.out, 0)), missing: rows.filter(r => r.missing).map(r => r.date)};
+  }
+  const R = {cashPlan, planDue, flow, FEES, setNorm, salesDays, payDays, payList, parseList, sum, supplierTable, storeTable, payTable};
   if (typeof module !== 'undefined') module.exports = R;
   return R;
 })();
@@ -3029,6 +3076,56 @@ function balLoad(date){ const b = S.balances.find(x => x.date === date), it = (b
   BAL_ACCS.forEach(([k]) => { $('#bal-' + k).value = it[k] == null || it[k] === '' ? '' : fmt(it[k]); });
   $('#bal-msg').innerHTML = b ? `<b>${esc(date)}-ний бүртгэлийг засварлаж байна</b> — тоогоо засаад «Хадгалах» дарна уу.` : ''; }
 $('#bal-date').addEventListener('change', e => balLoad(e.target.value));
+// ---------- cash plan (прогноз) ----------
+const CP_FREQ = [['month', 'сар бүр'], ['week', '7 хоног бүр'], ['day', 'өдөр бүр'], ['once', 'нэг удаа']];
+const CP_SAMPLE = ['Түрээс — Food City (F1)', 'Түрээс — Драгон', 'Цалин — урьдчилгаа', 'Цалин — сүүл', 'Банкны зээл', 'Хувийн зээл (өдөр бүр)', 'НДШ, татвар', 'Цахилгаан, ус, интернэт'].map(name => ({name, amt: '', freq: /өдөр бүр/.test(name) ? 'day' : 'month', day: ''}));
+let cpRows = null, cpDirty = false;
+const cpItems = () => cpRows || ((S.plan && S.plan.items && S.plan.items.length) ? S.plan.items.map(x => ({...x})) : CP_SAMPLE.map(x => ({...x})));
+function cpPlanHTML(){ const L = cpItems();
+  return L.map((it, i) => `<tr data-i="${i}"><td><input data-k="name" value="${esc(it.name || '')}" style="min-width:200px"></td><td class="n"><input data-k="amt" inputmode="decimal" value="${it.amt === '' || it.amt == null ? '' : fmt(it.amt)}" placeholder="0" style="width:130px;text-align:right"></td>
+    <td><select data-k="freq">${CP_FREQ.map(([v, l]) => `<option value="${v}"${(it.freq || 'month') === v ? ' selected' : ''}>${l}</option>`).join('')}</select></td>
+    <td>${(it.freq || 'month') === 'once' ? `<input type="date" data-k="date" value="${esc(it.date || '')}" style="width:auto">` : (it.freq === 'day' ? '<span class="note">—</span>' : `<input data-k="day" value="${esc(it.day || '')}" placeholder="${it.freq === 'week' ? '1–7' : '1–31'}" style="width:80px">`)}</td>
+    <td><input type="date" data-k="until" value="${esc(it.until || '')}" style="width:auto"></td><td><input data-k="note" value="${esc(it.note || '')}" style="min-width:140px"></td>
+    <td><button class="btn bad" type="button" data-cp-del="${i}" style="padding:2px 8px">✕</button></td></tr>`).join(''); }
+function cpRead(){ cpRows = [...document.querySelectorAll('#cp-plan tr')].map(tr => { const o = {}; tr.querySelectorAll('[data-k]').forEach(el => { o[el.dataset.k] = el.value; }); o.amt = o.amt === '' ? '' : parseAmt(o.amt) || 0; return o; }); }
+function renderCP(){
+  if (!$('#cp-card')) return;
+  if (!cpDirty || !$('#cp-plan').children.length) $('#cp-plan').innerHTML = cpPlanHTML();
+  const bals = S.balances.slice().sort((a, b) => String(a.date).localeCompare(String(b.date))), last = bals.at(-1), t = today();
+  if (!$('#cp-end').value) $('#cp-end').value = addD(t, 30);
+  if (S.plan && S.plan.avgIn && document.activeElement !== $('#cp-avg') && !$('#cp-avg').value) $('#cp-avg').value = fmt(S.plan.avgIn);
+  if (!last){ $('#cp-kpis').innerHTML = '<div class="banner" style="background:var(--warn-soft)">Эхлэх үлдэгдэл алга — дээр дансны үлдэгдлээ бүртгэнэ үү.</div>'; $('#cp-chart').innerHTML = ''; $('#cp-days').innerHTML = ''; return; }
+  const total = BAL_ACCS.reduce((q, [k]) => q + (+((last.items || {})[k]) || 0), 0);
+  const known = typeof DR !== 'undefined' && DR.canFlow, out = known && typeof drFlowTx === 'function' ? drFlowTx(last.date, addD(t, -1)) : [];
+  const reqAmt = (S.requests || []).filter(r => reqStatus(r) === 'approved').reduce((q, r) => q + (+r.amount || 0), 0);
+  const items = (cpRows || (S.plan && S.plan.items) || []).filter(x => +x.amt > 0);
+  const P = DAILY.cashPlan({start: {date: last.date, total}, today: t, end: $('#cp-end').value || addD(t, 30), days: typeof DR !== 'undefined' ? Object.values(DR.days) : [], out, outKnown: known, plan: items, reqAmt, avgIn: parseAmt($('#cp-avg').value) || 0});
+  const lowCls = P.min < 0 ? 'bad' : P.min < 20000000 ? 'warn' : 'ok';
+  $('#cp-kpis').innerHTML = `<div class="kpi"><div class="l">Эхлэх: бүртгэсэн үлдэгдэл ${esc(last.date)}</div><div class="v">${fmt(total)}</div><div class="s">бүх данс</div></div>
+    <div class="kpi"><div class="l">Өнөөдөр (${esc(t)}) өглөө байх ёстой</div><div class="v">${P.todayOpen == null ? '–' : fmt(P.todayOpen)}</div><div class="s">${P.missing.length ? '⚠ тайлангүй өдөр: ' + P.missing.join(', ') : 'бодит орлого' + (known ? ', бодит зарлагаар' : ', төлөвлөсөн зарлагаар')}</div></div>
+    <div class="kpi ${lowCls}"><div class="l">Хамгийн бага үлдэгдэл</div><div class="v">${fmt(P.min)}</div><div class="s">${esc(P.minD)}${P.firstNeg ? ' · ⚠ ' + esc(P.firstNeg) + '-нд мөнгө хүрэлцэхгүй' : ''}</div></div>
+    <div class="kpi"><div class="l">${esc($('#cp-end').value)}-ны орой</div><div class="v">${fmt(P.endBal)}</div><div class="s">өнөөдрөөс: +${fmt(P.sumIn)} орлого · −${fmt(P.sumOut)} зарлага · өдөрт ≈ ${fmt(P.avgAll)}</div></div>`;
+  // chart: the balance line, red below zero, today marked
+  const R = P.rows, W = 900, H = 170, mn = Math.min(0, ...R.map(r => r.close)), mx = Math.max(...R.map(r => r.close), 1), X = i => 40 + i * (W - 50) / Math.max(1, R.length - 1), Y = v => 10 + (mx - v) / (mx - mn || 1) * (H - 30);
+  const ti = R.findIndex(r => r.date === t);
+  $('#cp-chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;max-height:220px"><line x1="40" x2="${W - 10}" y1="${Y(0)}" y2="${Y(0)}" stroke="#d9534f" stroke-dasharray="4 3" stroke-width="1"/>
+    ${ti >= 0 ? `<line x1="${X(ti)}" x2="${X(ti)}" y1="5" y2="${H - 18}" stroke="#999" stroke-dasharray="2 3"/><text x="${X(ti) + 3}" y="14" font-size="11" fill="#777">өнөөдөр</text>` : ''}
+    <polyline fill="none" stroke="#1f5f8b" stroke-width="2" points="${R.map((r, i) => X(i) + ',' + Y(r.close)).join(' ')}"/>
+    ${R.map((r, i) => r.close < 0 ? `<circle cx="${X(i)}" cy="${Y(r.close)}" r="3" fill="#d9534f"/>` : '').join('')}
+    <text x="2" y="${Y(mx) + 4}" font-size="10" fill="#777">${(mx / 1e6).toFixed(0)} сая</text><text x="2" y="${Y(0) + 4}" font-size="10" fill="#d9534f">0</text>
+    ${R.map((r, i) => i % Math.ceil(R.length / 10) === 0 ? `<text x="${X(i)}" y="${H - 4}" font-size="10" fill="#777" text-anchor="middle">${r.date.slice(5)}</text>` : '').join('')}</svg>`;
+  const WD = ['Ня', 'Да', 'Мя', 'Лх', 'Пү', 'Ба', 'Бя'];
+  $('#cp-days').innerHTML = R.map(r => `<tr class="${r.close < 0 ? 'sev-bad' : ''}${r.date === t ? '" style="font-weight:700' : ''}"><td class="mono">${esc(r.date)} ${WD[r.wd]}</td><td class="n">${fmt(r.open)}</td><td class="n">${fmt(r.in)}${r.inSrc === 'avg' ? ' <span class="note">≈</span>' : ''}</td><td class="n">${r.out ? '−' + fmt(r.out) : ''}</td><td class="note" style="white-space:normal">${r.items.map(i => esc(i.name) + (r.items.length > 1 ? ' ' + fmt(i.amt) : '')).join(' · ')}</td><td class="n"><b>${fmt(r.close)}</b></td></tr>`).join('');
+}
+document.addEventListener('input', e => { if (e.target.closest('#cp-plan')){ cpDirty = true; cpRead(); renderCP(); } });
+document.addEventListener('change', e => { if (e.target.closest('#cp-plan') && e.target.dataset.k === 'freq'){ cpRead(); $('#cp-plan').innerHTML = cpPlanHTML(); renderCP(); } if (e.target.id === 'cp-end' || e.target.id === 'cp-avg') renderCP(); });
+document.addEventListener('click', e => { const d = e.target.closest('[data-cp-del]'); if (d){ cpRead(); cpRows.splice(+d.dataset.cpDel, 1); cpDirty = true; $('#cp-plan').innerHTML = cpPlanHTML(); renderCP(); }
+  if (e.target.closest('#cp-add')){ cpRead(); cpRows.push({name: '', amt: '', freq: 'month', day: ''}); cpDirty = true; $('#cp-plan').innerHTML = cpPlanHTML(); } });
+$('#cp-save') && $('#cp-save').addEventListener('click', async () => { if (!db) return; cpRead();
+  const items = cpRows.filter(x => String(x.name || '').trim() || +x.amt).map(x => ({name: String(x.name || '').trim(), amt: +x.amt || 0, freq: x.freq || 'month', day: x.day || '', date: x.date || '', until: x.until || '', note: x.note || ''}));
+  const old = S.plan; const hist = old ? (old.hist || []).concat([{items: old.items || [], avgIn: old.avgIn || 0, by: old.by || null, at: old.at || null}]).slice(-15) : [];
+  try{ await db.doc('balances/plan').set({items, avgIn: parseAmt($('#cp-avg').value) || 0, by: me, at: new Date().toISOString(), hist}); cpDirty = false; cpRows = null; $('#cp-msg').textContent = 'Хадгаллаа ✓'; }
+  catch(err){ $('#cp-msg').textContent = 'Хадгалж чадсангүй: ' + (err.code || err.message); } });
 document.addEventListener('click', async e => {
   const ed = e.target.closest('[data-bal-edit]'), del = e.target.closest('[data-bal-del]');
   if (ed){ $('#bal-date').value = ed.dataset.balEdit; balLoad(ed.dataset.balEdit); $('#bal-form').scrollIntoView({behavior: 'smooth', block: 'start'}); return; }
@@ -3331,7 +3428,7 @@ function renderCash(){
     : `<tr><td colspan="7" class="empty">${prob.length ? 'Бүх өдөр тайлбартай.' : 'Асуудалтай өдөр алга.'}</td></tr>`;
   if (focusId && document.getElementById(focusId)) document.getElementById(focusId).focus();
 }
-function renderBal(){
+function renderBal(){ try{ renderCP(); }catch(e){ console.warn('cashplan', e); }
   const list = S.balances.slice().sort((a,b) => String(b.date).localeCompare(String(a.date))).slice(0,30);
   const last = list[0], sumG = (it, g) => BAL_GROUPS.find(x => x[0] === g)[2].reduce((s,[k]) => s + (+(it||{})[k] || 0), 0);
   if (last){ const co = sumG(last.items, 'co'), pr = sumG(last.items, 'pr'); $('#k-bal').textContent = fmt(co + pr); $('#k-bal-s').textContent = `${last.date} · компани ${fmt(co)} · хувийн ${fmt(pr)}`; } else { $('#k-bal').textContent = '–'; $('#k-bal-s').textContent = 'Бүртгэл алга'; }
@@ -6905,7 +7002,7 @@ else VIVIFB.start(async () => {
   if (ALLOW.cash || ALLOW.rev) db.collection('cashruns').onSnapshot(s => { S.runs = s.docs.map(d => ({id:d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.cash || ALLOW.rev) db.doc('cash/latest').onSnapshot(d => { S.cash = d.exists ? d.data() : null; render(); }, onErr);
   if (ALLOW.cash) db.collection('cashnotes').onSnapshot(s => { S.notes = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); resolveNames(Object.values(S.notes).map(n => n.by)); render(); }, onErr);
-  if (ALLOW.bal) db.collection('balances').onSnapshot(s => { S.balances = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.balances.map(b => b.by)); render(); }, onErr);
+  if (ALLOW.bal) db.collection('balances').onSnapshot(s => { const all = s.docs.map(d => ({id:d.id, ...d.data()})); S.plan = all.find(b => b.id === 'plan') || null; S.balances = all.filter(b => b.id !== 'plan' && b.date); resolveNames(S.balances.map(b => b.by)); render(); }, onErr);
   if (ALLOW.pay){
     db.collection('payroll').onSnapshot(s => { PS.lists = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(PS.lists.map(l => l.by)); render(); }, onErr);
     db.collection('paydec').onSnapshot(s => { PS.decs = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
