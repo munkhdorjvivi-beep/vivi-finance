@@ -1173,7 +1173,7 @@ const VIVI = (() => {
   const iso = d => `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
   const mk = (y,m,d) => { const t = new Date(Date.UTC(y,m-1,d)); return (t.getUTCMonth()===m-1 && t.getUTCDate()===d) ? iso(t) : null; };
   const addDays = (s,n) => { const t = new Date(s+'T00:00:00Z'); t.setUTCDate(t.getUTCDate()+n); return iso(t); };
-  // StorePay pays a sale one month later (sold 9.11 → on the account 9.12); Pocket the same or the next day
+  // StorePay pays a sale one month later (sold 9.11 → on the account 9.12); Pocket the same day (the accountants withdraw it)
   const addMonth = s => { const y = +s.slice(0, 4), m = +s.slice(5, 7), d = +s.slice(8, 10), dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate(); return iso(new Date(Date.UTC(y, m, Math.min(d, dim)))); };
   const diffDays = (a,b) => Math.round((new Date(a+'T00:00:00Z') - new Date(b+'T00:00:00Z'))/86400000);
   function toDT(v){
@@ -2457,8 +2457,8 @@ const DAILY = (() => {
       // credit money arriving today: StorePay of the sales one month ago, Pocket of yesterday's
       const pk = +pkShare || 0, crOf = (x, want) => { const X = byDay[x]; let v = 0; if (X && X.pay) for (const U of Object.values(X.pay)) for (const [f, F] of Object.entries(U)) if (KIND(f, F) === 'credit'){ const c = crKind(f); v += c === want ? F.a : c === 'unk' ? F.a * (want === 'pk' ? pk : 1 - pk) : 0; } return v; };
       const mb = (() => { const y = +d.slice(0, 4), m = +d.slice(5, 7) - 2, dd = +d.slice(8, 10), Y = m < 0 ? y - 1 : y, M = (m + 12) % 12, dim = new Date(Date.UTC(Y, M + 1, 0)).getUTCDate(); return new Date(Date.UTC(Y, M, Math.min(dd, dim))).toISOString().slice(0, 10); })();
-      const crIn = crOf(mb, 'sp') + crOf(new Date(Date.parse(d + 'T00:00:00Z') - 86400e3).toISOString().slice(0, 10), 'pk');
-      return {date: d, has: !!(D && D.pay), bank: r2(bank), fee: r2(fee), cash: r2(cash), credit: r2(credit), crIn: r2(crIn), out: r2(o), net: r2(bank + cash + crIn - o)}; };
+      const crSp = crOf(mb, 'sp'), crPk = crOf(d, 'pk'), crIn = crSp + crPk;   // Pocket: the accountants withdraw it to our account the same day
+      return {date: d, has: !!(D && D.pay), bank: r2(bank), fee: r2(fee), cash: r2(cash), credit: r2(credit), crIn: r2(crIn), crSp: r2(crSp), crPk: r2(crPk), spFrom: mb, out: r2(o), net: r2(bank + cash + crIn - o)}; };
     const rows = dayList.map(row);
     for (const d of dayList){ const D = byDay[d]; if (D && D.pay) for (const U of Object.values(D.pay)) for (const [f, F] of Object.entries(U)) if (KIND(f, F) === 'credit') creditBy[f] = r2((creditBy[f] || 0) + F.a); }
     const tot = rows.reduce((q, r) => ({bank: q.bank + r.bank, fee: q.fee + r.fee, cash: q.cash + r.cash, credit: q.credit + r.credit, crIn: q.crIn + r.crIn, out: q.out + r.out, net: q.net + r.net}), {bank: 0, fee: 0, cash: 0, credit: 0, crIn: 0, out: 0, net: 0});
@@ -2470,10 +2470,10 @@ const DAILY = (() => {
     let exp = null; const checks = [];
     if (open){
       let run = open.total, d = open.date; const end = next(z);
-      const missing = [];
-      while (d < end){ const r = row(d); if (!r.has) missing.push(d); run += r.net; d = next(d);
+      const missing = [], parts = {bank: 0, cash: 0, sp: 0, pk: 0, out: 0, spFrom: []};
+      while (d < end){ const r = row(d); if (!r.has) missing.push(d); run += r.net; parts.bank += r.bank; parts.cash += r.cash; parts.sp += r.crSp; parts.pk += r.crPk; parts.out += r.out; if (r.crSp >= 1) parts.spFrom.push(r.spFrom); d = next(d);
         const actual = B.find(b => b.date === d); if (actual && d > open.date) checks.push({date: d, expected: r2(run), actual: actual.total, diff: r2(actual.total - run)}); }
-      exp = {from: open.date, open: open.total, at: end, value: r2(run), missing};
+      exp = {from: open.date, open: open.total, at: end, value: r2(run), missing, parts: {...parts, bank: r2(parts.bank), cash: r2(parts.cash), sp: r2(parts.sp), pk: r2(parts.pk), out: r2(parts.out)}};
     }
     return {creditBy, rows, tot: Object.fromEntries(Object.entries(tot).map(([k, v]) => [k, r2(v)])), cats: Object.values(cats).map(c => ({...c, a: r2(c.a)})).sort((x, y) => y.a - x.a), exp, checks};
   }
@@ -2503,7 +2503,7 @@ const DAILY = (() => {
     // named credit is exact (StorePay / Pocket); unnamed old data is split by the Pocket share; a person's credit brings no money
     const pk = Math.max(0, Math.min(1, +o.pkShare || 0)), crSale = d => { const x = inOf(d); return x ? x.cr * (1 - pk) + x.sp : (avg(WC[wdOf(d)]) ?? avg(allC) ?? 0) * (1 - pk); }, pkSale = d => { const x = inOf(d); return x ? x.cr * pk + x.pk : (avg(WC[wdOf(d)]) ?? avg(allC) ?? 0) * pk; };
     const monthBack = d => { const y = +d.slice(0, 4), m = +d.slice(5, 7) - 2, dd = +d.slice(8, 10), Y = m < 0 ? y - 1 : y, M = (m + 12) % 12, dim = new Date(Date.UTC(Y, M + 1, 0)).getUTCDate(); return new Date(Date.UTC(Y, M, Math.min(dd, dim))).toISOString().slice(0, 10); };
-    const crIn = d => { const prev = new Date(Date.parse(d + 'T00:00:00Z') - 86400e3).toISOString().slice(0, 10); return crSale(monthBack(d)) + pkSale(prev); };
+    const crIn = d => crSale(monthBack(d)) + pkSale(d);   // Pocket comes the same day (the accountants withdraw it), StorePay one month later
     const outBy = {}; for (const t of o.out || []) (outBy[t.date] = outBy[t.date] || []).push(t);
     const rows = []; let bal = +start.total || 0, d = start.date, minB = Infinity, minD = '', firstNeg = '';
     while (d <= end){
@@ -5172,6 +5172,8 @@ function drFlowTx(a, z){
   const M = DR.marks || {};
   return fromMail.concat(fromStmt).map(t => M[t.id] && M[t.id].own ? {...t, cat: 'own_md', mine: true} : t);
 }
+// StorePay money that really came in (statements), or null when no statement covers those days
+function drSpGot(a, z, k = 'sp'){ let v = 0, any = false; for (const D of Object.values(DR.stmt || {})) for (let d = a; d <= z; d = shiftDay(d, 1)){ if (d.slice(0, 7) !== D.per) continue; const x = (D.days || {})[d.slice(8)]; if (!x) continue; any = true; v += +x[k] || 0; } return any ? Math.round(v) : null; }
 // why the expected and the recorded balance differ: each likely cause with its amount
 function drDiag(F, E, outAll){
   const c = F.checks.filter(x => Math.abs(x.diff) > 100000).pop(); if (!c) return '';
@@ -5209,7 +5211,7 @@ function drDiag(F, E, outAll){
   const ch = b0 && b1 ? BAL_ACCS.map(([k, l]) => [l, (+((b1.items || {})[k]) || 0) - (+((b0.items || {})[k]) || 0), +((b0.items || {})[k]) || 0, +((b1.items || {})[k]) || 0]).filter(x => x[2] || x[3]) : [];
   const exp = c.expected - E.open;
   const sum = days.reduce((q, d) => { const r = R(d); q.bank += r.bank; q.cash += r.cash; return q; }, {bank: 0, cash: 0}), outP = outAll.filter(t => t.date >= E.from && t.date < c.date).reduce((q, t) => q + t.amount, 0), crP = c.expected - E.open - sum.bank - sum.cash + outP;
-  L.unshift(['ok', `Хүлээгдэж буй дүн хэрхэн гарсан: эхлэх үлдэгдэл ${fmt(E.open)} + бэлэн бус борлуулалт ${fmt(sum.bank)} + бэлэн ${fmt(sum.cash)} + зээлээс орох (StorePay/Pocket) ${fmt(crP)} − гарсан ${fmt(outP)} = <b>${fmt(c.expected)}</b>`]);
+  L.unshift(['ok', `Хүлээгдэж буй дүн хэрхэн гарсан: эхлэх үлдэгдэл ${fmt(E.open)} + бэлэн бус борлуулалт ${fmt(sum.bank)} + бэлэн ${fmt(sum.cash)} + <b>StorePay ${fmt((E.parts || {}).sp || 0)}</b>${((E.parts || {}).pk || 0) >= 1 ? ' + Pocket ' + fmt(E.parts.pk) : ''} − гарсан ${fmt(outP)} = <b>${fmt(c.expected)}</b>`]);
   return `<details open style="margin-top:10px"><summary><b>🔎 ${esc(c.date)}-ны зөрүү ${sgn(c.diff)} — боломжит шалтгаан</b></summary><ul style="margin:6px 0 0 18px;padding:0">${L.map(([k, h]) => `<li style="margin:4px 0">${k === 'bad' ? '❗ ' : k === 'ok' ? '✓ ' : ''}${h}</li>`).join('')}</ul>
     ${ch.length ? `<div class="tbl" style="margin-top:8px"><table><thead><tr><th>Данс</th><th class="n">${esc(E.from)}</th><th class="n">${esc(c.date)}</th><th class="n">Бодит өөрчлөлт</th></tr></thead><tbody>${ch.map(x => `<tr><td>${esc(x[0])}</td><td class="n">${fmt(x[2])}</td><td class="n">${fmt(x[3])}</td><td class="n">${sgn(x[1])}</td></tr>`).join('')}<tr style="font-weight:700"><td>Нийт</td><td class="n">${fmt(E.open)}</td><td class="n">${fmt(c.actual)}</td><td class="n">${sgn(c.actual - E.open)} <span class="note">(тооцоогоор ${sgn(exp)})</span></td></tr></tbody></table></div><p class="note">Аль дансны өсөлт бага/сөрөг байгааг хараарай — тэр дансны хуулгыг шалгавал шалтгаан тодорно.</p>` : ''}</details>`;
 }
@@ -5228,9 +5230,19 @@ function renderFlow(a, z){
     <div class="kpi ${T.net < 0 ? 'bad' : 'ok'}"><div class="l">Цэвэр урсгал</div><div class="v">${sgn(T.net)}</div><div class="s">орох − гарсан</div></div>`;
   const E = F.exp;
   if (!E) $('#dr-exp').innerHTML = `<div class="banner" style="background:var(--warn-soft)">Хүлээгдэж буй үлдэгдэл тооцохын тулд «Дансны үлдэгдэл» хэсэгт эхлэх өдрийн (эсвэл түүнээс өмнөх) үлдэгдлийг бүртгэнэ үү.</div>`;
-  else $('#dr-exp').innerHTML = `<div class="banner">Бүртгэсэн үлдэгдэл <b>${esc(E.from)}</b>: <b>${fmt(E.open)} ₮</b> → түүнээс хойших цэвэр урсгал ${sgn(E.value - E.open)} → <b>${esc(E.at)}-ны өглөөний хүлээгдэж буй үлдэгдэл: ${fmt(E.value)} ₮</b> <span class="note">(бэлэн мөнгийг тушаасан гэж тооцсон; зээл: StorePay сарын өмнөх борлуулалтынх орсон гэж тооцсон)</span>${E.missing.length ? `<div class="note" style="color:var(--bad)">Өдрийн тайлангүй өдөр (орлого тооцогдоогүй): ${E.missing.join(', ')}</div>` : ''}</div>`
-    + (F.checks.length ? `<div class="tbl" style="margin-top:8px"><table><thead><tr><th>Өдөр (өглөө)</th><th class="n">Хүлээгдэж буй</th><th class="n">Бүртгэсэн бодит</th><th class="n">Зөрүү</th></tr></thead><tbody>${F.checks.map(c => `<tr class="${Math.abs(c.diff) > 100000 ? 'sev-bad' : 'sev-ok'}"><td class="mono">${esc(c.date)}</td><td class="n">${fmt(c.expected)}</td><td class="n">${fmt(c.actual)}</td><td class="n">${Math.abs(c.diff) > 100000 ? `<span class="chip c-bad">${sgn(c.diff)}</span>` : sgn(c.diff)}</td></tr>`).join('')}</tbody></table></div>` + drDiag(F, E, outAll) : '');
-  $('#dr-flow').innerHTML = F.rows.slice().reverse().map(r => `<tr><td class="mono">${esc(r.date)}${r.has ? '' : ' <span class="chip c-warn">тайлангүй</span>'}</td><td class="n">${fmt(r.bank)}</td><td class="n">${fmt(r.cash)}</td><td class="n">${fmt(r.credit)}${r.crIn >= 1 ? `<div class="note">орсон ${fmt(Math.round(r.crIn))}</div>` : ''}</td><td class="n">${r.out ? '−' + fmt(r.out) : '0'}</td><td class="n"><b>${sgn(r.net)}</b></td></tr>`).join('');
+  else { const P = E.parts || {}, spGot = drSpGot(E.from, shiftDay(E.at, -1));
+    $('#dr-exp').innerHTML = `<div class="banner"><div>Бүртгэсэн үлдэгдэл <b>${esc(E.from)}</b>: <b>${fmt(E.open)} ₮</b> → <b>${esc(E.at)}-ны өглөөний хүлээгдэж буй үлдэгдэл: ${fmt(E.value)} ₮</b></div>
+      <table style="margin-top:6px;width:auto;font-size:13px"><tbody>
+        <tr><td>Эхлэх үлдэгдэл (${esc(E.from)})</td><td class="n">${fmt(E.open)}</td><td class="note"></td></tr>
+        <tr><td>+ Бэлэн бус борлуулалт (карт, QPay, шилжүүлэг; шимтгэлгүй)</td><td class="n">${fmt(P.bank)}</td><td class="note">Smart-ын тайлангаар</td></tr>
+        <tr><td>+ Бэлэн мөнгө</td><td class="n">${fmt(P.cash)}</td><td class="note"><b>таамаг:</b> банкинд тушаасан гэж үзсэн — үлдэгдэл бүртгэхээс өмнө тушаагаагүй бол үлдэгдэлд харагдахгүй</td></tr>
+        <tr style="background:var(--warn-soft)"><td><b>+ StorePay</b></td><td class="n"><b>${fmt(P.sp)}</b></td><td class="note"><b>таамаг:</b> ${P.spFrom && P.spFrom.length ? esc(P.spFrom[0]) + (P.spFrom.length > 1 ? ' – ' + esc(P.spFrom.at(-1)) : '') + '-ний' : 'сарын өмнөх'} StorePay борлуулалт сарын дараа орсон гэж үзсэн${spGot != null ? ` · <b>хуулгаар бодитоор орсон: ${fmt(spGot)}</b>${Math.abs(spGot - P.sp) > 1000 ? ` <span class="chip ${spGot < P.sp ? 'c-bad' : 'c-ok'}">${sgn(spGot - P.sp)}</span>` : ' ✓'}` : ' · хуулгаар шалгаагүй (хуулга оруулбал харагдана)'}</td></tr>
+        ${P.pk >= 1 ? `<tr><td>+ Pocket</td><td class="n">${fmt(P.pk)}</td><td class="note"><b>таамаг:</b> тухайн өдрийн Pocket борлуулалтыг нягтлан тэр өдөртөө данс руу татсан гэж үзсэн${(g => g != null ? ` · <b>хуулгаар орсон: ${fmt(g)}</b>${Math.abs(g - P.pk) > 1000 ? ` <span class="chip ${g < P.pk ? 'c-bad' : 'c-ok'}">${sgn(g - P.pk)}</span>` : ' ✓'}` : '')(drSpGot(E.from, shiftDay(E.at, -1), 'pk'))}</td></tr>` : ''}
+        <tr><td>− Гарсан шилжүүлэг</td><td class="n">−${fmt(P.out)}</td><td class="note">имэйл + хуулга</td></tr>
+        <tr style="font-weight:700"><td>= Хүлээгдэж буй</td><td class="n">${fmt(E.value)}</td><td class="note">StorePay-гүйгээр: ${fmt(E.value - P.sp)} · StorePay, бэлэнгүйгээр: ${fmt(E.value - P.sp - P.cash)}</td></tr>
+      </tbody></table>${E.missing.length ? `<div class="note" style="color:var(--bad)">Өдрийн тайлангүй өдөр (орлого тооцогдоогүй): ${E.missing.join(', ')}</div>` : ''}</div>`
+    $('#dr-exp').innerHTML += (F.checks.length ? `<div class="tbl" style="margin-top:8px"><table><thead><tr><th>Өдөр (өглөө)</th><th class="n">Хүлээгдэж буй</th><th class="n">Бүртгэсэн бодит</th><th class="n">Зөрүү</th></tr></thead><tbody>${F.checks.map(c => `<tr class="${Math.abs(c.diff) > 100000 ? 'sev-bad' : 'sev-ok'}"><td class="mono">${esc(c.date)}</td><td class="n">${fmt(c.expected)}</td><td class="n">${fmt(c.actual)}</td><td class="n">${Math.abs(c.diff) > 100000 ? `<span class="chip c-bad">${sgn(c.diff)}</span>` : sgn(c.diff)}</td></tr>`).join('')}</tbody></table></div>` + drDiag(F, E, outAll) : ''); }
+  $('#dr-flow').innerHTML = F.rows.slice().reverse().map(r => `<tr><td class="mono">${esc(r.date)}${r.has ? '' : ' <span class="chip c-warn">тайлангүй</span>'}</td><td class="n">${fmt(r.bank)}</td><td class="n">${fmt(r.cash)}</td><td class="n">${fmt(r.credit)}${r.crSp >= 1 ? `<div class="note" style="color:var(--warn)">StorePay орох ${fmt(Math.round(r.crSp))}</div>` : ''}${r.crPk >= 1 ? `<div class="note">Pocket ${fmt(Math.round(r.crPk))}</div>` : ''}</td><td class="n">${r.out ? '−' + fmt(r.out) : '0'}</td><td class="n"><b>${sgn(r.net)}</b></td></tr>`).join('');
   $('#dr-out').innerHTML = F.cats.length ? F.cats.map(c => `<tr><td>${esc(VIVI_CAT_LABEL(c.cat))}</td><td class="n">${c.n}</td><td class="n">${fmt(c.a)}</td></tr>`).join('') + `<tr style="font-weight:700"><td>Нийт</td><td class="n">${out.length}</td><td class="n">${fmt(T.out)}</td></tr>` : '<tr><td colspan="3" class="empty">Гарсан шилжүүлэг алга (имэйл ирээгүй).</td></tr>';
   $('#dr-outlist').innerHTML = out.sort((x, y) => String(y.dt).localeCompare(String(x.dt))).slice(0, 300).map(t => `<tr><td class="mono">${esc(String(t.dt).replace('T', ' ').slice(0, 16))}</td><td>${esc(ACC_LABEL[VIVI.norm(t.fromAcc)] || t.fromAcc)}</td><td>${esc(t.toName || '')}<div class="note mono">${esc(t.toAcc || '')}</div></td><td class="n">${fmt(t.amount)}</td><td>${esc(t.desc || '')}</td><td><span class="chip ${t.mine ? 'c-warn' : 'c-grey'}">${esc(t.mine ? '👤 Миний хувийн зардал' : VIVI_CAT_LABEL(t.cat))}</span> <span class="note">${t.src === 'stmt' ? 'хуулга' : 'имэйл'}</span>${isOwner ? ` <button class="btn" type="button" data-tx-mine="${esc(t.id)}" style="padding:1px 6px" title="${t.mine ? 'Хувийн зардал биш' : 'Миний хувийн зардал гэж тэмдэглэх'}">${t.mine ? '↺' : '👤'}</button>` : ''}</td></tr>`).join('');
 }
@@ -7475,9 +7487,9 @@ function stmtDaysOf(p, acc, a, z){
   for (let d = a, k = 0; d && d <= z && k < 400; d = shiftDay(d, 1), k++){ const M = byM[d.slice(0, 7)] = byM[d.slice(0, 7)] || {days: {}, tx: []}; M.days[d.slice(8)] = {in: 0, out: 0, iin: 0, iout: 0, n: 0}; }
   for (const r of p.rows || []){ const d = dayOf(r.dt); if (!d || d < a || d > z) continue; const M = byM[d.slice(0, 7)], D = M.days[d.slice(8)];
     const dt = typeof r.dt === 'string' ? r.dt.slice(0, 16) : new Date(r.dt instanceof Date ? r.dt.getTime() : +r.dt).toISOString().slice(0, 16); D.n++;
-    if (r.cr > 0){ if (isInt(r.cp)) D.iin += r.cr; else D.in += r.cr; }
+    if (r.cr > 0){ if (isInt(r.cp)) D.iin += r.cr; else { D.in += r.cr; if (VIVI.norm(r.cp) === '4002281424' || /стор\s*пэй|store\s*pay/i.test(String(r.cpName || '') + ' ' + String(r.desc || ''))) D.sp = (D.sp || 0) + r.cr; else if (/покет|pocket/i.test(String(r.cpName || '') + ' ' + String(r.desc || ''))) D.pk = (D.pk || 0) + r.cr; } }
     if (r.dr > 0){ if (isInt(r.cp)) D.iout += r.dr; else { D.out += r.dr; M.tx.push({dt, d, amount: Math.round(r.dr * 100) / 100, cp: VIVI.norm(r.cp), name: String(r.cpName || '').slice(0, 60), desc: String(r.desc || '').slice(0, 100), cat: VIVI.outCat(r)}); } } }
-  for (const M of Object.values(byM)) for (const D of Object.values(M.days)) for (const k of ['in', 'out', 'iin', 'iout']) D[k] = Math.round(D[k] * 100) / 100;
+  for (const M of Object.values(byM)) for (const D of Object.values(M.days)) for (const k of ['in', 'out', 'iin', 'iout', 'sp', 'pk']) D[k] = Math.round((D[k] || 0) * 100) / 100;
   return byM;
 }
 const stmtSpan = p => { const ds = (p.rows || []).map(t => typeof t.dt === 'string' ? t.dt.slice(0, 10) : isoU(t.dt instanceof Date ? t.dt.getTime() : +t.dt)).filter(Boolean).sort(); return p.per ? [p.per[0], p.per[1]] : [ds[0], ds[ds.length - 1]]; };
