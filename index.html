@@ -4142,11 +4142,11 @@ $('#rev-xlsx').addEventListener('click', async () => {
         const acOf = st => ACCT.find(([re]) => re.test(String(st || ''))), FN = {cash: 'Бэлэн', pos: 'Карт', qpay: 'QPay/шилж.', transfer: 'Шилжүүлэг', credit: 'Зээл', storepay: 'StorePay', pocket: 'Pocket'};
         const ymd = d => String(d).replace(/-/g, '/'), docNo = t => { const x = String(t || ''); const m = x.match(/qpay\s+(\d{9,})/i) || x.match(/TRF=(\d+)/) || x.match(/хаалт:\s*(\d+):/i) || x.match(/ХААНААС:\s*(\d{6})/); return m ? m[1] : ''; };
         const ent = {}; const add = (code, e) => (ent[code] = ent[code] || []).push(e);
-        for (const [k, D] of Object.entries(DT)){ const [st, d, ch] = k.split('|'), A = acOf(st); if (!A) continue; const g = {};
+        for (const [k, D] of Object.entries(DT)){ const [st, d, ch] = k.split('|'), A = acOf(st); if (!A || ch === 'credit') continue; const g = {};   // credit sales (StorePay, Pocket, persons) are not this account — as in the accountant's draft
           for (const r of D.s){ const kk = (r.kas || '') + '|' + ch; (g[kk] = g[kk] || {kas: r.kas || '', ch, amt: 0, n: 0}); g[kk].amt += r.amt; g[kk].n++; }
           for (const o of Object.values(g)) add(A[1], {d, t: '0', no: '1', txt: `Дэлгүүрийн борлуулалт. ${st}. ${o.kas || '(кассчингүй)'}-${ymd(d)}`, dr: Math.round(o.amt * 100) / 100, cr: 0, form: FN[o.ch] || o.ch}); }
         const other = [];
-        for (const x of (m2.ledger || [])){ const A = acOf(x.store), e = {d: x.d, t: '1' + new Date(x.dt).toISOString(), no: docNo(x.desc), txt: x.desc || '', dr: 0, cr: Math.round((x.g || x.cr) * 100) / 100, fee: Math.round(((x.g || x.cr) - x.cr) * 100) / 100, form: FN[x.ch] || x.ch, acc: x.acc, st: x.store}; if (A) add(A[1], e); else other.push(e); }
+        for (const x of (m2.ledger || [])){ const A = /storepay|pocket/.test(x.ch) ? null : acOf(x.store), e = {d: x.d, t: '1' + new Date(x.dt).toISOString(), no: docNo(x.desc), txt: x.desc || '', dr: 0, cr: Math.round((x.g || x.cr) * 100) / 100, fee: Math.round(((x.g || x.cr) - x.cr) * 100) / 100, form: FN[x.ch] || x.ch, acc: x.acc, st: x.store}; if (A) add(A[1], e); else other.push(e); }
         const L = [['', '', '', '', '', 'ВивекаВикториа ХХК'], ['Дансны хуулга'], ['', '', '', '', '', d0.replace(/-/g, '/') + ' - ' + d1.replace(/-/g, '/')], ['Баримтын №', 'Огноо', 'Гүйлгээний утга', 'Дебет', 'Кредит', 'Үлдэгдэл', 'Хэлбэр', 'Шимтгэл (QPay)']], sty = [];
         const XL = (r, c) => XS.utils.encode_cell({r, c});
         const sections = ACCT.map(([, code, nm]) => [code, nm]).concat(other.length ? [['—', 'Бусад данс (дэлгүүр тодорхойгүй)']] : []);
