@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd120</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd121</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -4983,11 +4983,11 @@ function plCashflow(){
       ${line('Карт, QPay, шилжүүлэг (шимтгэлгүй)', inP.bank, {ind: 1})}${line('Бэлэн мөнгө', inP.cash, {ind: 1, note: 'тушаасан гэж үзсэн'})}
       ${line('StorePay', inP.sp, {ind: 1, note: 'өмнөх сарын StorePay борлуулалт — сарын дараа орно'})}${inP.pk >= 1 ? line('Pocket', inP.pk, {ind: 1, note: 'тухайн өдөртөө'}) : ''}
       ${line('<b>− ' + CF_LABEL.op + '</b>', -opT, {b: 1, sign: 1})}${det('op')}
-      ${line('= Үйл ажиллагааны мөнгөн урсгал', opCash, {b: 1, sign: 1, bg: 'var(--sunk)', note: 'дэлгүүрүүд өөрсдийгөө санхүүжүүлж байна уу'})}
+      ${line('= Үйл ажиллагааны мөнгөн урсгал', opCash, {b: 1, sign: 1, bg: 'var(--sunk)', note: `= орсон ${fmt(inT)} − зардал ${fmt(opT)} · эерэг бол дэлгүүрүүд өөрсдийгөө санхүүжүүлж, илүү мөнгө үлдээж байна`})}
       ${line('<b>− ' + CF_LABEL.stock + '</b>', -buy, {b: 1, sign: 1})}${det('stock')}
       ${line('<b>− ' + CF_LABEL.debt + '</b>', -gs('debt'), {b: 1, sign: 1})}${det('debt')}
       ${line('<b>− ' + CF_LABEL.owner + '</b>', -gs('owner'), {b: 1, sign: 1})}${det('owner')}
-      ${line('= Мөнгөний цэвэр өөрчлөлт', net, {b: 1, sign: 1, bg: 'var(--sunk)'})}
+      ${line('= Мөнгөний цэвэр өөрчлөлт', net, {b: 1, sign: 1, bg: 'var(--sunk)', note: `= ${fmt(opCash)} − бараа ${fmt(buy)} − зээл ${fmt(gs('debt'))} − эзэмшигч ${fmt(gs('owner'))}`})}
       ${line(`<b>Тооцоолсон хаалтын үлдэгдэл</b> (${esc(end)} өглөө)`, calcEnd, {b: 1})}
       ${line(`Бүртгэсэн бодит үлдэгдэл (${esc(end)}${hm(close)})`, close ? close.total : null)}
       ${diff != null ? line('<b>Тайлбаргүй зөрүү</b>', diff, {b: 1, sign: 1, bg: Math.abs(diff) > 1000000 ? 'var(--bad-soft, #fde8e8)' : 'var(--ok-soft, #e8f6ec)', note: Math.abs(diff) > 1000000 ? '«Борлуулалт → Хүлээгдэж буй үлдэгдэл»-ийн 🔎 хэсгээс шалгана' : 'бараг таарч байна'}) : ''}
