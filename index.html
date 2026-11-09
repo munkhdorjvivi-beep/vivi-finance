@@ -301,6 +301,7 @@ body{margin:0;background:var(--bg)}
       <div class="banner" id="rev-cover" style="margin-top:10px"></div>
       <div class="row" id="rev-per-row" style="margin-top:10px;align-items:flex-end" hidden><label class="f" style="width:auto">Хяналтын хугацаа<span class="row" style="gap:6px"><input type="date" id="rev-d0" style="width:auto"> – <input type="date" id="rev-d1" style="width:auto"></span></label><span class="note" id="rev-per-note" style="max-width:640px"></span></div>
       <div class="files" id="cash-filelist" style="margin-top:10px"></div>
+      <div id="cash-check" style="margin-top:10px"></div>
       <div id="up-rev" style="margin-top:10px"></div>
       <div class="row" style="margin-top:10px"><button class="btn primary" id="cash-save" disabled>Үр дүнг хадгалж нягтланд харуулах</button><span class="note" id="cash-msg"></span></div>
     </div>
@@ -318,6 +319,7 @@ body{margin:0;background:var(--bg)}
       </div>
       <p class="note" id="rev-xlsx-note" style="margin:0 0 8px">Бүтэн Excel тайлан (хураангуй, дэлгүүр өдрөөр, бэлэн мөнгө, зарлага ангиллаар, тодруулах, зээл, дансууд) — дээр Smart тайлан болон хуулгаа оруулсны дараа татна.</p>
       <div class="tbl"><table><thead><tr><th>Төлбөрийн хэлбэр</th><th class="n">Smart</th><th class="n">Банкинд орсон</th><th class="n">Зөрүү</th><th class="n">%</th><th>Дүгнэлт</th></tr></thead><tbody id="rev-sum"><tr><td colspan="6" class="empty">Хяналт хийгдээгүй байна.</td></tr></tbody></table></div>
+      <div id="rev-check" style="margin-top:10px"></div>
       <p class="note" id="rev-accs" style="margin:8px 0 0"></p>
       <p class="note" style="margin:8px 0 0">Карт: банк 0.5% шимтгэл суутгасан гэж бүтэн дүн рүү шилжүүлсэн. QPay: шимтгэлийг нэмж тооцсон. QPay ба «Хаан шилжүүлэг» нэг дансанд ордог тул хамт тулгана. Зээл (StorePay, Pocket) банкинд шимтгэлтэйгээр цэвэр дүнгээр орно.</p>
     </div>
@@ -3232,7 +3234,11 @@ function renderRev(){
   const W = run && run.waterfall, F = (run && run.forms) || [];
   $('#rev-title').textContent = run ? `Төлбөрийн хэлбэрээр: Smart ба банк · ${run.d0} – ${run.d1}${pendingRun ? ' (хадгалаагүй)' : ''}` : 'Төлбөрийн хэлбэрээр: Smart ба банк';
   if (!W){ $('#rev-sum').innerHTML = `<tr><td colspan="6" class="empty">${isOwner ? (run ? 'Хадгалсан хяналтад төлбөрийн хэлбэрийн задаргаа алга — Smart тайлан, хуулгаа дахин оруулна уу.' : 'Дээр Smart тайлан болон банкны хуулгаа оруулна уу.') : 'Эзэмшигч хяналт хадгалаагүй байна.'}</td></tr>`; $('#rev-store').innerHTML = '<tr><td colspan="5" class="empty">–</td></tr>'; $('#rev-days').innerHTML = '<tr><td colspan="6" class="empty">–</td></tr>'; return; }
-  $('#rev-accs').textContent = run.accs ? `Оруулсан хуулга (${run.accs.length}): ${run.accs.join(', ')}. Аль нэг данс дутуу бол тухайн хэлбэрийн банкны дүн дутуу харагдана.` : '';
+  // older saved controls have only the list of statements: which required accounts are not in it (the dates are checked in the Excel)
+  const chk = run.check || (run.accs && run.d0 ? (() => { const C = stmtCheck(run.accs.map(l => { const m = String(l).match(/^(\S+)\s+(\S+)$/); return {type: 'bank', bank: m ? m[1] : '', acc: m ? m[2] : l, rows: [{dt: run.d0}, {dt: addD(run.d1, 1)}]}; }), run.d0, run.d1);
+    if (C) C.rows.forEach(r => { if (r.st === 'ok'){ r.a = r.z = ''; r.n = 0; r.note = 'орсон (огнооны хүрээг Excel-ийн «Хуулга шалгах» хуудаснаас харна уу)'; } }); return C; })() : null);
+  $('#rev-check').innerHTML = chk ? stmtCheckHTML(chk) : '';
+  $('#rev-accs').textContent = chk ? '' : run.accs ? `Оруулсан хуулга (${run.accs.length}): ${run.accs.join(', ')}. Аль нэг данс дутуу бол тухайн хэлбэрийн банкны дүн дутуу харагдана.` : '';
   let ts = 0, tb = 0;
   const verdict = (k, d, s) => { const p = s ? d / s * 100 : 0;
     if (k === 'credit') return Math.abs(p) <= 15 ? ['Шимтгэлийн хүрээнд','c-ok'] : ['Шалгах','c-warn'];
@@ -3529,7 +3535,8 @@ async function runRev(){
   if (fromDaily){ lastFiles.push(fromDaily); $('#cash-filelist').insertAdjacentHTML('beforeend', `<div class="auto"><span class="chip c-ok">✓</span> ${esc(fromDaily.label)} · ${fromDaily.rows.length} мөр</div>`); }
   const m = VIVI.build(lastFiles, {d0, d1});
   if (m.error){ $('#cash-msg').textContent = parsedFiles.some(f => f.type === 'bank') ? (window.REV_DAILY === false ? 'Smart «Борлуулалтын жагсаалт /төлбөрийн хэлбэрээр/» тайланг хуулгатай хамт оруулна уу.' : 'Хуулгын хугацаанд «Өдрийн тайлан»-д төлбөрийн хэлбэрийн өгөгдөл алга — тухайн өдрүүдийн Smart тайланг «Өдрийн тайлан»-д оруулна уу.') : 'Банкны хуулгаа оруулна уу.'; return; }
-  pendingRun = {d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, kas: m.kas ? {cashiers: m.kas.cashiers, errors: m.kas.errors.slice(0, 400), unres: m.kas.unres.slice(0, 200),  cov: m.kas.cov || null} : null, explain: trimExp(m.explain), accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
+  const CHK = stmtCheck(lastFiles, m.d0, m.d1); $('#cash-check').innerHTML = stmtCheckHTML(CHK);
+  pendingRun = {check: CHK, d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, kas: m.kas ? {cashiers: m.kas.cashiers, errors: m.kas.errors.slice(0, 400), unres: m.kas.unres.slice(0, 200),  cov: m.kas.cov || null} : null, explain: trimExp(m.explain), accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
   $('#cash-save').disabled = false; $('#cash-msg').textContent = 'Тооцоолсон. Хадгалбал нягтлан тайлбар бичих боломжтой болно.';
   render();
 }
@@ -3573,6 +3580,40 @@ function renderExp(run, st){
   const L = E.items.filter(i => !st || (i.stores || []).includes(st));
   $('#rev-exp-list').innerHTML = L.length ? L.slice(0, 120).map(i => `<tr class="${i.kind === 'left' ? 'sev-warn' : ''}"><td class="mono">${esc(String(i.d || '').slice(5))}</td><td><span class="chip ${i.kind === 'left' ? 'c-bad' : i.conf === 'тодорхой' ? 'c-ok' : 'c-warn'}">${esc(E.kinds[i.kind])}</span></td><td class="n">${fmt(i.amt)}</td><td style="white-space:normal">${esc(i.text)}</td></tr>`).join('') : '<tr><td colspan="4" class="empty">Зөрүү алга.</td></tr>';
 }
+// statement checklist: every account that must be in (Өгөгдлийн төлөв → «заавал хуулга оруулах данс») + what was uploaded,
+// each with the days its statement covers. Card, QPay and cash of the period's last day reach the bank the next day → the statement must reach d1 + 1.
+function stmtCheck(files, d0, d1){
+  if (!d0 || !d1) return null;
+  const need = typeof dsAccs === 'function' ? dsAccs() : [], up = {}, END = addD(d1, 1);
+  for (const f of files || []){ if (f.type !== 'bank') continue; const acc = String(f.acc || (f.rows[0] && f.rows[0].acc) || ''); if (!acc) continue;
+    const ds = f.rows.map(t => typeof t.dt === 'string' ? t.dt.slice(0, 10) : isoU(+t.dt)).filter(Boolean).sort(), U = up[acc] = up[acc] || {acc, bank: f.bank || '', a: '', z: '', n: 0, files: 0};
+    U.files++; U.n += f.rows.length; if (ds.length){ if (!U.a || ds[0] < U.a) U.a = ds[0]; if (!U.z || ds.at(-1) > U.z) U.z = ds.at(-1); } }
+  const accs = [...new Set([...need, ...Object.keys(up)])], NM = (VIVI.ACC_NAME || {}), rows = [];
+  for (const acc of accs){ const U = up[acc], req = need.includes(acc), r = {acc, name: NM[acc] || '', bank: U ? U.bank : '', a: U ? U.a : '', z: U ? U.z : '', n: U ? U.n : 0, req};
+    if (!U){ r.st = req ? 'miss' : 'extra'; const prev = typeof covHas === 'function' && covHas(acc, d0) && covHas(acc, d1);
+      r.note = 'Энэ хяналтад ороогүй' + (prev ? ' (өмнө өөр газар оруулсан байна — энд дахин оруулна уу)' : ''); }
+    else if (!U.n){ r.st = 'part'; r.note = 'Файл хоосон — гүйлгээгүй эсэхийг шалгана уу'; }
+    else if (U.z < d1){ r.st = 'part'; r.note = `${U.z} хүртэл л байна — ${addD(U.z, 1)} – ${END} дутуу`; }
+    else if (U.z < END){ r.st = 'part'; r.note = `${END}-ний өдөр дутуу (${d1}-ний карт, QPay, бэлэн мөнгө маргааш орно)`; }
+    else if (U.a > addD(d0, 1)){ r.st = 'part'; r.note = `${d0} – ${addD(U.a, -1)} гүйлгээ алга — хуулга ${U.a}-ээс эхэлсэн эсэхийг шалгана уу`; }
+    else { r.st = 'ok'; r.note = ''; }
+    if (!req && U) r.note = (r.note ? r.note + ' · ' : '') + 'жагсаалтад байхгүй данс';
+    rows.push(r); }
+  const ord = {miss: 0, part: 1, ok: 2, extra: 3}; rows.sort((x, y) => ord[x.st] - ord[y.st] || (x.name || x.acc).localeCompare(y.name || y.acc));
+  const req = rows.filter(r => r.req);
+  return {d0, d1, end: END, rows, need: req.length, ok: req.filter(r => r.st === 'ok').length, miss: req.filter(r => r.st === 'miss').length, part: req.filter(r => r.st === 'part').length, noList: !need.length};
+}
+function stmtCheckHTML(C){
+  if (!C) return '';
+  const IC = {ok: ['✓', 'ds-ok'], part: ['!', 'ds-part'], miss: ['✗', 'ds-miss'], extra: ['+', 'ds-f']};
+  const bad = C.miss + C.part, head = C.noList ? `<b>Хуулга:</b> ${C.rows.length} данс орсон. <span style="color:var(--warn)">«Өгөгдлийн төлөв» → тохиргоонд заавал оруулах дансны жагсаалтыг сонгоогүй тул дутууг шалгах боломжгүй.</span>`
+    : bad ? `<b style="color:var(--bad)">Хуулга дутуу: ${C.need}-аас ${C.ok} данс бүрэн${C.miss ? ' · ' + C.miss + ' данс ороогүй' : ''}${C.part ? ' · ' + C.part + ' данс хугацаа дутуу' : ''}.</b> Дутуу дансны мөнгө «Банкинд орсон»-д ороогүй тул зөрүү буруу гарна.`
+    : `<b style="color:var(--ok)">✓ Бүх ${C.need} дансны хуулга ${C.d0} – ${C.end} бүрэн орсон.</b>`;
+  return `<div class="banner${bad ? ' bad' : ''}" style="margin:0 0 6px">${head}</div>
+    <div class="tbl" style="max-height:380px;overflow:auto"><table><thead><tr><th></th><th>Данс</th><th>Нэр</th><th>Хуулгын хугацаа</th><th class="n">Гүйлгээ</th><th>Тайлбар</th></tr></thead><tbody>${C.rows.map(r =>
+      `<tr${r.st === 'miss' ? ' style="background:rgba(217,83,79,.07)"' : r.st === 'part' ? ' style="background:rgba(224,165,38,.08)"' : ''}><td><span class="ds-c ${IC[r.st][1]}" style="display:inline-block;color:#fff;text-align:center;line-height:22px;font-weight:700">${IC[r.st][0]}</span></td><td class="mono">${esc(r.bank ? r.bank + ' ' : '')}${esc(r.acc)}</td><td>${esc(r.name)}</td><td>${r.a ? esc(r.a) + ' – ' + esc(r.z) : '—'}</td><td class="n">${r.n || ''}</td><td class="note" style="white-space:normal">${esc(r.note)}</td></tr>`).join('')}</tbody></table></div>
+    <p class="note" style="margin:4px 0 0">Хяналт ${esc(C.d0)} – ${esc(C.d1)} бол хуулга ${esc(C.end)}-ний өдрийг дуустал хэрэгтэй. Заавал оруулах дансны жагсаалтыг эзэн «Өгөгдлийн төлөв» → тохиргоонд сонгоно.</p>`;
+}
 function dailySmartFile(files, a0, z0){
   if (typeof DR === 'undefined') return null;
   const dts = files.filter(f => f.type === 'bank').flatMap(f => f.rows.map(t => +t.dt)).filter(x => x > 0);
@@ -3598,7 +3639,9 @@ drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add(
 drop.addEventListener('dragleave', () => drop.classList.remove('over'));
 drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); handleFiles([...e.dataTransfer.files]); });
 $('#cash-save').addEventListener('click', async () => {
-  if (!db || !pendingRun) return; $('#cash-save').disabled = true;
+  if (!db || !pendingRun) return;
+  const C = pendingRun.check; if (C && (C.miss || C.part) && !confirm(`${C.need}-аас ${C.need - C.ok} дансны хуулга дутуу (${C.rows.filter(r => r.req && r.st !== 'ok').map(r => r.name || r.acc).join(', ')}).\n\nДутуу дансны мөнгө «банкинд ороогүй» гэж харагдана. Тэгсэн ч хадгалах уу?`)) return;
+  $('#cash-save').disabled = true;
   try{ $('#cash-msg').textContent = 'Хадгалж байна…'; const id = pendingRun.d0 + '_' + pendingRun.d1; const rawN = await saveRaw(lastFiles || [], id);
     const doc = {...pendingRun, rawN, savedAt: new Date().toISOString(), by: me}; await db.doc('cashruns/' + id).set(doc);
     if (!S.cash || String(S.cash.d1 || '') <= pendingRun.d1) await db.doc('cash/latest').set({...doc, runId: id});   // «Бэлэн мөнгө» follows the newest period
@@ -3706,7 +3749,16 @@ $('#rev-xlsx').addEventListener('click', async () => {
   }
   if (!files){ btn.disabled = false; btn.textContent = '📥 Excel тайлан татах'; return; }
   loadStyledXLSX().then(XS => {
-    try{ const r = VIVI.report(files, {d0, d1}); if (r.error){ alert(r.error); return; } XS.writeFile(VIVI.toWorkbook(r, XS), r.filename); }
+    try{ const r = VIVI.report(files, {d0, d1}); if (r.error){ alert(r.error); return; } const wb = VIVI.toWorkbook(r, XS);
+      const C = stmtCheck(files, d0, d1); if (C){ const ST = {ok: '✓ бүрэн', part: '! хугацаа дутуу', miss: '✗ ороогүй', extra: '+ нэмэлт'}, FL = {ok: 'D4EDDA', part: 'FFF3CD', miss: 'F8D7DA', extra: 'EEEEEE'};
+        const aoa = [[`Хуулга шалгах: ${C.d0} – ${C.d1} (хуулга ${C.end} хүртэл хэрэгтэй)`], [C.noList ? 'Заавал оруулах дансны жагсаалт тохируулаагүй' : `${C.need}-аас ${C.ok} данс бүрэн · ${C.miss} ороогүй · ${C.part} хугацаа дутуу`], [], ['Төлөв', 'Банк', 'Данс', 'Нэр', 'Эхлэх', 'Дуусах', 'Гүйлгээ', 'Тайлбар']]
+          .concat(C.rows.map(x => [ST[x.st], x.bank, x.acc, x.name, x.a, x.z, x.n, x.note]));
+        const ws = XS.utils.aoa_to_sheet(aoa); ws['!cols'] = [16, 8, 14, 26, 11, 11, 9, 70].map(w => ({wch: w}));
+        if (ws.A1) ws.A1.s = {font: {bold: true, sz: 13}}; if (ws.A2) ws.A2.s = {font: {bold: true, color: {rgb: C.miss || C.part ? 'C00000' : '2E7D32'}}};
+        for (let c = 0; c < 8; c++){ const h = ws[XS.utils.encode_cell({r: 3, c})]; if (h) h.s = {font: {bold: true, color: {rgb: 'FFFFFF'}}, fill: {patternType: 'solid', fgColor: {rgb: '1F5F8B'}}}; }
+        C.rows.forEach((x, i) => { for (let c = 0; c < 8; c++){ const cell = ws[XS.utils.encode_cell({r: 4 + i, c})]; if (cell) cell.s = {fill: {patternType: 'solid', fgColor: {rgb: FL[x.st]}}, alignment: {wrapText: c === 7, vertical: 'top'}}; } });
+        XS.utils.book_append_sheet(wb, ws, 'Хуулга шалгах'); const N = wb.SheetNames; N.splice(1, 0, N.pop()); }
+      XS.writeFile(wb, r.filename); }
     catch(err){ console.warn(err); alert('Excel үүсгэж чадсангүй: ' + (err.message || err)); }
     finally{ btn.disabled = false; btn.textContent = '📥 Excel тайлан татах'; }
   });
