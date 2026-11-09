@@ -114,6 +114,7 @@ section[data-panel="req"]:not([data-mode="rec"]) #recur-card{display:none}
 .chat-compose{border-top:1px solid var(--line,#ddd);padding-top:8px}.chat-back{display:none}
 @media (max-width:760px){.chat-wrap{grid-template-columns:1fr}.chat-back{display:inline-block}.chat-wrap.mobile-list .chat-main{display:none}.chat-wrap:not(.mobile-list) .chat-side{display:none}.chat-main{height:80vh}}
 .duty{margin:0 0 10px;padding:10px 14px;border-radius:12px;border:1px solid var(--line);line-height:1.7}.duty.warn{background:rgba(183,121,31,.10);border-color:rgba(183,121,31,.4)}.duty.bad{background:rgba(192,57,43,.10);border-color:rgba(192,57,43,.45)}.duty.ok{background:rgba(31,157,107,.08);border-color:rgba(31,157,107,.35)}
+.hr-grid{border-collapse:separate;border-spacing:1px}.hr-grid th,.hr-grid td{padding:2px 3px}.hr-d{font-size:11px;text-align:center;min-width:24px}.hr-d span{color:var(--muted,#888);font-weight:400}.hr-d.we{background:rgba(0,0,0,.04)}.hr-d.td{outline:2px solid #1f5f8b}.hr-c{text-align:center;cursor:pointer;min-width:24px;height:26px;font-weight:600;border:1px solid var(--line,#e3e3e3);border-radius:3px}.hr-on{background:#dbe9f6}.hr-off{background:#f1f1f1;color:#999}.hr-ok{background:#d4edda;color:#1e6b3a}.hr-late{background:#fff3cd;color:#8a6100}.hr-abs{background:#f8d7da;color:#a12a2a}.hr-sick{background:#e8defa}.hr-lv{background:#d9f2ef;color:#1d6b62;cursor:default}.hr-mat{background:#fde2f0;color:#a0336c;cursor:default}.hr-miss{background:repeating-linear-gradient(45deg,#fafafa,#fafafa 4px,#eee 4px,#eee 8px)}
 .ds-cal{border-collapse:separate;border-spacing:2px;width:auto!important}.ds-cal th,.ds-cal td{padding:0}.ds-h{font-size:11px;text-align:center;min-width:22px;font-weight:600}.ds-h span{font-weight:400;opacity:.6}.ds-h.we{color:var(--bad)}.ds-l{text-align:left;font-weight:500;padding:2px 8px 2px 0!important;white-space:nowrap;font-size:13px}
 .ds-c{width:22px;height:22px;border-radius:5px}.ds-ok{background:#2e9e6b}.ds-part{background:#e0a526}.ds-miss{background:#d9534f}.ds-f{background:var(--surface-2,#ececec)}.ds-key{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle}
 tr.dim td{opacity:.5}
@@ -178,6 +179,7 @@ body{margin:0;background:var(--bg)}
     <button role="tab" data-tab="rot" aria-selected="false">Эргэлт, захиалга</button>
     <button role="tab" data-tab="rqs" aria-selected="false">Хүсэлт гаргах</button>
     <button role="tab" data-tab="contr" aria-selected="false">Гэрээ<span class="n" id="t-ct" hidden></span></button>
+    <button role="tab" data-tab="hr" aria-selected="false">HR</button>
     <button role="tab" data-tab="chat" aria-selected="false">💬 Чат<span class="n" id="t-chat" hidden></span></button>
     <button role="tab" data-tab="set" aria-selected="false" id="tab-set" hidden>Тохиргоо</button>
     <button role="tab" data-tab="data" aria-selected="false">Өгөгдлийн төлөв</button>
@@ -827,6 +829,64 @@ body{margin:0;background:var(--bg)}
         <label class="f">Гэрээ (PDF, хэд хэдэн файл; 15 МБ хүртэл)<input id="ct-file" type="file" multiple accept="application/pdf,image/*"></label>
         <div class="f full row"><button class="btn primary" type="submit" id="ct-save">Хадгалах</button><button class="btn" type="button" id="ct-cancel" hidden>Болих</button><span class="note" id="ct-msg"></span></div>
       </form>
+    </div>
+  </section>
+
+  <!-- HR: employee cards, maternity leave, schedule & attendance, leave requests, hiring and leaving -->
+  <section class="panel" data-panel="hr" hidden>
+    <div id="hr-alert"></div>
+    <div class="kpis" id="hr-kpis"></div>
+    <div class="card">
+      <div class="filter chips" id="hr-tabs"><button data-t="emp" aria-pressed="true">👤 Ажилтнууд</button><button data-t="sch" aria-pressed="false">📅 Хуваарь, ирц</button><button data-t="lv" aria-pressed="false">🌴 Чөлөө, амралт</button><button data-t="rec" aria-pressed="false">🧲 Шинэ ажилтан, гарсан</button></div>
+
+      <!-- employees -->
+      <div data-hr="emp" style="margin-top:10px">
+        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <label class="f" style="width:auto">Хайх<input id="hr-q" placeholder="нэр, регистр, утас…" style="width:200px"></label>
+          <label class="f" style="width:auto">Салбар<select id="hr-unit" style="width:auto"></select></label>
+          <label class="f" style="width:auto">Төлөв<select id="hr-st" style="width:auto"><option value="cur">Ажиллаж буй + декрет + чөлөө</option><option value="active">Ажиллаж буй</option><option value="maternity">Декреттэй</option><option value="leave">Урт хугацааны чөлөө</option><option value="left">Гарсан</option><option value="all">Бүгд</option></select></label>
+          <button class="btn primary" type="button" id="hr-new">＋ Шинэ ажилтан</button>
+          <button class="btn" type="button" id="hr-import" hidden>⤵ Цалингийн жагсаалтаас нэмэх</button>
+          <button class="btn" type="button" id="hr-xlsx">📥 Excel</button>
+        </div>
+        <div class="tbl" style="margin-top:8px;max-height:620px;overflow:auto"><table><thead><tr><th>Ажилтан</th><th>Албан тушаал</th><th>Салбар</th><th>Ажилд орсон</th><th>Гэрээ</th><th>Төлөв</th><th class="n">Ээлжийн амралт үлдсэн</th><th></th></tr></thead><tbody id="hr-list"></tbody></table></div>
+        <div id="hr-card" style="margin-top:12px"></div>
+      </div>
+
+      <!-- schedule & attendance -->
+      <div data-hr="sch" style="margin-top:10px" hidden>
+        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <label class="f" style="width:auto">Сар<input type="month" id="hr-m" style="width:auto"></label>
+          <label class="f" style="width:auto">Салбар<select id="hr-sunit" style="width:auto"></select></label>
+          <div class="filter chips" id="hr-mode"><button data-m="plan" aria-pressed="true">Хуваарь</button><button data-m="att" aria-pressed="false">Ирц</button></div>
+          <label class="f" style="width:auto">Тэмдэглэгээ<select id="hr-code" style="width:auto"></select></label>
+        </div>
+        <p class="note" style="margin:6px 0" id="hr-sch-note"></p>
+        <div class="tbl" style="overflow:auto"><table class="hr-grid"><thead id="hr-sch-head"></thead><tbody id="hr-sch-body"></tbody></table></div>
+      </div>
+
+      <!-- leave -->
+      <div data-hr="lv" style="margin-top:10px" hidden>
+        <form id="hr-lv-form" class="grid" style="gap:8px">
+          <label class="f">Ажилтан<select id="hr-lv-emp" required></select></label>
+          <label class="f">Төрөл<select id="hr-lv-kind"></select></label>
+          <label class="f">Эхлэх<input type="date" id="hr-lv-a" required></label>
+          <label class="f">Дуусах<input type="date" id="hr-lv-z" required></label>
+          <label class="f full">Тайлбар<input id="hr-lv-note" placeholder="шалтгаан, эмнэлгийн хуудас…"></label>
+          <div class="row full"><button class="btn primary">Чөлөө бүртгэх</button><span class="note" id="hr-lv-msg"></span></div>
+        </form>
+        <div class="filter chips" id="hr-lv-f" style="margin-top:10px"><button data-f="pend" aria-pressed="true">Шийдвэрлээгүй</button><button data-f="now" aria-pressed="false">Одоо чөлөөтэй</button><button data-f="all" aria-pressed="false">Бүгд</button></div>
+        <div class="tbl" style="margin-top:6px;max-height:520px;overflow:auto"><table><thead><tr><th>Ажилтан</th><th>Төрөл</th><th>Хугацаа</th><th class="n">Ажлын өдөр</th><th>Тайлбар</th><th>Төлөв</th><th></th></tr></thead><tbody id="hr-lv-list"></tbody></table></div>
+      </div>
+
+      <!-- hiring and leaving -->
+      <div data-hr="rec" style="margin-top:10px" hidden>
+        <h3 style="margin:0 0 6px">Сул орон тоо, ажил горилогч</h3>
+        <form id="hr-vac-form" class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label class="f" style="width:auto">Албан тушаал<input id="hr-vac-t" required placeholder="худалдагч, кассчин…"></label><label class="f" style="width:auto">Салбар<select id="hr-vac-u"></select></label><label class="f" style="width:auto">Тоо<input id="hr-vac-n" type="number" min="1" value="1" style="width:70px"></label><button class="btn primary">＋ Сул орон тоо</button></form>
+        <div id="hr-vacs" style="margin-top:8px"></div>
+        <h3 style="margin:16px 0 6px">Гарсан ажилтны тооцоо</h3>
+        <div class="tbl" style="overflow:auto"><table><thead><tr><th>Ажилтан</th><th>Гарсан</th><th>Шалтгаан</th><th>Тооцоо</th></tr></thead><tbody id="hr-off"></tbody></table></div>
+      </div>
     </div>
   </section>
 
@@ -3248,6 +3308,7 @@ function renderInner(){
   try{ renderRs(); }catch(e){ console.warn('rs', e); }
   try{ renderContr(); }catch(e){ console.warn('contr', e); }
   try{ renderChat(); }catch(e){ console.warn('chat', e); }
+  try{ renderHR(); }catch(e){ console.warn('hr', e); }
   try{ renderNav(); }catch(e){ console.warn('nav', e); }
   try{ renderDaily(); }catch(e){ console.warn('daily', e); }
 }
@@ -6197,6 +6258,216 @@ document.addEventListener('click', async e => {
     const cat = [...$('#rq-cat').options].find(o => /зээл/i.test(o.text)); if (cat) $('#rq-cat').value = cat.value;
     $('#rq-note').value = `${c.kind || 'Зээл'}ийн төлбөр: ${c.name}${c.no ? ' №' + c.no : ''} · ${s.next.d}`; $('#rq-msg').textContent = 'Гэрээнээс бөглөсөн — шалгаад илгээнэ үү.'; }
 });
+// ===================== HR: employee cards, maternity leave, schedule & attendance, leave, hiring and leaving =====================
+// hremp/{id} — the employee card · hrleave/{id} — leave · hrsched/{unit}_{YYYY-MM} — schedule (plan) and attendance (att) · hrrec/{id} — a vacancy with its candidates
+const HR = {emp: [], lv: [], sch: {}, rec: [], t: 'emp', q: '', unit: '', st: 'cur', open: '', edit: false, m: '', sunit: '', mode: 'plan', code: 'Б', lvF: 'pend', init: false};
+const HR_UNITS = ['Фүүд сити', 'Драгон', 'Нийслэл', 'Онлайн дэлгүүр', 'Агуулах', 'Оффис', 'Бусад'];
+const HR_ST = {active: ['Ажиллаж буй', 'c-ok'], maternity: ['Декреттэй', 'c-acc'], leave: ['Урт хугацааны чөлөө', 'c-warn'], left: ['Гарсан', 'c-grey']};
+const HR_CT = ['Хөдөлмөрийн гэрээ (хугацаагүй)', 'Хөдөлмөрийн гэрээ (хугацаатай)', 'Туршилтын хугацаа', 'Хөлсөөр ажиллах гэрээ', 'Цагийн ажил'];
+const HR_LV = [['annual', 'Ээлжийн амралт'], ['sick', 'Өвчтэй (эмнэлгийн хуудас)'], ['paid', 'Чөлөө — цалинтай'], ['unpaid', 'Чөлөө — цалингүй'], ['other', 'Бусад']];
+const HR_PLAN = [['Б', 'Б — бүтэн өдөр'], ['Ө', 'Ө — өглөөний ээлж'], ['О', 'О — оройн ээлж'], ['-', '− амрах өдөр'], ['', '(арилгах)']];
+const HR_ATT = [['✓', '✓ ирсэн'], ['Х', 'Х — хоцорсон'], ['Т', 'Т — тасалсан'], ['Ш', 'Ш — өвчтэй'], ['Э', 'Э — ээлжийн амралт / чөлөө'], ['', '(арилгах)']];
+const HR_OFF = [['calc', 'Цалин, тооцоо хийсэн'], ['items', 'Эд хөрөнгө, түлхүүр, дүрэмт хувцас хүлээлгэсэн'], ['debt', 'Өр, урьдчилгаа суутгасан'], ['ndsh', 'НДШ-ийн дэвтэр / тодорхойлолт өгсөн'], ['acc', 'Smart, системийн эрх хаасан']];
+const hrDay = s => new Date(s + 'T00:00:00Z');
+const hrDiff = (a, b) => Math.round((hrDay(a) - hrDay(b)) / 86400e3);
+const hrName = e => e ? ((e.ovog ? e.ovog.slice(0, 1) + '.' : '') + (e.name || '—')) : '—';
+const hrById = id => HR.emp.find(e => e.id === id);
+// working days (Mon–Fri) between two dates, both included
+function hrWork(a, z){ if (!a || !z || z < a) return 0; let n = 0; for (let d = a, k = 0; d <= z && k < 800; d = shiftDay(d, 1), k++){ const w = hrDay(d).getUTCDay(); if (w && w !== 6) n++; } return n; }
+// annual leave left this year: the entitlement (15 working days unless set) − approved annual leave this year
+function hrLeaveLeft(e){ const y = today().slice(0, 4), used = HR.lv.filter(l => l.emp === e.id && l.kind === 'annual' && l.status === 'approved' && String(l.a).slice(0, 4) === y).reduce((s, l) => s + (+l.days || 0), 0);
+  return (+e.lvDays || 15) - used; }
+function hrAlerts(){
+  const t = today(), out = [];
+  for (const e of HR.emp){ if (e.status === 'left') continue;
+    if (e.status === 'maternity' && e.matTo){ const d = hrDiff(e.matTo, t); if (d <= 45) out.push([d < 0 ? 'bad' : 'warn', `👶 <b>${esc(hrName(e))}</b> — декрет ${d < 0 ? esc(e.matTo) + '-нд дууссан, ажилдаа гарсан эсэхийг тэмдэглэнэ үү' : d + ' хоногийн дараа дуусна (' + esc(e.matTo) + ') — ажлын байрыг бэлдэх'}`, e.id]); }
+    if (e.ctTo && e.status === 'active'){ const d = hrDiff(e.ctTo, t); if (d <= 30) out.push([d < 0 ? 'bad' : 'warn', `📄 <b>${esc(hrName(e))}</b> — хөдөлмөрийн гэрээ ${d < 0 ? esc(e.ctTo) + '-нд дууссан' : d + ' хоногийн дараа дуусна (' + esc(e.ctTo) + ')'} — сунгах уу?`, e.id]); }
+    if (e.trialTo && e.status === 'active'){ const d = hrDiff(e.trialTo, t); if (d >= -3 && d <= 14) out.push(['warn', `🧪 <b>${esc(hrName(e))}</b> — туршилтын хугацаа ${d < 0 ? 'дууссан' : d + ' хоногийн дараа дуусна'} (${esc(e.trialTo)}) — үндсэн гэрээ байгуулах эсэх`, e.id]); } }
+  const pend = HR.lv.filter(l => l.status === 'pending').length; if (pend) out.push(['warn', `🌴 Шийдвэрлээгүй чөлөөний хүсэлт: <b>${pend}</b>`, '']);
+  return out;
+}
+function renderHR(){
+  if (!$('#hr-list')) return;
+  if (!HR.init){ HR.init = true; HR.m = today().slice(0, 7);
+    const uo = '<option value="">Бүгд</option>' + HR_UNITS.map(u => `<option>${esc(u)}</option>`).join(''); $('#hr-unit').innerHTML = uo; $('#hr-sunit').innerHTML = HR_UNITS.map(u => `<option>${esc(u)}</option>`).join(''); $('#hr-vac-u').innerHTML = HR_UNITS.map(u => `<option>${esc(u)}</option>`).join('');
+    $('#hr-lv-kind').innerHTML = HR_LV.map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join(''); HR.sunit = HR_UNITS[0]; $('#hr-m').value = HR.m; hrCodes(); }
+  $('#hr-import').hidden = !(typeof PS !== 'undefined' && (PS.lists || []).length);
+  // alerts and KPIs
+  const AL = hrAlerts(); $('#hr-alert').innerHTML = AL.length ? `<div class="card" style="padding:10px 14px">${AL.map(([c, h, id]) => `<div class="banner${c === 'bad' ? ' bad' : ''}" style="margin:4px 0;${c === 'warn' ? 'background:var(--warn-soft)' : ''}">${h}${id ? ` <a href="#" data-hr-open="${esc(id)}">нээх</a>` : ''}</div>`).join('')}</div>` : '';
+  const cur = HR.emp.filter(e => e.status !== 'left'), t = today(), y = t.slice(0, 4);
+  const nowOff = HR.lv.filter(l => l.status === 'approved' && l.a <= t && l.z >= t);
+  $('#hr-kpis').innerHTML = `<div class="kpi"><div class="l">Ажиллаж буй</div><div class="v">${cur.filter(e => e.status === 'active').length}</div><div class="s">${HR_UNITS.map(u => [u, cur.filter(e => e.status === 'active' && e.unit === u).length]).filter(x => x[1]).map(([u, n]) => esc(u) + ' ' + n).join(' · ')}</div></div>`
+    + `<div class="kpi"><div class="l">👶 Декреттэй</div><div class="v">${cur.filter(e => e.status === 'maternity').length}</div><div class="s">${cur.filter(e => e.status === 'maternity').sort((a, b) => String(a.matTo).localeCompare(String(b.matTo))).slice(0, 3).map(e => esc(hrName(e)) + ' → ' + esc(e.matTo || '?')).join(' · ') || '—'}</div></div>`
+    + `<div class="kpi"><div class="l">Өнөөдөр чөлөөтэй</div><div class="v">${nowOff.length}</div><div class="s">${nowOff.slice(0, 4).map(l => esc(hrName(hrById(l.emp)))).join(' · ') || '—'}</div></div>`
+    + `<div class="kpi"><div class="l">${y} онд гарсан / орсон</div><div class="v">${HR.emp.filter(e => String(e.end || '').startsWith(y)).length} / ${HR.emp.filter(e => String(e.start || '').startsWith(y)).length}</div><div class="s">сул орон тоо: ${HR.rec.filter(v => v.status !== 'closed').reduce((s, v) => s + (+v.n || 1), 0)}</div></div>`;
+  $$('#hr-tabs button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.t === HR.t))); $$('[data-hr]').forEach(x => x.hidden = x.dataset.hr !== HR.t);
+  if (HR.t === 'emp') hrRenderEmp(); else if (HR.t === 'sch') hrRenderSch(); else if (HR.t === 'lv') hrRenderLv(); else hrRenderRec();
+}
+// ---------- employees ----------
+function hrRenderEmp(){
+  const q = HR.q.toLowerCase(), L = HR.emp.filter(e => (!HR.unit || e.unit === HR.unit) && (HR.st === 'all' || (HR.st === 'cur' ? e.status !== 'left' : e.status === HR.st)) && (!q || [e.name, e.ovog, e.reg, e.phone, e.pos].join(' ').toLowerCase().includes(q)))
+    .sort((a, b) => (HR_UNITS.indexOf(a.unit) - HR_UNITS.indexOf(b.unit)) || String(a.name).localeCompare(String(b.name)));
+  $('#hr-list').innerHTML = L.length ? L.map(e => { const st = HR_ST[e.status] || HR_ST.active, left = hrLeaveLeft(e);
+    const sub = e.status === 'maternity' ? `декрет ${esc(e.matFrom || '?')} → <b>${esc(e.matTo || '?')}</b>${e.matTo ? ' (' + hrDiff(e.matTo, today()) + ' хоног)' : ''}` : e.status === 'left' ? 'гарсан ' + esc(e.end || '') : '';
+    return `<tr${e.id === HR.open ? ' style="background:rgba(31,95,139,.08)"' : ''}><td><b>${esc((e.ovog ? e.ovog + ' ' : '') + (e.name || ''))}</b><div class="note">${esc(e.phone || '')}${e.reg ? ' · ' + esc(e.reg) : ''}</div></td><td>${esc(e.pos || '')}</td><td>${esc(e.unit || '')}</td><td class="mono">${esc(e.start || '')}${e.start ? `<div class="note">${hrTenure(e.start, e.end)}</div>` : ''}</td>
+      <td class="note">${esc(e.ct || '')}${e.ctTo ? '<br>→ ' + esc(e.ctTo) : ''}${e.trialTo ? '<br>туршилт → ' + esc(e.trialTo) : ''}</td><td><span class="chip ${st[1]}">${st[0]}</span>${sub ? `<div class="note">${sub}</div>` : ''}</td>
+      <td class="n">${e.status === 'left' ? '' : `<span class="chip ${left < 0 ? 'c-bad' : left <= 3 ? 'c-warn' : 'c-ok'}">${left}</span>`}</td><td><button class="btn" type="button" data-hr-open="${esc(e.id)}" style="padding:2px 10px">Нээх</button></td></tr>`; }).join('')
+    : `<tr><td colspan="8" class="empty">${HR.emp.length ? 'Шүүлтэд тохирох ажилтан алга.' : 'Ажилтан бүртгээгүй байна. «＋ Шинэ ажилтан» эсвэл «Цалингийн жагсаалтаас нэмэх».'}</td></tr>`;
+  hrRenderCard();
+}
+function hrTenure(a, z){ const d = hrDiff(z || today(), a); if (d < 0) return ''; const y = Math.floor(d / 365.25), m = Math.floor((d - y * 365.25) / 30.44); return (y ? y + ' жил ' : '') + m + ' сар'; }
+function hrRenderCard(){
+  const el = $('#hr-card'); if (!HR.open){ el.innerHTML = ''; return; }
+  const e = HR.open === 'new' ? {id: 'new', status: 'active', unit: HR.unit || HR_UNITS[0], lvDays: 15} : hrById(HR.open); if (!e){ el.innerHTML = ''; return; }
+  const ed = HR.open === 'new' || HR.edit, v = k => esc(e[k] == null ? '' : e[k]);
+  const inp = (k, l, type = 'text', extra = '') => `<label class="f">${l}<input data-hf="${k}" type="${type}" value="${v(k)}" ${ed ? '' : 'disabled'} ${extra}></label>`;
+  const sel = (k, l, opts) => `<label class="f">${l}<select data-hf="${k}" ${ed ? '' : 'disabled'}>${opts.map(o => Array.isArray(o) ? o : [o, o]).map(([x, y]) => `<option value="${esc(x)}"${String(e[k] || '') === x ? ' selected' : ''}>${esc(y)}</option>`).join('')}</select></label>`;
+  const lvs = HR.lv.filter(l => l.emp === e.id).sort((a, b) => String(b.a).localeCompare(String(a.a)));
+  const sal = (e.salHist || []).slice().reverse();
+  el.innerHTML = `<div class="card" style="border:2px solid var(--acc,#1f5f8b)"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 style="margin:0">${e.id === 'new' ? 'Шинэ ажилтан' : esc((e.ovog ? e.ovog + ' ' : '') + (e.name || ''))}</h2>
+      <div class="row" style="gap:6px">${ed ? `<button class="btn primary" type="button" id="hr-save">Хадгалах</button>` : `<button class="btn" type="button" id="hr-edit">✏️ Засах</button>`}${e.id !== 'new' && isOwner ? `<button class="btn bad" type="button" id="hr-del">Устгах</button>` : ''}<button class="btn" type="button" id="hr-close">✕</button></div></div>
+    <div class="grid" style="margin-top:8px">
+      ${inp('ovog', 'Овог')}${inp('name', 'Нэр *')}${inp('reg', 'Регистрийн дугаар')}${inp('phone', 'Утас', 'tel')}${inp('pos', 'Албан тушаал')}${sel('unit', 'Салбар', HR_UNITS)}
+      ${inp('start', 'Ажилд орсон', 'date')}${sel('ct', 'Гэрээний төрөл', [''].concat(HR_CT))}${inp('ctTo', 'Гэрээ дуусах', 'date')}${inp('trialTo', 'Туршилт дуусах', 'date')}
+      ${inp('salary', 'Үндсэн цалин ₮', 'text', 'inputmode="decimal"')}${inp('lvDays', 'Ээлжийн амралт (ажлын өдөр / жил)', 'number')}
+      ${sel('status', 'Төлөв', Object.entries(HR_ST).map(([k, x]) => [k, x[0]]))}
+      <div class="full" data-hr-mat ${e.status === 'maternity' ? '' : 'hidden'}><div class="row" style="gap:8px;flex-wrap:wrap">${inp('matFrom', '👶 Декрет эхэлсэн', 'date')}${inp('matTo', '👶 Декрет дуусах (ажилд гарах)', 'date')}</div></div>
+      <div class="full" data-hr-left ${e.status === 'left' ? '' : 'hidden'}><div class="row" style="gap:8px;flex-wrap:wrap">${inp('end', 'Гарсан огноо', 'date')}${sel('endWhy', 'Шалтгаан', ['', 'Өөрийн хүсэлтээр', 'Гэрээ дууссан', 'Ажил олгогчийн санаачилгаар', 'Сахилгын шийтгэл', 'Бусад'])}</div></div>
+      <label class="f full">Тэмдэглэл<textarea data-hf="note" rows="2" ${ed ? '' : 'disabled'}>${v('note')}</textarea></label>
+    </div>
+    ${e.id === 'new' ? '' : `<div class="row" style="gap:16px;flex-wrap:wrap;margin-top:10px;align-items:flex-start">
+      <div style="flex:1;min-width:260px"><b>Баримт бичиг</b> <span class="note">(иргэний үнэмлэх, гэрээ, тушаал, эмнэлгийн хуудас — зураг, PDF)</span>
+        <div style="margin:6px 0">${(e.docs || []).map((d, i) => `<div><a href="#" data-file="${esc(d.id)}">📎 ${esc(d.name || 'файл')}</a> <span class="note">${esc(String(d.at || '').slice(0, 10))}</span>${isOwner ? ` <a href="#" data-hr-doc-del="${i}" class="note">устгах</a>` : ''}</div>`).join('') || '<span class="note">—</span>'}</div>
+        <input type="file" id="hr-doc" accept="image/*,application/pdf" multiple style="max-width:300px"><span class="note" id="hr-doc-msg"></span></div>
+      <div style="flex:1;min-width:240px"><b>Цалингийн түүх</b><div class="note" style="margin-top:4px">${sal.map(s => `${esc(s.from)}: <b>${fmt(s.amt)} ₮</b>${s.by ? ' · ' + esc(nameOf(s.by)) : ''}`).join('<br>') || '—'}</div></div>
+      <div style="flex:1;min-width:240px"><b>Чөлөө, амралт</b> <span class="note">ээлжийн амралт үлдсэн: ${hrLeaveLeft(e)} өдөр</span><div class="note" style="margin-top:4px">${lvs.slice(0, 8).map(l => `${esc(l.a)} – ${esc(l.z)} · ${esc((HR_LV.find(x => x[0] === l.kind) || ['', l.kind])[1])} · ${l.days} өдөр${l.status !== 'approved' ? ' · ' + (l.status === 'pending' ? '⏳' : '✗') : ''}`).join('<br>') || '—'}</div></div>
+    </div>`}
+    ${e.status === 'left' && e.id !== 'new' ? `<div style="margin-top:10px"><b>Гарах үеийн тооцоо</b><div class="row" style="gap:14px;flex-wrap:wrap;margin-top:4px">${HR_OFF.map(([k, l]) => `<label class="row" style="gap:6px;width:auto"><input type="checkbox" style="width:auto" data-hr-off="${k}" ${(e.off || {})[k] ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div></div>` : ''}
+    <span class="note" id="hr-msg"></span></div>`;
+}
+async function hrSave(){
+  const o = {}; $$('#hr-card [data-hf]').forEach(x => { o[x.dataset.hf] = x.value.trim(); });
+  if (!o.name){ $('#hr-msg').textContent = 'Нэр оруулна уу.'; return; }
+  o.salary = o.salary === '' ? '' : parseAmt(o.salary) || 0; o.lvDays = +o.lvDays || 15;
+  const old = HR.open === 'new' ? null : hrById(HR.open), now = new Date().toISOString();
+  const salHist = (old && old.salHist || []).slice(); if (o.salary !== '' && (!old || +old.salary !== +o.salary)) salHist.push({from: today(), amt: o.salary, by: me});
+  const hist = old ? (old.hist || []).concat([{at: now, by: me, was: Object.fromEntries(Object.keys(o).filter(k => String(old[k] ?? '') !== String(o[k] ?? '')).map(k => [k, old[k] ?? '']))}]).slice(-30) : [];
+  try{ const doc = {...o, salHist, hist, by: me, at: now}; if (old){ await db.doc('hremp/' + old.id).set(doc, {merge: true}); } else { const r = db.collection('hremp').doc(); await r.set({...doc, createdBy: me, createdAt: now, docs: []}); HR.open = r.id; }
+    HR.edit = false; hrRenderEmp(); }
+  catch(err){ $('#hr-msg').textContent = 'Хадгалж чадсангүй: ' + (err.code || err.message); }
+}
+async function hrImport(){
+  const L = (PS.lists || []).slice().sort((a, b) => String(b.per).localeCompare(String(a.per))), seen = new Set(HR.emp.map(e => (e.ovog || '').slice(0, 1) + '|' + String(e.name || '').toLowerCase())), add = [];
+  for (const l of L.slice(0, 3)) for (const p of l.people || []){ const k = (p.ovog || '').slice(0, 1) + '|' + String(p.name || '').toLowerCase(); if (seen.has(k) || !p.name) continue; seen.add(k);
+    add.push({name: p.name, ovog: p.ovog || '', pos: p.pos || '', unit: (u => HR_UNITS.includes(u) ? u : /оффис|захиргаа|нягтлан/i.test(u) ? 'Оффис' : /агуулах/i.test(u) ? 'Агуулах' : 'Бусад')(PAY.unitOf(p.dept)), payKey: p.key || '', status: 'active', lvDays: 15}); }
+  if (!add.length){ alert('Цалингийн сүүлийн жагсаалтын бүх ажилтан аль хэдийн бүртгэгдсэн байна.'); return; }
+  if (!confirm(`Цалингийн сүүлийн жагсаалтаас ${add.length} ажилтан нэмэх үү?\n\n${add.slice(0, 12).map(a => a.ovog + ' ' + a.name).join(', ')}${add.length > 12 ? '…' : ''}`)) return;
+  const now = new Date().toISOString(); for (const a of add) await db.collection('hremp').add({...a, by: me, at: now, createdBy: me, createdAt: now, docs: [], salHist: [], hist: []});
+}
+// ---------- schedule & attendance ----------
+function hrCodes(){ const L = HR.mode === 'plan' ? HR_PLAN : HR_ATT; if (!L.some(x => x[0] === HR.code)) HR.code = L[0][0]; $('#hr-code').innerHTML = L.map(([c, l]) => `<option value="${esc(c)}"${c === HR.code ? ' selected' : ''}>${esc(l)}</option>`).join(''); }
+function hrRenderSch(){
+  const m = HR.m, u = HR.sunit, id = (u + '_' + m).replace(/[\/.#$\[\]]/g, '_'), D = HR.sch[id] || {plan: {}, att: {}}, n = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).getUTCDate(), WD = ['Ня', 'Да', 'Мя', 'Лх', 'Пү', 'Ба', 'Бя'], t = today();
+  if (!HR.sch[id] && db && !HR['_l' + id]){ HR['_l' + id] = true; db.doc('hrsched/' + id).onSnapshot(d => { HR.sch[id] = d.exists ? d.data() : {plan: {}, att: {}}; if (HR.t === 'sch') hrRenderSch(); }, e => console.warn(e)); }
+  const ms = m + '-01', me_ = m + '-' + String(n).padStart(2, '0');
+  const E = HR.emp.filter(e => e.unit === u && (e.status !== 'left' || String(e.end || '') >= ms) && (!e.start || e.start <= me_)).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  $('#hr-sch-note').innerHTML = HR.mode === 'plan' ? 'Нүдэн дээр дарахад сонгосон тэмдэглэгээ (дээр) тавигдана. Батлагдсан чөлөө автоматаар <b>Э</b> гэж харагдана. Декреттэй ажилтан хуваарьт орохгүй.' : 'Ирц: өдөр бүр ирсэн (✓), хоцорсон (Х), тасалсан (Т), өвчтэй (Ш). Хуваарьт ажлын өдөр байсан ч ирц тэмдэглээгүй бол саарал.';
+  $('#hr-sch-head').innerHTML = `<tr><th style="position:sticky;left:0;background:var(--surface,#fff);z-index:1">Ажилтан</th>${Array.from({length: n}, (_, i) => { const d = m + '-' + String(i + 1).padStart(2, '0'), w = hrDay(d).getUTCDay(); return `<th class="hr-d${w === 0 || w === 6 ? ' we' : ''}${d === t ? ' td' : ''}">${i + 1}<br><span>${WD[w]}</span></th>`; }).join('')}<th class="n">Ажлын</th><th class="n">Х</th><th class="n">Т</th></tr>`;
+  $('#hr-sch-body').innerHTML = E.length ? E.map(e => { const P = (D.plan || {})[e.id] || {}, A = (D.att || {})[e.id] || {}; let w = 0, late = 0, abs = 0;
+    const cells = Array.from({length: n}, (_, i) => { const dd = String(i + 1).padStart(2, '0'), d = m + '-' + dd, lv = HR.lv.find(l => l.emp === e.id && l.status === 'approved' && l.a <= d && l.z >= d);
+      const mat = e.status === 'maternity' && (!e.matFrom || e.matFrom <= d) && (!e.matTo || e.matTo >= d);
+      const p = mat ? 'Д' : lv ? 'Э' : P[dd] || '', a = A[dd] || ''; if (/[БӨО]/.test(p)) w++; if (a === 'Х') late++; if (a === 'Т') abs++;
+      const show = HR.mode === 'plan' ? p : (a || (lv ? 'Э' : mat ? 'Д' : ''));
+      const cls = mat ? 'hr-mat' : lv ? 'hr-lv' : HR.mode === 'att' ? ({'✓': 'hr-ok', 'Х': 'hr-late', 'Т': 'hr-abs', 'Ш': 'hr-sick', 'Э': 'hr-lv'}[a] || (/[БӨО]/.test(p) && d < t ? 'hr-miss' : '')) : (p === '-' ? 'hr-off' : p ? 'hr-on' : '');
+      return `<td class="hr-c ${cls}" data-hr-cell="${esc(e.id)}|${dd}"${mat || lv ? ' data-lock="1"' : ''} title="${esc(hrName(e))} ${d}${HR.mode === 'att' && p ? ' · хуваарь: ' + p : ''}">${esc(show)}</td>`; }).join('');
+    return `<tr><td style="position:sticky;left:0;background:var(--surface,#fff);white-space:nowrap">${esc(hrName(e))}<div class="note">${esc(e.pos || '')}</div></td>${cells}<td class="n">${w}</td><td class="n">${late || ''}</td><td class="n">${abs || ''}</td></tr>`; }).join('')
+    : `<tr><td colspan="${n + 4}" class="empty">${esc(u)}-д ажилтан бүртгээгүй.</td></tr>`;
+}
+async function hrCell(el){
+  if (el.dataset.lock) return; const [eid, dd] = el.dataset.hrCell.split('|'), id = (HR.sunit + '_' + HR.m).replace(/[\/.#$\[\]]/g, '_'), key = HR.mode === 'plan' ? 'plan' : 'att';
+  const D = HR.sch[id] = HR.sch[id] || {plan: {}, att: {}}; D[key] = D[key] || {}; D[key][eid] = D[key][eid] || {}; D[key][eid][dd] = HR.code; hrRenderSch();
+  try{ await db.doc('hrsched/' + id).set({unit: HR.sunit, m: HR.m, [key]: {[eid]: {[dd]: HR.code}}, by: me, at: new Date().toISOString()}, {merge: true}); }catch(err){ alert('Хадгалж чадсангүй: ' + (err.code || err.message)); }
+}
+// ---------- leave ----------
+function hrRenderLv(){
+  const act = HR.emp.filter(e => e.status !== 'left').sort((a, b) => String(a.name).localeCompare(String(b.name))), cur = $('#hr-lv-emp').value;
+  const html = act.map(e => `<option value="${esc(e.id)}"${e.id === cur ? ' selected' : ''}>${esc(hrName(e))} · ${esc(e.unit || '')}</option>`).join(''); if ($('#hr-lv-emp').innerHTML !== html) $('#hr-lv-emp').innerHTML = html;
+  const t = today(), L = HR.lv.filter(l => HR.lvF === 'all' || (HR.lvF === 'pend' ? l.status === 'pending' : l.status === 'approved' && l.a <= t && l.z >= t)).sort((a, b) => String(b.a).localeCompare(String(a.a)));
+  $$('#hr-lv-f button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === HR.lvF)));
+  const ST = {pending: ['⏳ Хүлээгдэж буй', 'c-warn'], approved: ['✓ Зөвшөөрсөн', 'c-ok'], rejected: ['✗ Татгалзсан', 'c-bad']};
+  $('#hr-lv-list').innerHTML = L.length ? L.map(l => { const e = hrById(l.emp), s = ST[l.status] || ST.pending;
+    return `<tr><td>${esc(hrName(e))}<div class="note">${esc(e ? e.unit || '' : '')}</div></td><td>${esc((HR_LV.find(x => x[0] === l.kind) || ['', l.kind])[1])}</td><td class="mono">${esc(l.a)} – ${esc(l.z)}</td><td class="n">${l.days}</td><td class="note">${esc(l.note || '')}<div>${esc(nameOf(l.by))}</div></td>
+      <td><span class="chip ${s[1]}">${s[0]}</span>${l.dBy ? `<div class="note">${esc(nameOf(l.dBy))}</div>` : ''}</td><td style="white-space:nowrap">${l.status === 'pending' ? `<button class="btn" type="button" data-hr-lv="${esc(l.id)}|approved" style="padding:2px 8px">✓</button> <button class="btn bad" type="button" data-hr-lv="${esc(l.id)}|rejected" style="padding:2px 8px">✗</button>` : isOwner ? `<button class="btn" type="button" data-hr-lv="${esc(l.id)}|del" style="padding:2px 8px" title="Устгах">🗑</button>` : ''}</td></tr>`; }).join('')
+    : `<tr><td colspan="7" class="empty">${HR.lvF === 'pend' ? 'Шийдвэрлээгүй хүсэлт алга.' : 'Бүртгэл алга.'}</td></tr>`;
+}
+// ---------- hiring and leaving ----------
+function hrRenderRec(){
+  const STG = [['new', 'Шинэ'], ['int', 'Ярилцлага'], ['offer', 'Санал тавьсан'], ['hired', 'Ажилд авсан'], ['no', 'Татгалзсан']];
+  const V = HR.rec.slice().sort((a, b) => (a.status === 'closed') - (b.status === 'closed') || String(b.at).localeCompare(String(a.at)));
+  $('#hr-vacs').innerHTML = V.length ? V.map(v => `<div class="card" style="padding:10px 12px;margin:6px 0${v.status === 'closed' ? ';opacity:.6' : ''}"><div class="row" style="justify-content:space-between;flex-wrap:wrap"><div><b>${esc(v.title)}</b> · ${esc(v.unit || '')} · ${+v.n || 1} хүн <span class="note">${esc(String(v.at || '').slice(0, 10))}</span>${v.status === 'closed' ? ' <span class="chip c-grey">хаасан</span>' : ''}</div>
+      <div class="row" style="gap:6px"><button class="btn" type="button" data-hr-cand="${esc(v.id)}" style="padding:2px 10px">＋ Горилогч</button><button class="btn" type="button" data-hr-vac="${esc(v.id)}" style="padding:2px 10px">${v.status === 'closed' ? 'Нээх' : 'Хаах'}</button></div></div>
+      ${(v.cands || []).length ? `<div class="tbl" style="margin-top:6px"><table><tbody>${v.cands.map((c, i) => `<tr><td>${esc(c.name)}<div class="note">${esc(c.phone || '')}</div></td><td><select data-hr-stage="${esc(v.id)}|${i}" style="width:auto">${STG.map(([k, l]) => `<option value="${k}"${c.stage === k ? ' selected' : ''}>${l}</option>`).join('')}</select></td><td class="note">${esc(c.note || '')}</td><td>${c.stage === 'hired' && !c.emp ? `<button class="btn primary" type="button" data-hr-hire="${esc(v.id)}|${i}" style="padding:2px 10px">Ажилтан болгох</button>` : c.emp ? '<span class="chip c-ok">карт үүссэн</span>' : ''}</td></tr>`).join('')}</tbody></table></div>` : ''}</div>`).join('')
+    : '<p class="note">Сул орон тоо бүртгээгүй.</p>';
+  const off = HR.emp.filter(e => e.status === 'left').sort((a, b) => String(b.end || '').localeCompare(String(a.end || '')));
+  $('#hr-off').innerHTML = off.length ? off.map(e => { const k = HR_OFF.filter(([x]) => (e.off || {})[x]).length;
+    return `<tr><td><a href="#" data-hr-open="${esc(e.id)}">${esc(hrName(e))}</a><div class="note">${esc(e.pos || '')} · ${esc(e.unit || '')}</div></td><td class="mono">${esc(e.end || '?')}</td><td>${esc(e.endWhy || '')}</td><td><span class="chip ${k === HR_OFF.length ? 'c-ok' : 'c-warn'}">${k}/${HR_OFF.length}</span> ${HR_OFF.filter(([x]) => !(e.off || {})[x]).map(([, l]) => `<span class="note">${esc(l)}</span>`).join(' · ')}</td></tr>`; }).join('')
+    : '<tr><td colspan="4" class="empty">Гарсан ажилтан алга.</td></tr>';
+}
+function hrExcel(){
+  if (typeof XLSX === 'undefined') return; const wb = XLSX.utils.book_new(), lab = s => (HR_ST[s] || ['', ''])[0];
+  const rows = [['Овог', 'Нэр', 'Регистр', 'Утас', 'Албан тушаал', 'Салбар', 'Ажилд орсон', 'Гэрээ', 'Гэрээ дуусах', 'Туршилт дуусах', 'Цалин', 'Төлөв', 'Декрет эхэлсэн', 'Декрет дуусах', 'Гарсан', 'Шалтгаан', 'Ээлжийн амралт үлдсэн']]
+    .concat(HR.emp.map(e => [e.ovog || '', e.name || '', e.reg || '', e.phone || '', e.pos || '', e.unit || '', e.start || '', e.ct || '', e.ctTo || '', e.trialTo || '', +e.salary || '', lab(e.status), e.matFrom || '', e.matTo || '', e.end || '', e.endWhy || '', e.status === 'left' ? '' : hrLeaveLeft(e)]));
+  const ws = XLSX.utils.aoa_to_sheet(rows); ws['!cols'] = [12, 16, 12, 12, 18, 14, 12, 26, 12, 12, 12, 16, 12, 12, 12, 18, 10].map(w => ({wch: w})); XLSX.utils.book_append_sheet(wb, ws, 'Ажилтнууд');
+  const lv = [['Ажилтан', 'Салбар', 'Төрөл', 'Эхлэх', 'Дуусах', 'Ажлын өдөр', 'Төлөв', 'Тайлбар']].concat(HR.lv.map(l => { const e = hrById(l.emp); return [hrName(e), e ? e.unit : '', (HR_LV.find(x => x[0] === l.kind) || ['', l.kind])[1], l.a, l.z, l.days, l.status, l.note || '']; }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(lv), 'Чөлөө'); XLSX.writeFile(wb, 'VIVI_HR_' + today() + '.xlsx');
+}
+// ---------- events ----------
+document.addEventListener('click', async e => {
+  if (!e.target.closest('[data-panel="hr"]') && !e.target.closest('[data-hr-open]')) return;
+  const tb = e.target.closest('#hr-tabs button'); if (tb){ HR.t = tb.dataset.t; renderHR(); return; }
+  const op = e.target.closest('[data-hr-open]'); if (op){ e.preventDefault(); HR.open = op.dataset.hrOpen; HR.edit = false; HR.t = 'emp'; if (HR.st !== 'all' && (hrById(HR.open) || {}).status === 'left') HR.st = 'all'; renderHR(); setTimeout(() => $('#hr-card') && $('#hr-card').scrollIntoView({behavior: 'smooth', block: 'start'}), 50); return; }
+  if (e.target.closest('#hr-new')){ HR.open = 'new'; HR.edit = true; hrRenderCard(); $('#hr-card').scrollIntoView({behavior: 'smooth'}); return; }
+  if (e.target.closest('#hr-close')){ HR.open = ''; HR.edit = false; hrRenderEmp(); return; }
+  if (e.target.closest('#hr-edit')){ HR.edit = true; hrRenderCard(); return; }
+  if (e.target.closest('#hr-save')){ hrSave(); return; }
+  if (e.target.closest('#hr-import')){ hrImport(); return; }
+  if (e.target.closest('#hr-xlsx')){ hrExcel(); return; }
+  if (e.target.closest('#hr-del') && isOwner){ const x = hrById(HR.open); if (x && confirm(`${hrName(x)}-ийн картыг бүр мөсөн устгах уу? (Гарсан бол «Төлөв: Гарсан» гэж тэмдэглэх нь зөв.)`)){ await db.doc('hremp/' + x.id).delete(); HR.open = ''; } return; }
+  const dd = e.target.closest('[data-hr-doc-del]'); if (dd && isOwner){ e.preventDefault(); const x = hrById(HR.open); if (!x || !confirm('Баримтыг устгах уу?')) return; const docs = (x.docs || []).slice(); docs.splice(+dd.dataset.hrDocDel, 1); await db.doc('hremp/' + x.id).set({docs, by: me, at: new Date().toISOString()}, {merge: true}); return; }
+  const mb = e.target.closest('#hr-mode button'); if (mb){ HR.mode = mb.dataset.m; $$('#hr-mode button').forEach(b => b.setAttribute('aria-pressed', String(b === mb))); hrCodes(); hrRenderSch(); return; }
+  const cell = e.target.closest('[data-hr-cell]'); if (cell){ hrCell(cell); return; }
+  const lf = e.target.closest('#hr-lv-f button'); if (lf){ HR.lvF = lf.dataset.f; hrRenderLv(); return; }
+  const lb = e.target.closest('[data-hr-lv]'); if (lb){ const [id, act] = lb.dataset.hrLv.split('|');
+    if (act === 'del'){ if (isOwner && confirm('Чөлөөний бүртгэлийг устгах уу?')) await db.doc('hrleave/' + id).delete(); return; }
+    await db.doc('hrleave/' + id).set({status: act, dBy: me, dAt: new Date().toISOString(), by: (HR.lv.find(l => l.id === id) || {}).by || me}, {merge: true}); return; }
+  const cv = e.target.closest('[data-hr-vac]'); if (cv){ const v = HR.rec.find(x => x.id === cv.dataset.hrVac); if (v) await db.doc('hrrec/' + v.id).set({status: v.status === 'closed' ? 'open' : 'closed', at2: new Date().toISOString()}, {merge: true}); return; }
+  const cc = e.target.closest('[data-hr-cand]'); if (cc){ const v = HR.rec.find(x => x.id === cc.dataset.hrCand); if (!v) return; const name = prompt('Горилогчийн нэр:'); if (!name) return; const phone = prompt('Утас:') || '', note = prompt('Тэмдэглэл (туршлага, хаанаас ирсэн…):') || '';
+    await db.doc('hrrec/' + v.id).set({cands: (v.cands || []).concat([{name, phone, note, stage: 'new', at: new Date().toISOString()}])}, {merge: true}); return; }
+  const hi = e.target.closest('[data-hr-hire]'); if (hi){ const [vid, i] = hi.dataset.hrHire.split('|'), v = HR.rec.find(x => x.id === vid); if (!v) return; const c = v.cands[+i], now = new Date().toISOString();
+    const r = db.collection('hremp').doc(); await r.set({name: c.name, ovog: '', phone: c.phone || '', pos: v.title, unit: v.unit, start: today(), ct: 'Туршилтын хугацаа', trialTo: shiftDay(today(), 90), status: 'active', lvDays: 15, note: c.note || '', docs: [], salHist: [], hist: [], by: me, at: now, createdBy: me, createdAt: now});
+    const cands = v.cands.slice(); cands[+i] = {...c, emp: r.id}; await db.doc('hrrec/' + vid).set({cands}, {merge: true}); HR.open = r.id; HR.edit = true; HR.t = 'emp'; renderHR(); return; }
+});
+document.addEventListener('change', async e => {
+  const t = e.target; if (!t.closest || !t.closest('[data-panel="hr"]')) return;
+  if (t.id === 'hr-unit'){ HR.unit = t.value; hrRenderEmp(); } else if (t.id === 'hr-st'){ HR.st = t.value; hrRenderEmp(); }
+  else if (t.id === 'hr-m'){ HR.m = t.value || today().slice(0, 7); hrRenderSch(); } else if (t.id === 'hr-sunit'){ HR.sunit = t.value; hrRenderSch(); } else if (t.id === 'hr-code'){ HR.code = t.value; }
+  else if (t.dataset.hf === 'status'){ $('#hr-card [data-hr-mat]').hidden = t.value !== 'maternity'; $('#hr-card [data-hr-left]').hidden = t.value !== 'left'; }
+  else if (t.dataset.hrOff){ const x = hrById(HR.open); if (x) await db.doc('hremp/' + x.id).set({off: {...(x.off || {}), [t.dataset.hrOff]: t.checked ? today() : ''}, by: me, at: new Date().toISOString()}, {merge: true}); }
+  else if (t.dataset.hrStage){ const [vid, i] = t.dataset.hrStage.split('|'), v = HR.rec.find(x => x.id === vid); if (!v) return; const cands = v.cands.slice(); cands[+i] = {...cands[+i], stage: t.value}; await db.doc('hrrec/' + vid).set({cands}, {merge: true}); }
+  else if (t.id === 'hr-doc'){ const x = hrById(HR.open); if (!x || !assets) return; const ups = [];
+    try{ for (const f of [...t.files]){ $('#hr-doc-msg').textContent = 'Хадгалж байна… ' + f.name; const up = await assets.upload(f); ups.push({id: up.id, type: up.contentType, name: f.name, at: new Date().toISOString(), by: me}); }
+      await db.doc('hremp/' + x.id).set({docs: (x.docs || []).concat(ups), by: me, at: new Date().toISOString()}, {merge: true}); $('#hr-doc-msg').textContent = '✓'; }
+    catch(err){ $('#hr-doc-msg').textContent = err && err.code === 'too_big' ? 'Файл хэт том (15 MB хүртэл).' : err && err.code === 'type' ? 'Зөвхөн зураг эсвэл PDF.' : 'Алдаа: ' + (err.code || err.message); } t.value = ''; }
+});
+document.addEventListener('input', e => { if (e.target.id === 'hr-q'){ HR.q = e.target.value; hrRenderEmp(); } });
+document.addEventListener('submit', async e => {
+  if (e.target.id === 'hr-lv-form'){ e.preventDefault(); const emp = $('#hr-lv-emp').value, a = $('#hr-lv-a').value, z = $('#hr-lv-z').value; if (!emp || !a || !z || z < a){ $('#hr-lv-msg').textContent = 'Огноогоо шалгана уу.'; return; }
+    const kind = $('#hr-lv-kind').value, days = hrWork(a, z), x = hrById(emp);
+    if (kind === 'annual' && x && days > hrLeaveLeft(x) && !confirm(`${hrName(x)}: ээлжийн амралт ${hrLeaveLeft(x)} өдөр үлдсэн, ${days} өдөр хүсэж байна. Тэгсэн ч бүртгэх үү?`)) return;
+    try{ await db.collection('hrleave').add({emp, kind, a, z, days, note: $('#hr-lv-note').value.trim(), status: 'pending', by: me, at: new Date().toISOString()}); $('#hr-lv-msg').textContent = `✓ бүртгэлээ (${days} ажлын өдөр) — зөвшөөрөхийг хүлээж байна`; $('#hr-lv-note').value = ''; }
+    catch(err){ $('#hr-lv-msg').textContent = 'Алдаа: ' + (err.code || err.message); } }
+  if (e.target.id === 'hr-vac-form'){ e.preventDefault(); try{ await db.collection('hrrec').add({title: $('#hr-vac-t').value.trim(), unit: $('#hr-vac-u').value, n: +$('#hr-vac-n').value || 1, status: 'open', cands: [], by: me, at: new Date().toISOString()}); $('#hr-vac-t').value = ''; }catch(err){ alert('Алдаа: ' + (err.code || err.message)); } }
+});
 // ---------- sales analyser (Борлуулалтын шинжилгээ) ----------
 const AN = {date: '', mode: 'day', cmp: 'w1', unit: '', from: '', to: '', last: null, init: false, snaps: {}, loading: ''};
 const anPct = v => v == null || !isFinite(v) ? '–' : (v > 0 ? '+' : '') + v.toFixed(1) + '%';
@@ -6839,7 +7110,7 @@ document.addEventListener('visibilitychange', chMarkRead);
 function chatBtn(r){ const c = CH.chats.find(x => x.id === 'req_' + r.id); return `<button class="btn" data-chat-req="${esc(r.id)}" title="Энэ хүсэлтийн чат">💬${c && c.n ? ' ' + c.n : ''}${c && chUnread(c) ? ' <span style="color:var(--bad)">●</span>' : ''}</button>`; }
 // ===================== two-level menu: groups on top, the group's tabs below (wrapping, no sideways scroll) =====================
 const NAV_GROUPS = [['fin', '💰 Санхүү', ['req', 'rqs', 'bank', 'rev', 'cash', 'bal', 'pay', 'contr']], ['rep', '📊 Тайлан', ['daily', 'anal', 'pl']],
-  ['wh', '📦 Агуулах, дэлгүүр', ['wh', 'rcv', 'inv', 'rot']], ['chat', '💬 Чат', ['chat']], ['set', '⚙ Тохиргоо', ['set', 'data']]];
+  ['wh', '📦 Агуулах, дэлгүүр', ['wh', 'rcv', 'inv', 'rot']], ['hr', '👥 HR', ['hr']], ['chat', '💬 Чат', ['chat']], ['set', '⚙ Тохиргоо', ['set', 'data']]];
 const navGrpOf = t => (NAV_GROUPS.find(g => g[2].includes(t)) || NAV_GROUPS[0])[0];
 let NAV_G = '';
 (() => { const nav = document.querySelector('nav.tabs'); if (!nav) return; const bar = document.createElement('div'); bar.className = 'nav-groups'; bar.id = 'nav-groups'; nav.parentNode.insertBefore(bar, nav);
@@ -6892,9 +7163,9 @@ $('#rq-acc').addEventListener('change', () => { const b = PAYEES.get($('#rq-acc'
   if (n) n.textContent = `Сангаас: ${b.name}${b.group ? ' · ' + b.group : ''}${b.holder ? ' · эзэмшигч ' + b.holder : ''}`; });
 // ---------- settings (owner) ----------
 let ACCESS = {emails: [], perms: {}};
-const SECTIONS_WH = [['wh','Агуулах (LPP скан)'],['rcv_fc','Хүлээн авалт – Food City'],['rcv_dr','Хүлээн авалт – Драгон'],['rcv_ns','Хүлээн авалт – Нийслэл'],['rcv_ht','Хүлээн авалт – Бөөн'],['inv','Тооллого – тоолох'],['invadm','Тооллого – удирдах (үүсгэх, тайлан, Smart файл)'],['reqsub','Хүсэлт гаргах — зөвхөн ажилтанд (нягтланд хэрэггүй)'],['contr','Гэрээ (зээл, лизинг)']];
+const SECTIONS_WH = [['wh','Агуулах (LPP скан)'],['rcv_fc','Хүлээн авалт – Food City'],['rcv_dr','Хүлээн авалт – Драгон'],['rcv_ns','Хүлээн авалт – Нийслэл'],['rcv_ht','Хүлээн авалт – Бөөн'],['inv','Тооллого – тоолох'],['invadm','Тооллого – удирдах (үүсгэх, тайлан, Smart файл)'],['reqsub','Хүсэлт гаргах — зөвхөн ажилтанд (нягтланд хэрэггүй)'],['contr','Гэрээ (зээл, лизинг)'],['hr','HR — ажилтан, хуваарь, чөлөө']];
 const SECTIONS = [['req','Төлбөрийн хүсэлт'],['daily','Өдрийн тайлан'],['bank','Банкны гүйлгээ'],['rev','Орлого тулгалт'],['cash','Бэлэн мөнгө'],['bal','Дансны үлдэгдэл'],['pay','Цалин'],['pl','Дотоод тайлан']];
-const DEFAULT_PERMS = {daily:false, req:true, bank:true, rev:false, cash:true, bal:true, pay:false, pl:false, wh:false, rcv_fc:false, rcv_dr:false, rcv_ns:false, rcv_ht:false, inv:false, invadm:false, reqsub:false, contr:false};
+const DEFAULT_PERMS = {daily:false, req:true, bank:true, rev:false, cash:true, bal:true, pay:false, pl:false, wh:false, rcv_fc:false, rcv_dr:false, rcv_ns:false, rcv_ht:false, inv:false, invadm:false, reqsub:false, contr:false, hr:false};
 const permsOf = e => ({...DEFAULT_PERMS, ...((ACCESS.perms || {})[e] || {})});
 function renderAccess(){
   const ownRow = `<div class="acc-row" style="background:var(--ok-bg,#eef8f1)"><div class="row" style="justify-content:space-between"><b>${esc(user.email())}</b><span class="chip c-ok">Эзэмшигч — бүх эрх автоматаар</span></div>
@@ -6954,13 +7225,13 @@ else VIVIFB.start(async () => {
   $('#req-form-card').hidden = !canWrite;
   $('#tab-set').hidden = !isOwner;
   const onErr = e => console.warn('db', e);
-  let ALLOW = {daily:true, req:true, bank:true, rev:true, cash:true, bal:true, pay:true, pl:true, wh:true, rcv_fc:true, rcv_dr:true, rcv_ns:true, rcv_ht:true, inv:true, invadm:true, reqsub:false, contr:true};
+  let ALLOW = {daily:true, req:true, bank:true, rev:true, cash:true, bal:true, pay:true, pl:true, wh:true, rcv_fc:true, rcv_dr:true, rcv_ns:true, rcv_ht:true, inv:true, invadm:true, reqsub:false, contr:true, hr:true};
   if (!isOwner){
     try{ const a = await db.doc('config/access').get(); const x = a.exists ? a.data() : {}; ALLOW = {...DEFAULT_PERMS, ...((x.perms || {})[String(user.email()).toLowerCase()] || {})}; }catch(e){ console.warn(e); }
   }
   ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); ALLOW.inv = !!(ALLOW.inv || ALLOW.invadm); ALLOW.chat = true; ALLOW.anal = !!ALLOW.daily; ALLOW.rot = !!ALLOW.daily; ALLOW.data = !!(ALLOW.daily || ALLOW.rev || ALLOW.cash || isOwner); if (ALLOW.req) ALLOW.reqsub = false;   // an accountant makes real requests; the employee form is only for people without «Төлбөрийн хүсэлт»
   window.ALLOWX = ALLOW; if (!isOwner && !ALLOW.req && !ALLOW.rev) $('#role').textContent = 'Ажилтан · ' + user.email();
-  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv', inv:'inv', reqsub:'rqs', contr:'contr', chat:'chat', anal:'anal', rot:'rot', data:'data'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
+  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv', inv:'inv', reqsub:'rqs', contr:'contr', hr:'hr', chat:'chat', anal:'anal', rot:'rot', data:'data'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
   for (const k in TABS){ const b = document.querySelector(`nav.tabs button[data-tab="${TABS[k]}"]`); if (b) b.hidden = !ALLOW[k]; if (KPI[k]) $(KPI[k]).closest('.kpi').hidden = !ALLOW[k]; }
   { const cur = document.querySelector('nav.tabs button[aria-selected="true"]'); if (!cur || cur.hidden){ const first = [...document.querySelectorAll('nav.tabs button')].find(b => !b.hidden); if (first) showTab(first.dataset.tab); } }
   if (!Object.values(ALLOW).some(Boolean)) gate('Танд харах хэсэг сонгогдоогүй байна. Эзэмшигчид хандана уу.', true);
@@ -6970,6 +7241,7 @@ else VIVIFB.start(async () => {
   chLoadUsers().then(render);
   (isOwner ? db.collection('chats') : db.collection('chats').where('members', 'array-contains', me)).onSnapshot(s => { CH.chats = s.docs.map(d => ({id: d.id, ...d.data()})); CH.loaded = true; render(); }, onErr);
   if (ALLOW.contr) db.collection('contracts').onSnapshot(s => { CT.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+  if (ALLOW.hr){ db.collection('hremp').onSnapshot(s => { HR.emp = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); db.collection('hrleave').onSnapshot(s => { HR.lv = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); db.collection('hrrec').onSnapshot(s => { HR.rec = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); }
   if (ALLOW.inv) db.collection('inv').onSnapshot(s => { IV.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.wh || ALLOW.rcv) db.doc('config/wh').onSnapshot(d => { WS.cfg = d.exists ? d.data() : null; render(); }, onErr);
   if (ALLOW.wh){
