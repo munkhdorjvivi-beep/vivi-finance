@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd115</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd116</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -645,8 +645,8 @@ body{margin:0;background:var(--bg)}
     <div class="card" id="pl-unk-card" hidden>
       <h2>Тодруулах — танигдаагүй зарлага</h2>
       <div class="daysum" id="pl-unk-sum"></div>
-      <div class="tbl"><table><thead><tr><th>Хүлээн авагч</th><th>Гүйлгээний утга</th><th class="n">Гүйлгээ</th><th class="n">Дүн</th><th>Ангилал</th><th>Салбар</th><th></th></tr></thead><tbody id="pl-unk"></tbody></table></div>
-      <p class="note" style="margin:8px 0 0">Ангилал, салбарыг сонгоод «Сан руу нэмэх» дарвал хүлээн авагч «Харилцагчийн сан»-д нэмэгдэж, цаашид бүх хэсэгт (банк, өдрийн ба дотоод тайлан, төлбөрийн хүсэлт) автоматаар танигдана.</p>
+      <div class="tbl"><table><thead><tr><th>Хүлээн авагч</th><th>Гүйлгээний утга</th><th class="n">Дүн</th><th>Юу вэ? · аль салбар(ууд)?</th><th></th></tr></thead><tbody id="pl-unk"></tbody></table></div>
+      <p class="note" style="margin:8px 0 0">«Хадгалах» — тухайн хүлээн авагчийн бүх гүйлгээ (цаашдынх ч) энэ ангилалд орж «Харилцагчийн сан»-д нэмэгдэнэ. Нэг хүлээн авагчид өөр өөр зориулалттай гүйлгээ байвал «▸ гүйлгээ» дарж гүйлгээ бүрийг тусад нь ангилна. Хэд хэдэн салбарт хамаатай зардлыг олон салбар чагтлаад хуваах аргаа сонгоно.</p>
     </div>
     <div class="card">
       <details><summary><b>Гараар нэмэх зардал</b> <span class="note">— бэлнээр төлсөн, шилжүүлэггүй зардал</span></summary>
@@ -4714,6 +4714,13 @@ const PLS = {months: {}, sel: '', cfg: {catMode: {}}, fixedCfg: {units: {}}, acc
 // active units (Nov 2026): Food City, Dragon, Online; Нийслэл opening; closed stores still show when a period has their data
 const PL_UNITS = ['Фүүд сити','Драгон','Онлайн дэлгүүр','Нийслэл','Оффис','Агуулах'];
 const N2O = {'4002594661':'405095875','4002639706':'405096869','4002636496':'405096868','4002599151':'405095877'};
+// one transaction's classification: a per-transaction choice (txmark) wins, then the counterparty base (may name several stores)
+const plTxId = t => t.id || ('p_' + t.acc + '_' + String(t.dt).slice(0, 16) + '_' + t.amount);
+function plApplyMark(t){ const id = plTxId(t), m = (DR.marks || {})[id] || {}; const r = {...t, id};
+  if (m.cat) r.cat = m.cat; if (m.own) r.cat = 'own_md';
+  if (m.stores && m.stores.length){ r.store = m.stores.join(','); r.alloc = m.alloc || 'sales'; }
+  else if (!r.store && r.cp){ const ps = (PBINFO.plStore || {})[r.cp]; if (ps && ps.stores && ps.stores.length){ r.store = ps.stores.map(x => PAY.unitOf(x)).join(','); r.alloc = ps.alloc || 'sales'; } }
+  if (m.cat || (m.stores && m.stores.length)) r.manual = true; return r; }
 const plUnits = () => [...new Set([...PL_UNITS, ...Object.values(DR.days).flatMap(d => Object.keys(d.stores || {}).map(PAY.unitOf))])].filter(u => u !== PAY.CLOSED);
 const pct = v => v == null || !isFinite(v) ? '–' : v.toFixed(1) + '%';
 const sgnC = v => `<span style="color:${v < 0 ? 'var(--bad)' : 'inherit'}">${fmt(v)}</span>`;
@@ -4766,8 +4773,8 @@ function plTx(a, z){
     if (cov && (cov.has(String(t.fromAcc)) || cov.has(N2O[String(t.fromAcc)] || ''))) continue;   // (drFlowTx already brings the statements of revenue control, day by day)
     if (t.cat === 'internal') continue;
     const m = mt[t.id], req = m && m.req ? S.requests.find(x => x.id === m.req) : null;
-    out.push({dt: String(t.dt).slice(0, 16), acc: String(t.fromAcc), cp: VIVI.norm(t.toAcc), name: t.toName || '', desc: t.desc || '', amount: t.amount, cat: t.cat, src: 'email', store: req && req.store || '', alloc: req && req.alloc || ''}); }
-  return out;
+    out.push({id: t.id, dt: String(t.dt).slice(0, 16), acc: String(t.fromAcc), cp: VIVI.norm(t.toAcc), name: t.toName || '', desc: t.desc || '', amount: t.amount, cat: t.cat, src: t.src === 'stmt' ? 'stmt' : 'email', store: req && req.store || '', alloc: req && req.alloc || '', mine: t.mine}); }
+  return out.map(plApplyMark);
 }
 function plModel(){
   const [a, z] = drRange(); const months = plMonths(a, z);
@@ -4792,7 +4799,7 @@ function plModel(){
     const [yy, mm] = per.split('-').map(Number), last = `${per}-${String(new Date(Date.UTC(yy, mm, 0)).getUTCDate()).padStart(2, '0')}`;
     monthSales[per] = {stores: st, final: ds.some(d => d.date === last), upTo: ds.map(d => d.date).sort().at(-1) || ''};
   }
-  const baseStore = Object.fromEntries(Object.values(PAYEES.all()).filter(p => p.store).map(p => [p.acc, PAY.unitOf(p.store)]));
+  const baseStore = Object.fromEntries(Object.values(PAYEES.all()).filter(p => p.store && !String(p.store).includes(',')).map(p => [p.acc, PAY.unitOf(p.store)]));
   const accStoreN = Object.fromEntries(Object.entries(PLS.accStore || {}).map(([a, u]) => [a, u ? PAY.unitOf(u) : u]));
   const out = PL.build(pl, Object.keys(pay.units).length ? pay : null, tx, {catMode: PLS.cfg.catMode || {}, accStore: accStoreN, baseStore, manual: (manual || []).map(m => m.unit ? {...m, unit: PAY.unitOf(m.unit)} : m), officeUnits: PAY.OFFICE_UNITS, fixed, area: PLS.area || {}, monthSales, order: PAY.STORE_ORDER});
   return {...out, a, z, months, pl, tx, A, docs, payMissing, payAdv, hasStmt: months.some(m => ((PLS.months[m.per] || {}).stmtAccs || []).length || Object.values(DR.stmt || {}).some(D => D.per === m.per))};
@@ -4850,6 +4857,7 @@ function renderPL(){
   const CL = M.office.find(x => x.unit === PAY.CLOSED), closedCost = CL ? Math.round((CL.payroll || 0) + (CL.direct || 0) - (CL.gp || 0)) : 0;
   const cmp = [['Дэлгүүрүүдийн ашиг', M.storeTot.result], ['− Оффисын зардал (цалин, оффист оноосон)', -(M.officeCost - closedCost)], ...(closedCost ? [['± Хаагдсан салбарууд (Е-март, Эрдэнэт, УИД, Хан-Уул, Кинг тауэр): бохир ашиг − зардал', -closedCost]] : []), ...Object.entries(M.company.byCat).sort((a, b) => b[1] - a[1]).map(([k, v]) => [`− ${esc(VIVI_CAT_LABEL(k))} (салбарт хуваарилаагүй)`, -v])];
   $('#pl-company').innerHTML = cmp.map(([l, v]) => `<tr><td>${l}</td><td class="n">${sgnC(v)}</td></tr>`).join('')
+    + (M.company.byCat.other ? `<tr><td colspan="2"><div class="banner" style="background:var(--warn-soft);margin:6px 0">⚠️ <b>${fmt(M.company.byCat.other)} ₮</b> зарлага «Бусад / тодруулах» — юу болохыг тодруулаагүй тул компанийн зардлаар хасагдсан. Дотор нь бараа, зээлийн төлбөр байвал ашигт хамаагүй (тусад нь) болно. Доорх «Тодруулах» хэсэгт ангилна уу — ангилсны дараа ашиг өөрчлөгдөнө.</div></td></tr>` : '')
     + `<tr style="font-weight:700"><td>Компанийн цэвэр ашиг</td><td class="n">${sgnC(M.net)} <span class="note">(${pct(M.netPct)})</span></td></tr>`
     + `<tr><td class="note">Тусад нь: зээл, хүүгийн төлбөр</td><td class="n note">${fmt(M.company.debt)}</td></tr><tr><td class="note">Тусад нь: эзэмшигч рүү (хувийн)</td><td class="n note">${fmt(M.company.owner)}</td></tr>`
     + `<tr><td class="note">Тусад нь: бараа худалдан авалт — нийлүүлэгчид төлсөн</td><td class="n note">${fmt(M.company.stock || 0)}</td></tr>`
@@ -4880,23 +4888,9 @@ function renderPL(){
   $('#pl-sup').innerHTML = sr.length ? sr.map(x => `<tr data-sup="${esc(x.supplier)}" style="cursor:pointer"><td><b>${esc(x.supplier)}</b>${x.brands.length > 1 ? ` <span class="note">${PLS.open[x.supplier] ? '▾' : '▸'} ${x.brands.length} бүлэг</span>` : ''}</td><td class="n">${fmt(x.s)}</td><td class="n">${fmt(x.c)}</td><td class="n">${sgnC(x.gp)}</td><td class="n"><span class="chip ${mcls(x.m)}">${pct(x.m)}</span></td><td class="n">${pct(x.share)}</td><td class="n">${fmt(x.q)}</td></tr>`
     + (PLS.open[x.supplier] && x.brands.length > 1 ? x.brands.map(b => `<tr><td style="padding-left:24px" class="note">${esc(b.brand)}</td><td class="n note">${fmt(b.s)}</td><td class="n note">${fmt(b.c)}</td><td class="n note">${fmt(b.gp)}</td><td class="n note">${pct(b.m)}</td><td class="n note">${pct(b.share)}</td><td class="n note">${fmt(b.q)}</td></tr>`).join('') : '')).join('')
     : '<tr><td colspan="7" class="empty">Нийлүүлэгч алга.</td></tr>';
-  // unknown expenses (category «other»): add the receiver to the counterparty base
-  const all = M.tx; const unk = {};
-  for (const t of all){ if (t.cat !== 'other') continue; const k = t.cp || ('name:' + t.name);
-    const o = unk[k] = unk[k] || {k, cp: t.cp, name: t.name, n: 0, amt: 0, descs: []}; o.n++; o.amt += t.amount; if (t.desc && o.descs.length < 3 && !o.descs.includes(t.desc)) o.descs.push(t.desc); }
-  const U = Object.values(unk).sort((x, y) => y.amt - x.amt);
-  $('#pl-unk-card').hidden = !U.length;
-  $('#pl-unk-sum').innerHTML = U.length ? `Энэ хугацаанд ангилал тодорхойгүй <b>${U.reduce((q, o) => q + o.n, 0)}</b> гүйлгээ · <b>${fmt(U.reduce((q, o) => q + o.amt, 0))} ₮</b> («Бусад / тодруулах»-д орсон)` : '';
-  const CATS = ['rent', 'media', 'ops', 'goods', 'ploan', 'bank', 'cargo', 'fuel', 'tax', 'repair', 'travel', 'salary', 'own_md', 'other'];
-  const uo2 = '<option value="">— компани —</option>' + plUnits().map(u => `<option>${esc(u)}</option>`).join('');
-  $('#pl-unk').innerHTML = U.map((o, i) => { const b = o.cp ? PAYEES.get(o.cp) : null;
-    const amb = b && b.alts && b.alts.length > 1;
-    return `<tr><td><b>${esc(o.name || o.cp || '?')}</b>${b ? `<div><span class="chip c-acc">${esc(b.name)}</span></div>` : ''}<div class="note mono">${esc(o.cp || 'данс тодорхойгүй')}</div></td><td class="note">${o.descs.map(esc).join('<br>')}</td><td class="n">${o.n}</td><td class="n">${fmt(o.amt)}</td>
-      <td>${o.cp ? `<select id="unk-cat-${i}" style="width:auto"><option value="">— ангилал —</option>${(amb ? b.alts.map(x => x.cat) : CATS).map(c => `<option value="${c}">${esc(VIVI_CAT_LABEL(c))}</option>`).join('')}</select>` : ''}</td>
-      <td>${o.cp && !amb ? `<select id="unk-store-${i}" style="width:auto">${uo2}</select>` : ''}</td>
-      <td>${!o.cp ? '' : amb ? `<button class="btn" data-unkdef="${i}" data-acc="${esc(b.acc)}" title="Утгад «зээл»/«бараа» гэж бичээгүй үед энэ ангиллаар тооцно">Анхдагч болгох</button><div class="note">эсвэл утгад «зээл» / «бараа» гэж бичүүлнэ</div>`
-        : `<button class="btn primary" data-unkadd="${i}" data-acc="${esc(o.cp)}" data-name="${esc(o.name || '')}">Сан руу нэмэх</button>`}</td></tr>`; }).join('');
-  const catTot = {}; for (const t of all) catTot[t.cat] = (catTot[t.cat] || 0) + t.amount;
+  // unknown expenses (category «other»): classify by counterparty (all its transfers, saved to the base) or one transaction at a time
+  plRenderUnk(M);
+  const all = M.tx, catTot = {}; for (const t of all) catTot[t.cat] = (catTot[t.cat] || 0) + t.amount;
   $('#pl-cats').innerHTML = Object.keys({...PL.CAT_DEFAULT, ...catTot}).filter(k => k !== 'internal').sort((a, b) => (catTot[b] || 0) - (catTot[a] || 0)).map(k => { const mode = (PLS.cfg.catMode || {})[k] || PL.CAT_DEFAULT[k] || 'cost';
     return `<tr><td>${esc(VIVI_CAT_LABEL(k))}</td><td class="n">${catTot[k] ? fmt(catTot[k]) : '–'}</td><td><select data-plcat="${esc(k)}" style="width:auto">${Object.entries(PL.CAT_MODE_LABEL).map(([v, l]) => `<option value="${v}" ${v === mode ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></td></tr>`; }).join('');
   const mu = $('#pl-man-unit'); const uo = '<option value="">Компани (хуваарилаагүй)</option>' + plUnits().map(u => `<option>${esc(u)}</option>`).join(''); if (mu.innerHTML !== uo) mu.innerHTML = uo;
@@ -4924,17 +4918,6 @@ $('#pl-xlsx').addEventListener('click', () => { const M = plModel(); const pl = 
     XS.writeFile(wb, `VIVI_dotood_tailan_${M.a === M.z ? M.a : M.a + '_' + M.z}.xlsx`);
   }); });
 
-document.addEventListener('click', async e => {
-  const add = e.target.closest('button[data-unkadd]'), def = e.target.closest('button[data-unkdef]'); if (!add && !def) return;
-  const i = (add || def).dataset[add ? 'unkadd' : 'unkdef'], cat = ($('#unk-cat-' + i) || {}).value;
-  if (!cat){ alert('Ангилал сонгоно уу.'); return; }
-  try{
-    if (add){ const store = ($('#unk-store-' + i) || {}).value || '', acc = add.dataset.acc, name = add.dataset.name || acc;
-      const extra = (PBINFO.extra || []).filter(x => x.acc !== acc).concat([{acc, name, holder: name, group: 'Нэмсэн', cat, store, cf: '', by: me, at: new Date().toISOString()}]);
-      await db.doc('config/payees').set({extra}, {merge: true}); }
-    else { await db.doc('config/payees').set({defaults: {...(PBINFO.defaults || {}), [def.dataset.acc]: cat}}, {merge: true}); }
-  }catch(err){ console.warn(err); alert('Хадгалж чадсангүй'); }
-});
 
 $('#pl-area-save').addEventListener('click', async () => { if (!db) return; const area = {};
   $$('#pl-area input').forEach(el => { const v = (parseAmt(String(el.value)) || 0); if (v) area[el.dataset.unit] = v; });
@@ -4942,7 +4925,7 @@ $('#pl-area-save').addEventListener('click', async () => { if (!db) return; cons
 
 // ===================== 💵 cash flow of the period: where the money came from and where it went =====================
 // opening = recorded balance on the first day (morning); closing = the morning AFTER the last day (card / POS money of the last day lands then)
-const CF_GROUP = {rent: 'op', f1: 'op', media: 'op', repair: 'op', travel: 'op', fuel: 'op', fee: 'op', tax: 'op', ops: 'op', other: 'op', salary: 'op', refund: 'op', fx: 'op',
+const CF_GROUP = {rent: 'op', f1: 'op', media: 'op', repair: 'op', travel: 'op', fuel: 'op', fee: 'op', tax: 'op', ops: 'op', other: 'op', salary: 'op', refund: 'op', fx: 'stock',
   goods: 'stock', cargo: 'stock', bank: 'debt', ploan: 'debt', own_md: 'owner', own_eb: 'owner', hipay: 'owner'};
 const CF_LABEL = {op: 'Үйл ажиллагааны зардал', stock: 'Бараа худалдан авалт (нийлүүлэгч, тээвэр)', debt: 'Зээл, хүү (банк, ББСБ, хувийн)', owner: 'Эзэмшигч (хувийн)'};
 function plCashflow(){
@@ -4972,7 +4955,15 @@ function plCashflow(){
   for (const t of out.filter(t => t.date >= a && t.date <= z)){ const o = W[wk(t.date)] = W[wk(t.date)] || {in: 0, op: 0, stock: 0, debt: 0, owner: 0}; o[CF_GROUP[t.cat] || 'op'] += t.amount; }
   const miss = []; if (!open) miss.push(`${a}-ны (эсвэл өмнөх) дансны үлдэгдэл бүртгэлгүй`); if (!close) miss.push(`${end}-ны өглөөний дансны үлдэгдэл бүртгэлгүй — хаалтын үлдэгдлийг дараа өдрийн өглөө бүртгэнэ (сүүлийн өдрийн карт/POS мөнгө тэр өглөө ордог)`);
   if (F.exp && F.exp.missing.length) miss.push(`Өдрийн тайлангүй: ${F.exp.missing.length} өдөр`);
-  box.innerHTML = `${miss.length ? `<div class="banner" style="background:var(--warn-soft)">${miss.map(esc).join('<br>')}</div>` : ''}
+  const unk = (G.op.other || 0);
+  const guide = `<details ${PLS.cfGuide ? 'open' : ''} id="pl-cf-guide" style="margin-bottom:8px"><summary class="note"><b>ℹ️ Энэ хүснэгтийг яаж унших вэ?</b></summary><div class="note" style="margin-top:6px;line-height:1.6">
+      <b>Ашиг</b> (дээрх тайлан) ба <b>мөнгө</b> (энэ хүснэгт) өөр зүйл. Ашиг — зарсан бараанаас хэр олсныг харуулна. Мөнгөн урсгал — дансанд мөнгө хаанаас орж, хаашаа гарсныг харуулна.<br>
+      1) <b>Борлуулалтаас орсон</b> — Smart-ын тайлангаар дэлгүүрүүдэд орсон мөнгө.<br>
+      2) <b>Үйл ажиллагааны зардал</b> — дэлгүүрийг ажиллуулахад гарсан мөнгө (цалин, түрээс, ашиглалт…). <b>= Үйл ажиллагааны мөнгөн урсгал</b> эерэг байвал дэлгүүрүүд өөрсдийгөө санхүүжүүлж, илүү мөнгө үлдээж байна.<br>
+      3) Дараа нь тэр илүү мөнгөөр: <b>бараа</b> худалдан авсан, <b>зээл</b> төлсөн, <b>эзэмшигч</b> хувьдаа авсан.<br>
+      4) <b>Мөнгөний цэвэр өөрчлөлт</b> хасах бол — орсноос их мөнгө гарсан: дансны үлдэгдэл буурсан (жишээ нь зээл их төлсөн).<br>
+      5) <b>Тайлбаргүй зөрүү</b> — тооцоолсон ба нягтлангийн бүртгэсэн үлдэгдлийн зөрүү. Бага байвал бүх мөнгө тайлбартай.</div></details>`;
+  box.innerHTML = guide + (unk > 0 ? `<div class="banner" style="background:var(--warn-soft)">⚠️ <b>${fmt(unk)} ₮</b> зарлага ангилагдаагүй («Бусад / тодруулах») — одоогоор «үйл ажиллагааны зардал»-д орсон. Доорх «Тодруулах» хэсэгт ангилбал (бараа, зээл, түрээс…) зөв мөрөнд шилжинэ.</div>` : '') + `${miss.length ? `<div class="banner" style="background:var(--warn-soft)">${miss.map(esc).join('<br>')}</div>` : ''}
     <div class="tbl"><table><tbody>
       ${line(`<b>Эхлэх үлдэгдэл</b> (${esc(a)} өглөө${open && open.date < a ? `; ${esc(open.date)}-ны бүртгэлээс тооцсон` : hm(open)})`, openV, {b: 1})}
       ${line('<b>+ Борлуулалтаас орсон</b>', inT, {b: 1, note: 'Smart-ын төлбөрийн хэлбэрээр'})}
@@ -4997,6 +4988,53 @@ function plCashflow(){
     <p class="note">Гарсан мөнгө: банкны хуулга (хяналтад оруулсан) + хуулгагүй өдрүүдэд имэйл мэдэгдэл. Данс хоорондын шилжүүлэг тооцохгүй. 👤 тэмдэглэсэн гүйлгээ «Эзэмшигч» мөрөнд.</p>`;
 }
 { const _rp = renderPL; renderPL = function(){ _rp(); try{ plCashflow(); }catch(e){ console.warn('cashflow', e); } }; }
+
+// ---------- «Тодруулах»: what each unknown outflow is and which store(s) it belongs to ----------
+// the choices live in PLS.unkSel, so a refresh from new data never wipes what the user is picking
+PLS.unkSel = PLS.unkSel || {}; PLS.unkOpen = PLS.unkOpen || {};
+const PL_CATS = ['goods', 'cargo', 'rent', 'media', 'ops', 'repair', 'fuel', 'tax', 'travel', 'salary', 'ploan', 'bank', 'own_md', 'fx', 'refund', 'other'];
+const PL_ALLOC = [['sales', 'борлуулалтын хувиар'], ['area', 'талбайн хэмжээгээр'], ['equal', 'тэнцүү']];
+function plUnkPicker(key, def){ const st = PLS.unkSel[key] || (PLS.unkSel[key] = {cat: def.cat || '', stores: def.stores || [], alloc: def.alloc || 'sales'}), U = plUnits();
+  return `<select data-unk="${esc(key)}" data-f="cat" style="width:auto"><option value="">— юу вэ? —</option>${PL_CATS.map(c => `<option value="${c}" ${st.cat === c ? 'selected' : ''}>${esc(VIVI_CAT_LABEL(c))}</option>`).join('')}</select>
+    <div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 10px">${U.map(u => `<label class="note" style="display:inline-flex;gap:3px;align-items:center;width:auto;cursor:pointer"><input type="checkbox" data-unk="${esc(key)}" data-f="store" value="${esc(u)}" ${st.stores.includes(u) ? 'checked' : ''} style="width:auto">${esc(u)}</label>`).join('')}</div>
+    ${st.stores.length > 1 ? `<select data-unk="${esc(key)}" data-f="alloc" style="width:auto;margin-top:4px">${PL_ALLOC.map(([v, l]) => `<option value="${v}" ${st.alloc === v ? 'selected' : ''}>${st.stores.length} салбарт ${l} хуваах</option>`).join('')}</select>` : `<div class="note">${st.stores.length ? '1 салбарт' : 'салбар сонгоогүй = компанийн зардал'}</div>`}`; }
+function plRenderUnk(M){
+  const all = M.tx, unk = {};
+  for (const t of all){ if (t.cat !== 'other' || t.manual) continue; const k = t.cp || ('name:' + (t.name || t.desc || '?').slice(0, 40));
+    const o = unk[k] = unk[k] || {k, cp: t.cp, name: t.name, n: 0, amt: 0, tx: []}; o.n++; o.amt += t.amount; o.tx.push(t); }
+  const U = Object.values(unk).sort((x, y) => y.amt - x.amt), done = all.filter(t => t.manual);
+  $('#pl-unk-card').hidden = !U.length && !done.length;
+  $('#pl-unk-sum').innerHTML = (U.length ? `Ангилал тодорхойгүй <b>${U.reduce((q, o) => q + o.n, 0)}</b> гүйлгээ · <b>${fmt(U.reduce((q, o) => q + o.amt, 0))} ₮</b> — одоогоор «Бусад / тодруулах» нэрээр компанийн зардалд орж, ашгийг бууруулж байна.` : 'Бүх зарлага ангилагдсан ✓')
+    + (done.length ? ` <span class="note">· гүйлгээгээр ангилсан: ${done.length}</span>` : '');
+  const html = U.slice(0, 80).map(o => { const b = o.cp ? PAYEES.get(o.cp) : null, open = PLS.unkOpen[o.k];
+    return `<tr><td><b>${esc(o.name || o.cp || 'данс тодорхойгүй')}</b>${b ? `<div><span class="chip c-acc">${esc(b.name)}</span></div>` : ''}<div class="note mono">${esc(o.cp || '')}</div>
+        <a href="#" class="note" data-unk-open="${esc(o.k)}">${open ? '▾' : '▸'} ${o.n} гүйлгээ</a></td>
+      <td class="note">${[...new Set(o.tx.map(t => t.desc).filter(Boolean))].slice(0, 3).map(esc).join('<br>')}</td><td class="n">${fmt(o.amt)}</td>
+      <td>${o.cp ? plUnkPicker('cp:' + o.cp, {}) : '<span class="note">данс байхгүй — доор гүйлгээ бүрээр ангилна</span>'}</td>
+      <td>${o.cp ? `<button class="btn primary" type="button" data-unk-save="${esc('cp:' + o.cp)}" data-acc="${esc(o.cp)}" data-name="${esc(o.name || '')}">Хадгалах</button><div class="note">энэ хүлээн авагчийн бүх гүйлгээ, цаашид ч</div>` : ''}</td></tr>`
+      + (open ? o.tx.map(t => `<tr style="background:var(--sunk)"><td class="note mono" style="padding-left:22px">${esc(String(t.dt).replace('T', ' ').slice(0, 16))}<div>${esc(ACC_LABEL[t.acc] || t.acc)}</div></td><td class="note">${esc(t.desc || '')}</td><td class="n">${fmt(t.amount)}</td>
+          <td>${plUnkPicker('tx:' + t.id, {})}</td><td><button class="btn" type="button" data-unk-save="${esc('tx:' + t.id)}">Зөвхөн энэ гүйлгээ</button></td></tr>`).join('') : ''); }).join('');
+  const el = $('#pl-unk'); if (el.dataset.h !== html){ el.innerHTML = html; el.dataset.h = html; }
+}
+document.addEventListener('toggle', e => { if (e.target.id === 'pl-cf-guide') PLS.cfGuide = e.target.open; }, true);
+document.addEventListener('change', e => { const x = e.target.closest('[data-unk]'); if (!x) return; const st = PLS.unkSel[x.dataset.unk] = PLS.unkSel[x.dataset.unk] || {cat: '', stores: [], alloc: 'sales'};
+  if (x.dataset.f === 'cat') st.cat = x.value; else if (x.dataset.f === 'alloc') st.alloc = x.value;
+  else { st.stores = $$(`[data-unk="${CSS.escape(x.dataset.unk)}"][data-f="store"]`).filter(c => c.checked).map(c => c.value); const M = PLS.lastM; if (M) plRenderUnk(M); } });
+document.addEventListener('click', async e => {
+  const op = e.target.closest('[data-unk-open]'); if (op){ e.preventDefault(); PLS.unkOpen[op.dataset.unkOpen] = !PLS.unkOpen[op.dataset.unkOpen]; if (PLS.lastM) plRenderUnk(PLS.lastM); return; }
+  const b = e.target.closest('[data-unk-save]'); if (!b || !db) return; const key = b.dataset.unkSave, st = PLS.unkSel[key] || {};
+  if (!st.cat){ alert('«юу вэ?» — ангиллаа сонгоно уу.'); return; }
+  b.disabled = true; b.textContent = 'Хадгалж байна…';
+  try{
+    if (key.startsWith('cp:')){ const acc = b.dataset.acc, name = b.dataset.name || acc;
+      const extra = (PBINFO.extra || []).filter(x => x.acc !== acc).concat([{acc, name, holder: name, group: 'Нэмсэн', cat: st.cat, store: (st.stores || []).join(','), alloc: st.alloc || 'sales', cf: '', by: me, at: new Date().toISOString()}]);
+      await db.doc('config/payees').set({extra, defaults: {...(PBINFO.defaults || {}), [acc]: st.cat}, plStore: {...(PBINFO.plStore || {}), [acc]: {stores: st.stores || [], alloc: st.alloc || 'sales'}}}, {merge: true});
+      PAYEES.setDefaults({...(PBINFO.defaults || {}), [acc]: st.cat}); }
+    else { const id = key.slice(3); await db.doc('txmark/' + id.replace(/\//g, '_')).set({cat: st.cat, stores: st.stores || [], alloc: st.alloc || 'sales', by: me, at: new Date().toISOString()}, {merge: true});
+      DR.marks = DR.marks || {}; DR.marks[id] = {...(DR.marks[id] || {}), cat: st.cat, stores: st.stores || [], alloc: st.alloc || 'sales'}; }
+    delete PLS.unkSel[key]; render();
+  }catch(err){ console.warn(err); alert('Хадгалж чадсангүй: ' + (err.code || err.message)); b.disabled = false; b.textContent = 'Хадгалах'; }
+});
 // ---------- daily report (Өдрийн тайлан) ----------
 // days before DR_FROM are not kept live — they load on demand for the period being looked at
 const DR_FROM = (() => { const t = new Date(Date.now() + 8 * 3600e3 - 150 * 86400e3); return t.toISOString().slice(0, 10); })();
@@ -5237,7 +5275,7 @@ function drFlowTx(a, z){
   const fromStmt = []; for (const D of Object.values(DR.stmt || {})){ if (DR_OUTSIDE.has(D.acc) || D.acc === '5026747956') continue;
     for (const t of (D.tx || [])) if (t.d >= a && t.d <= z) fromStmt.push({id: 's_' + D.acc + '_' + t.dt + '_' + t.amount, dt: t.dt, date: t.d, amount: +t.amount, fromAcc: D.acc, toAcc: t.cp, toName: t.name, desc: t.desc, cat: t.cat, src: 'stmt'}); }
   const M = DR.marks || {};
-  return fromMail.concat(fromStmt).map(t => M[t.id] && M[t.id].own ? {...t, cat: 'own_md', mine: true} : t);
+  return fromMail.concat(fromStmt).map(t => { const m = M[t.id]; if (!m) return t; if (m.own) return {...t, cat: 'own_md', mine: true}; return m.cat ? {...t, cat: m.cat, store: (m.stores || []).join(','), alloc: m.alloc} : t; });
 }
 // StorePay money that really came in (statements), or null when no statement covers those days
 function drSpGot(a, z, k = 'sp'){ let v = 0, any = false; for (const D of Object.values(DR.stmt || {})) for (let d = a; d <= z; d = shiftDay(d, 1)){ if (d.slice(0, 7) !== D.per) continue; const x = (D.days || {})[d.slice(8)]; if (!x) continue; any = true; v += +x[k] || 0; } return any ? Math.round(v) : null; }
@@ -8076,7 +8114,7 @@ else VIVIFB.start(async () => {
     for (const acc of PAY.SAL_ACCS) db.collection('banktx').where('fromAcc', '==', acc).onSnapshot(s => { payTxBy[acc] = s.docs.map(d => ({id:d.id, ...d.data()})); PS.tx = [].concat(...Object.values(payTxBy)); render(); }, onErr);
   }
   db.doc('config/payees').onSnapshot(d => { const x = d.exists ? d.data() : {}; const base = (x.list || []).length ? x.list : PAYEES_DEFAULT.list;
-    PAYEES.set((x.extra || []).concat(PAYEES_DEFAULT.added || [], base)); PAYEES.setDefaults(x.defaults || {}); PBINFO = {file: (x.list || []).length ? (x.file || '') : PBINFO.file, emps: x.emps || PBINFO.emps, extra: x.extra || [], defaults: x.defaults || {}}; renderPayees(); render(); }, onErr);
+    PAYEES.set((x.extra || []).concat(PAYEES_DEFAULT.added || [], base)); PAYEES.setDefaults(x.defaults || {}); PBINFO = {file: (x.list || []).length ? (x.file || '') : PBINFO.file, emps: x.emps || PBINFO.emps, extra: x.extra || [], defaults: x.defaults || {}, plStore: x.plStore || {}}; renderPayees(); render(); }, onErr);
   // only the recent days live; older ones (history, last year) are fetched when a period needs them — drEnsure()
   db.collection('uplog').where('at', '>=', new Date(Date.now() - 120 * 864e5).toISOString()).onSnapshot(s => { DS.log = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.data || ALLOW.pay || ALLOW.pl){
@@ -8085,7 +8123,7 @@ else VIVIFB.start(async () => {
     db.collection('monthclose').onSnapshot(s => { DS.closed = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); }
   if (isOwner){ $('#aud-card').hidden = false; db.collection('audit').where('at', '>=', new Date(Date.now() - 60 * 864e5).toISOString()).onSnapshot(s => { AUD.list = s.docs.map(d => ({id: d.id, ...d.data()})); renderAudit(); }, onErr); }
   if (ALLOW.daily) db.collection('stocksnap').onSnapshot(s => { AN.snaps = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
-  if (isOwner || (ALLOW.bank && ALLOW.bal)){ db.collection('stmtday').where('per', '>=', new Date(Date.now() - 100 * 864e5).toISOString().slice(0, 7)).onSnapshot(s => { DR.stmt = {...Object.fromEntries(Object.entries(DR.stmt || {}).filter(([, v]) => v.fromRun)), ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; render(); }, onErr);
+  if (isOwner || (ALLOW.bank && ALLOW.bal) || ALLOW.pl){ db.collection('stmtday').where('per', '>=', new Date(Date.now() - 100 * 864e5).toISOString().slice(0, 7)).onSnapshot(s => { DR.stmt = {...Object.fromEntries(Object.entries(DR.stmt || {}).filter(([, v]) => v.fromRun)), ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; render(); }, onErr);
     db.collection('txmark').onSnapshot(s => { DR.marks = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); }
   if (ALLOW.daily || ALLOW.rev) db.collection('daily').where('date', '>=', DR_FROM).onSnapshot(s => { const keep = Object.fromEntries(Object.entries(DR.days).filter(([d]) => d < DR_FROM)); DR.days = {...keep, ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; DR.live = true; render(); }, onErr);
   $('#cash-upload').hidden = !(isOwner || ALLOW.rev); window.REV_DAILY = isOwner || !!ALLOW.daily || !!ALLOW.rev;
