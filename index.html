@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd117</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd118</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -465,7 +465,7 @@ body{margin:0;background:var(--bg)}
       <div class="row daybar" style="margin-bottom:6px">
         <button class="btn" id="dr-prev" title="Өмнөх">◀</button><input type="date" id="dr-day" style="width:auto"><button class="btn" id="dr-next" title="Дараах">▶</button>
         <div class="filter chips" id="dr-range"><button data-f="day" aria-pressed="true">Өдөр</button><button data-f="5" aria-pressed="false">Сүүлийн 5 хоног</button><button data-f="7" aria-pressed="false">7 хоног</button><button data-f="month" aria-pressed="false">Энэ сар</button><button data-f="pmonth" aria-pressed="false">Өмнөх сар</button><button data-f="custom" aria-pressed="false">Хугацаа…</button></div>
-        <span id="dr-custom" class="row" hidden><input type="date" id="dr-from" style="width:auto"> – <input type="date" id="dr-to" style="width:auto"></span>
+        <span id="dr-custom" class="row" hidden style="gap:6px;flex-wrap:wrap"><label class="note" style="display:inline-flex;align-items:center;gap:4px;width:auto">Сар<input type="month" id="dr-mon" style="width:auto"></label><span class="note">эсвэл</span><input type="date" id="dr-from" style="width:auto"> – <input type="date" id="dr-to" style="width:auto"><button class="btn primary" type="button" id="dr-apply">Харуулах</button><span class="note" id="dr-pend"></span></span>
         <button class="btn" id="dr-xlsx" style="margin-left:auto">📥 Excel</button>
       </div>
       <div class="daysum" id="dr-title"></div>
@@ -605,7 +605,7 @@ body{margin:0;background:var(--bg)}
       <div class="row daybar" style="margin-bottom:6px">
         <button class="btn" id="pl-prev" title="Өмнөх">◀</button><input type="date" id="pl-day" style="width:auto"><button class="btn" id="pl-next" title="Дараах">▶</button>
         <div class="filter chips" id="pl-range"><button data-f="day">Өдөр</button><button data-f="5">Сүүлийн 5 хоног</button><button data-f="7">7 хоног</button><button data-f="month">Энэ сар</button><button data-f="pmonth">Өмнөх сар</button><button data-f="custom">Хугацаа…</button></div>
-        <span id="pl-custom" class="row" hidden><input type="date" id="pl-from" style="width:auto"> – <input type="date" id="pl-to" style="width:auto"></span>
+        <span id="pl-custom" class="row" hidden style="gap:6px;flex-wrap:wrap"><label class="note" style="display:inline-flex;align-items:center;gap:4px;width:auto">Сар<input type="month" id="pl-mon" style="width:auto"></label><span class="note">эсвэл</span><input type="date" id="pl-from" style="width:auto"> – <input type="date" id="pl-to" style="width:auto"><button class="btn primary" type="button" id="pl-apply">Харуулах</button><span class="note" id="pl-pend"></span></span>
       </div>
       <p class="note" style="margin:0">Борлуулалт, маржинг «Өдрийн тайлан»-гаас (өдөр бүрийн Smart тайлан) нийлүүлж, тогтмол зардлыг хугацааны хоногт хувааж, зардлыг банкны имэйл мэдэгдлээс авна. Хугацаа «Өдрийн тайлан»-тай нэг.</p>
       <details style="margin-top:8px"><summary class="note">Банкны хуулга нэмэх (заавал биш — имэйл ирдэггүй дансны зардлыг бүрэн болгоно)</summary>
@@ -4809,7 +4809,7 @@ $('#pl-range').addEventListener('click', e => { const b = e.target.closest('butt
 $('#pl-day').addEventListener('change', e => { DR.day = e.target.value; drSyncBar(); });
 $('#pl-prev').addEventListener('click', () => $('#dr-prev').click());
 $('#pl-next').addEventListener('click', () => $('#dr-next').click());
-['#pl-from', '#pl-to'].forEach(s2 => $(s2).addEventListener('change', () => { DR.from = $('#pl-from').value; DR.to = $('#pl-to').value; drSyncBar(); }));
+rangeBar('pl');
 // ----- events -----
 $('#pl-sup-units').addEventListener('click', e => { const b = e.target.closest('button[data-u]'); if (!b) return; PLS.supUnit = b.dataset.u; render(); });
 ['#pl-sup-sort', '#pl-sup-min'].forEach(s => $(s).addEventListener('change', () => render()));
@@ -4835,7 +4835,7 @@ $('#pl-man-list').addEventListener('click', async e => { const b = e.target.clos
 function renderPL(){
   if (!$('#pl-body')) return;
   $$('#pl-range button').forEach(b2 => b2.setAttribute('aria-pressed', b2.dataset.f === DR.range)); $('#pl-custom').hidden = DR.range !== 'custom';
-  { const [x, y] = drRange(); $('#pl-day').value = DR.day || y; $('#pl-from').value = DR.from || x; $('#pl-to').value = DR.to || y; }
+  { const [x, y] = drRange(); $('#pl-day').value = DR.day || y; if (DR.pending !== 'pl'){ $('#pl-from').value = DR.from || x; $('#pl-to').value = DR.to || y; } $('#pl-mon').value = DR.from && DR.to && DR.from.slice(0, 7) === DR.to.slice(0, 7) && DR.from.endsWith('-01') ? DR.from.slice(0, 7) : ''; }
   const M = plModel(); const ST = M.stores; const pl = M.pl; PLS.lastM = M;
   $('#pl-title').textContent = `Дотоод тайлан · ${M.a === M.z ? M.a : M.a + ' – ' + M.z} (${daysBetween(M.a, M.z)} хоног)`;
   const warn = [];
@@ -5167,12 +5167,25 @@ function drRange(){
   if (DR.range === 'pmonth'){ const [y, m] = day.split('-').map(Number); const a = new Date(y, m - 2, 1), b = new Date(y, m - 1, 0); const f = x => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; return [f(a), f(b)]; }
   return [DR.from || day, DR.to || day];
 }
-function drSyncBar(){ $$('#dr-range button').forEach(b => b.setAttribute('aria-pressed', b.dataset.f === DR.range)); $('#dr-custom').hidden = DR.range !== 'custom'; $('#dr-day').value = DR.day || ''; $('#dr-from').value = DR.from || ''; $('#dr-to').value = DR.to || ''; render(); }
+function drSyncBar(){ $$('#dr-range button').forEach(b => b.setAttribute('aria-pressed', b.dataset.f === DR.range)); $('#dr-custom').hidden = DR.range !== 'custom'; $('#dr-day').value = DR.day || ''; if (DR.pending !== 'dr'){ $('#dr-from').value = DR.from || ''; $('#dr-to').value = DR.to || ''; } $('#dr-mon').value = DR.from && DR.to && DR.from.slice(0, 7) === DR.to.slice(0, 7) && DR.from.endsWith('-01') ? DR.from.slice(0, 7) : ''; render(); }
 $('#dr-range').addEventListener('click', e => { const b = e.target.closest('button[data-f]'); if (!b) return; DR.range = b.dataset.f; if (DR.range === 'custom'){ const [a, z] = drRange(); DR.from = DR.from || a; DR.to = DR.to || z; } drSyncBar(); });
 $('#dr-day').addEventListener('change', e => { DR.day = e.target.value; drSyncBar(); });
 $('#dr-prev').addEventListener('click', () => { const step = DR.range === '5' ? 5 : DR.range === '7' ? 7 : 1; DR.day = shiftDay(DR.day || drRange()[1], -step); if (DR.range === 'custom') DR.range = 'day'; drSyncBar(); });
 $('#dr-next').addEventListener('click', () => { const step = DR.range === '5' ? 5 : DR.range === '7' ? 7 : 1; const n = shiftDay(DR.day || drRange()[1], step); if (n <= today()){ DR.day = n; if (DR.range === 'custom') DR.range = 'day'; drSyncBar(); } });
-['#dr-from', '#dr-to'].forEach(s => $(s).addEventListener('change', () => { DR.from = $('#dr-from').value; DR.to = $('#dr-to').value; render(); }));
+// custom period: choosing dates does nothing until «Харуулах» (or Enter) — no reloading on every click in the calendar
+function rangeBar(pre){
+  const mark = () => { const f = $('#' + pre + '-from').value, t = $('#' + pre + '-to').value, ch = f !== (DR.from || '') || t !== (DR.to || '');
+    $('#' + pre + '-pend').textContent = ch ? '← «Харуулах» дарна уу' : ''; $('#' + pre + '-apply').classList.toggle('primary', true); DR.pending = ch ? pre : ''; };
+  const apply = () => { let f = $('#' + pre + '-from').value, t = $('#' + pre + '-to').value; if (!f || !t){ $('#' + pre + '-pend').textContent = 'Огноогоо бүрэн оруулна уу'; return; }
+    if (t < f) [f, t] = [t, f]; DR.from = f; DR.to = t; DR.pending = ''; $('#' + pre + '-pend').textContent = ''; drSyncBar(); };
+  $('#' + pre + '-from').addEventListener('input', mark); $('#' + pre + '-to').addEventListener('input', mark);
+  $('#' + pre + '-from').addEventListener('change', mark); $('#' + pre + '-to').addEventListener('change', mark);
+  $('#' + pre + '-mon').addEventListener('change', e => { const m = e.target.value; if (!m) return; const [y, mo] = m.split('-').map(Number), last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+    $('#' + pre + '-from').value = m + '-01'; $('#' + pre + '-to').value = m + '-' + String(last).padStart(2, '0'); apply(); });
+  $('#' + pre + '-apply').addEventListener('click', apply);
+  $('#' + pre + '-custom').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input[type=date]')){ e.preventDefault(); apply(); } });
+}
+rangeBar('dr');
 ['#dr-sup-sort', '#dr-sup-n'].forEach(s => $(s).addEventListener('change', () => render()));
 $('#dr-sup-units').addEventListener('click', e => { const b = e.target.closest('button[data-u]'); if (!b) return; DR.supUnit = b.dataset.u; render(); });
 $('#dr-sup').addEventListener('click', e => { const tr = e.target.closest('tr[data-sup]'); if (!tr) return; DR.open[tr.dataset.sup] = !DR.open[tr.dataset.sup]; render(); });
