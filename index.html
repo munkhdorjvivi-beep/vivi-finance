@@ -3654,7 +3654,8 @@ function renderCash(){
 function renderBal(){ try{ renderCP(); }catch(e){ console.warn('cashplan', e); }
   const list = S.balances.slice().sort((a,b) => String(b.date).localeCompare(String(a.date))).slice(0,30);
   const last = list[0], sumG = (it, g) => BAL_GROUPS.find(x => x[0] === g)[2].reduce((s,[k]) => s + (+(it||{})[k] || 0), 0);
-  if (last){ const co = sumG(last.items, 'co'), pr = sumG(last.items, 'pr'); $('#k-bal').textContent = fmt(co + pr); $('#k-bal-s').textContent = `${last.date} · компани ${fmt(co)} · хувийн ${fmt(pr)}`; } else { $('#k-bal').textContent = '–'; $('#k-bal-s').textContent = 'Бүртгэл алга'; }
+  if (last){ const co = sumG(last.items, 'co'), pr = sumG(last.items, 'pr'); $('#k-bal').textContent = fmt(co + pr); const tm = last.at ? new Date(last.at) : null, hm = tm && !isNaN(tm) ? String(tm.getHours()).padStart(2, '0') + ':' + String(tm.getMinutes()).padStart(2, '0') : '';   // when the accountant entered it
+    $('#k-bal-s').innerHTML = `${esc(last.date)}${hm ? ' <b>' + hm + '</b>' : ''}${last.by ? ' · ' + esc(nameOf(last.by)) : ''}<br>компани ${fmt(co)} · хувийн ${fmt(pr)}`; } else { $('#k-bal').textContent = '–'; $('#k-bal-s').textContent = 'Бүртгэл алга'; }
   const cols = BAL_GROUPS.filter(([g]) => balView === 'all' || balView === g);
   const accTh = cols.map(([g, t, L]) => L.map(([,l]) => `<th class="n">${esc(l)}</th>`).join('') + `<th class="n" style="background:var(--surface-2,#eef0ea)">${g === 'co' ? 'Компани нийт' : 'Хувийн нийт'}</th>`).join('');
   $('#bal-head').innerHTML = `<tr><th>Огноо</th>${accTh}${balView === 'all' ? '<th class="n">Нийт</th>' : ''}<th>Оруулсан</th></tr>`;
