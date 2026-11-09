@@ -1123,7 +1123,18 @@ const VIVI = (() => {
 
   // ---------- parsing ----------
   function findRow(rows, pred, limit=40){ for (let i=0;i<Math.min(limit,rows.length);i++){ if (pred((rows[i]||[]).map(str))) return i; } return -1; }
+  // a statement that names a different number than the account (internal / card number) → the real account
+  const ACC_ALIAS = {'6726578882': '1735156519'};
+  const accAlias = a => ACC_ALIAS[String(a || '')] || String(a || '');
   function parseRows(rows, name){
+    const p = parseRows0(rows, name);
+    // the statement's own period from its header («Интервал: 2026/07/24 - 2026/10/24», «Гүйлгээний огноо 2026-07-24 - 2026-10-24») — days without transactions are still covered
+    if (p && p.type === 'bank'){ for (const r of rows.slice(0, 15)){ const tx = (r || []).map(v => v == null ? '' : String(v)).join(' '), m = tx.match(/(\d{4})[\/.\-](\d{2})[\/.\-](\d{2})\s*(?:-|–|—|~)\s*(\d{4})[\/.\-](\d{2})[\/.\-](\d{2})(?![\d:])/);
+      if (m){ p.per = [`${m[1]}-${m[2]}-${m[3]}`, `${m[4]}-${m[5]}-${m[6]}`]; break; } } }
+    if (p && p.type === 'bank' && ACC_ALIAS[p.acc]){ const a = ACC_ALIAS[p.acc]; p.acc = a; p.rows.forEach(r => { r.acc = a; }); if (p.bank === 'Bank' && a === '1735156519') p.bank = 'Golomt'; p.label = `${p.bank} ${a}`; }
+    return p;
+  }
+  function parseRows0(rows, name){
     // Smart payment-form report
     let h = findRow(rows, r => r.includes('Төлбөрийн хэлбэр') && r.includes('Дүн'));
     if (h >= 0){
@@ -1211,13 +1222,18 @@ const VIVI = (() => {
     if (h >= 0){
       const c = rows[h].map(str), find = re => c.findIndex(v => re.test(v));
       const iD = find(/огноо|date/i), iC = find(/^(орлого|кредит|credit)/i), iR = find(/^(зарлага|дебит|debit)/i), iT = find(/утга|тайлбар|description|narrative/i), iP = find(/харьцсан|данс|account/i);
-      let acc = ''; const m = name.match(/(\d{9,12})(?!.*\d{9,12})/); if (m) acc = m[1].slice(-10).replace(/^0+/,'');
+      // the account: a «Данс / Account» cell above the header first, the file name only as the last resort
+      let acc = '', bank = 'Bank';
+      for (const r of rows.slice(0, h)){ const rr = (r || []).map(str), tx = rr.join(' ');
+        if (/голомт|golomt/i.test(tx)) bank = 'Golomt'; else if (/хаан|khan/i.test(tx) && bank === 'Bank') bank = 'Khan'; else if (/худалдаа хөгжлийн|tdb/i.test(tx) && bank === 'Bank') bank = 'TDB';
+        if (!acc){ const i = rr.findIndex(v => /данс|account/i.test(v)); if (i >= 0){ const mm = rr.slice(i).join(' ').replace(/\s/g, '').match(/(?:MN\d{6})?(\d{9,12})/); if (mm) acc = mm[1].slice(-10).replace(/^0+/, ''); } } }
+      if (!acc){ const m = name.match(/(\d{9,12})(?!.*\d{9,12})/); if (m) acc = m[1].slice(-10).replace(/^0+/,''); }
       const out = [];
       for (const r of rows.slice(h+1)){
         const dt = toDT(r[iD]); if (!dt) continue;
         out.push({acc, dt, cr: Math.abs(num(r[iC])), dr: Math.abs(num(r[iR])), desc: iT >= 0 ? str(r[iT]) : '', cp: iP >= 0 && iP !== iD ? str(r[iP]) : ''});
       }
-      if (out.length) return {type:'bank', bank:'Bank', acc, label:`Банк ${acc}`, rows: out};
+      if (out.length) return {type:'bank', bank, acc, label:`${bank === 'Bank' ? 'Банк' : bank} ${acc}`, rows: out};
     }
     return {type:'unknown', label:'Танигдаагүй файл', rows: []};
   }
@@ -1785,7 +1801,7 @@ const VIVI = (() => {
     return wb;
   }
 
-  return {kasCheck, parseRows, build, parseDates, matchCash, classifyCredit, iso, OWN, norm, parseMail, mailLocal, report, outCat, setBase, toWorkbook, ACC_NAME};
+  return {kasCheck, parseRows, build, parseDates, matchCash, classifyCredit, iso, OWN, norm, parseMail, mailLocal, report, outCat, setBase, toWorkbook, ACC_NAME, accAlias, ACC_ALIAS};
 })();
 
 
@@ -3785,14 +3801,15 @@ function renderExp(run, st){
 function stmtCheck(files, d0, d1){
   if (!d0 || !d1) return null;
   const need = typeof dsAccs === 'function' ? dsAccs() : [], up = {}, END = addD(d1, 1);
-  for (const f of files || []){ if (f.type !== 'bank') continue; const acc = String(f.acc || (f.rows[0] && f.rows[0].acc) || ''); if (!acc) continue;
+  for (const f of files || []){ if (f.type !== 'bank') continue; const acc = (VIVI.accAlias || String)(String(f.acc || (f.rows[0] && f.rows[0].acc) || '')); if (!acc) continue;
     const ds = f.rows.map(t => typeof t.dt === 'string' ? t.dt.slice(0, 10) : isoU(+t.dt)).filter(Boolean).sort(), U = up[acc] = up[acc] || {acc, bank: f.bank || '', a: '', z: '', n: 0, files: 0};
-    U.files++; U.n += f.rows.length; if (ds.length){ if (!U.a || ds[0] < U.a) U.a = ds[0]; if (!U.z || ds.at(-1) > U.z) U.z = ds.at(-1); } }
+    U.files++; U.n += f.rows.length; const pa = f.per ? f.per[0] : ds[0], pz = f.per ? f.per[1] : ds.at(-1); if (f.per) U.per = true;   // the statement's header period when it has one
+    if (pa && (!U.a || pa < U.a)) U.a = pa; if (pz && (!U.z || pz > U.z)) U.z = pz; }
   const accs = [...new Set([...need, ...Object.keys(up)])], NM = (VIVI.ACC_NAME || {}), rows = [];
   for (const acc of accs){ const U = up[acc], req = need.includes(acc), r = {acc, name: NM[acc] || '', bank: U ? U.bank : '', a: U ? U.a : '', z: U ? U.z : '', n: U ? U.n : 0, req};
     if (!U){ r.st = req ? 'miss' : 'extra'; const prev = typeof covHas === 'function' && covHas(acc, d0) && covHas(acc, d1);
       r.note = 'Энэ хяналтад ороогүй' + (prev ? ' (өмнө өөр газар оруулсан байна — энд дахин оруулна уу)' : ''); }
-    else if (!U.n){ r.st = 'part'; r.note = 'Файл хоосон — гүйлгээгүй эсэхийг шалгана уу'; }
+    else if (!U.n && !U.per){ r.st = 'part'; r.note = 'Файл хоосон — гүйлгээгүй эсэхийг шалгана уу'; }
     else if (U.z < d1){ r.st = 'part'; r.note = `${U.z} хүртэл л байна — ${addD(U.z, 1)} – ${END} дутуу`; }
     else if (U.z < END){ r.st = 'part'; r.note = `${END}-ний өдөр дутуу (${d1}-ний карт, QPay, бэлэн мөнгө маргааш орно)`; }
     else if (U.a > addD(d0, 1)){ r.st = 'part'; r.note = `${d0} – ${addD(U.a, -1)} гүйлгээ алга — хуулга ${U.a}-ээс эхэлсэн эсэхийг шалгана уу`; }
@@ -3925,7 +3942,7 @@ function loadStyledXLSX(){
 // the saved control keeps its statements (in chunks), so anyone who can see it can download the full Excel later
 const RAW_CHUNK = 300000;
 async function saveRaw(files, id){
-  const keep = files.filter(f => f.type === 'bank' || f.type === 'smart').map(f => ({type: f.type, bank: f.bank || null, acc: f.acc || null, label: f.label, file: f.file || '', rows: f.rows.map(r => r.dt instanceof Date ? {...r, dt: +r.dt} : r)}));
+  const keep = files.filter(f => f.type === 'bank' || f.type === 'smart').map(f => ({type: f.type, bank: f.bank || null, acc: f.acc || null, per: f.per || null, label: f.label, file: f.file || '', rows: f.rows.map(r => r.dt instanceof Date ? {...r, dt: +r.dt} : r)}));
   const str = JSON.stringify(keep), n = Math.ceil(str.length / RAW_CHUNK);
   for (let i = 0; i < n; i++) await db.doc('cashraw/' + id + '_' + i).set({part: str.slice(i * RAW_CHUNK, (i + 1) * RAW_CHUNK), i, run: id, by: me, at: new Date().toISOString()});
   return n;
@@ -6815,9 +6832,9 @@ const dupNote = (x, name) => x ? `<div><span class="chip c-warn">Өмнө ору
 async function upLog(e){ if (!db) return null; try{ const r = await db.collection('uplog').add({...e, by: me, email: (user.email() || '').toLowerCase(), at: new Date().toISOString()}); return r.id; }catch(err){ console.warn('uplog', err); return null; } }
 // which days of an account the statements cover — merged ranges
 async function regStmt(p, file, hash){
-  if (!db || !p || p.type !== 'bank' || !p.rows.length) return;
+  if (!db || !p || p.type !== 'bank' || (!p.rows.length && !p.per)) return;
   const acc = String(p.acc || (p.rows[0] && p.rows[0].acc) || ''); if (!acc) return;
-  const ds = p.rows.map(t => typeof t.dt === 'string' ? t.dt.slice(0, 10) : isoU(+t.dt)).filter(Boolean).sort(), a = ds[0], z = ds[ds.length - 1];
+  const ds = p.rows.map(t => typeof t.dt === 'string' ? t.dt.slice(0, 10) : isoU(+t.dt)).filter(Boolean).sort(), a = p.per ? p.per[0] : ds[0], z = p.per ? p.per[1] : ds[ds.length - 1];
   try{ const ref = db.doc('stmtcov/' + acc), o = await ref.get(), R = (o.exists ? o.data().r || [] : []).map(x => x.split('_'));
     R.push([a, z]); R.sort((x, y) => x[0] < y[0] ? -1 : 1); const M = [];
     for (const r of R){ const L = M[M.length - 1]; if (L && r[0] <= shiftDay(L[1], 1)){ if (r[1] > L[1]) L[1] = r[1]; } else M.push([r[0], r[1]]); }
@@ -6826,9 +6843,10 @@ async function regStmt(p, file, hash){
   }catch(err){ console.warn('stmtcov', err); }
   await upLog({kind: 'stmt', file, hash: hash || '', acc, a, z, n: p.rows.length});
 }
-const covHas = (acc, d) => ((DS.cov[acc] || {}).r || []).some(x => { const [a, z] = x.split('_'); return d >= a && d <= z; });
+const dsAlias = a => (VIVI.accAlias ? VIVI.accAlias(a) : a), dsIds = acc => [acc, ...Object.entries(VIVI.ACC_ALIAS || {}).filter(([, v]) => v === acc).map(([k]) => k)];
+const covHas = (acc, d) => dsIds(dsAlias(acc)).some(id => ((DS.cov[id] || {}).r || []).some(x => { const [a, z] = x.split('_'); return d >= a && d <= z; }));
 // required accounts: chosen by the owner; by default every own account a statement was ever uploaded for (private ones never)
-const dsAccs = () => { const D = DS.duty || {}; if (Array.isArray(D.accs)) return D.accs.filter(a => !DS_PRIVATE.has(a)); return Object.keys(DS.cov).filter(a => !DS_PRIVATE.has(a)).sort(); };
+const dsAccs = () => { const D = DS.duty || {}, L = Array.isArray(D.accs) ? D.accs : Object.keys(DS.cov); return [...new Set(L.map(dsAlias))].filter(a => !DS_PRIVATE.has(a)).sort(); };
 // the state of one day: per data kind 'ok' | 'part' | 'miss' (+ why)
 function dsDay(d){
   const D = DR.days[d], out = {};
