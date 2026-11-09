@@ -1092,7 +1092,7 @@ window.VIVIFB = (() => {
 <script>
 // ===== VIVI cash control core (shared by page and node tests) =====
 const VIVI = (() => {
-  const OWN = new Set(['1825100856','5175306931','5175306920','5175278095','5174134484','5174134473','405095875','405095876','405095877','405096869','405096868','5174135239','5311365725','2106025813','5174139482','5403962410','5403962396','5403962454','5224167095','5224167073','1735156519','1735159300','1735159334','1735159299','405097294','4002622637','405097565','4002594661','4002639706','4002636496','4002599151','5310744690','405102965']);
+  const OWN = new Set(['4002598034','1825100856','5175306931','5175306920','5175278095','5174134484','5174134473','405095875','405095876','405095877','405096869','405096868','5174135239','5311365725','2106025813','5174139482','5403962410','5403962396','5403962454','5224167095','5224167073','1735156519','1735159300','1735159334','1735159299','405097294','4002622637','405097565','4002594661','4002639706','4002636496','4002599151','5310744690','405102965']);
   const ACC_STORE = {'5403962396':'Food city','5311365725':'Food city','1735156519':'Food city','5403962410':'Драгон','5174139482':'Драгон','5175278095':'Драгон','5310744690':'Драгон','5403962454':'Дархан / Сандэй плаза','5174134484':'Е март баянгол-3 давхар','405095875':'ХХБ 405095875 (Эрдэнэт, Хан-Уул, онлайн)','5175306920':'Онлайн дэлгүүр'};
   const TERM_STORE = {'FOOD CITY VIVI 3':'Food city','FOOD CITY-4':'Food city','VIVI-FOOD CITY 2-2':'Food city','DRAGON VIVI 1':'Драгон','DRAGON VIVI 2':'Драгон','DRAGON VIVI 3':'Драгон','VIVI GREAT BRANDS 2':'Драгон','VIVI GREAT BRAND':'Драгон','SUNDAY VIVI':'Дархан / Сандэй плаза','FOOD CITY VIVI 1':'Food city','FOOD CITY VIVI 2':'Food city','VIVI-BGD':'Е март баянгол-3 давхар'};
   const CASH_ACC = {'5403962396':'Food city','5403962410':'Драгон','5403962454':'Дархан / Сандэй плаза','5174134484':'Е март баянгол-3 давхар'};
@@ -1124,14 +1124,16 @@ const VIVI = (() => {
   // ---------- parsing ----------
   function findRow(rows, pred, limit=40){ for (let i=0;i<Math.min(limit,rows.length);i++){ if (pred((rows[i]||[]).map(str))) return i; } return -1; }
   // a statement that names a different number than the account (internal / card number) → the real account
-  const ACC_ALIAS = {'6726578882': '1735156519'};
+  // TDB gave every account a new 10-digit number (old 4050… → new 4002…); the app keeps the old number as the key
+  const TDB_NEW2OLD = {'4002594661':'405095875','4002639706':'405096869','4002636496':'405096868','4002599151':'405095877','4002598034':'405095876'};
+  const ACC_ALIAS = Object.assign({'6726578882': '1735156519'}, TDB_NEW2OLD);
   const accAlias = a => ACC_ALIAS[String(a || '')] || String(a || '');
   function parseRows(rows, name){
     const p = parseRows0(rows, name);
     // the statement's own period from its header («Интервал: 2026/07/24 - 2026/10/24», «Гүйлгээний огноо 2026-07-24 - 2026-10-24») — days without transactions are still covered
     if (p && p.type === 'bank'){ for (const r of rows.slice(0, 15)){ const tx = (r || []).map(v => v == null ? '' : String(v)).join(' '), m = tx.match(/(\d{4})[\/.\-](\d{2})[\/.\-](\d{2})\s*(?:-|–|—|~)\s*(\d{4})[\/.\-](\d{2})[\/.\-](\d{2})(?![\d:])/);
-      if (m){ p.per = [`${m[1]}-${m[2]}-${m[3]}`, `${m[4]}-${m[5]}-${m[6]}`]; break; } } }
-    if (p && p.type === 'bank' && ACC_ALIAS[p.acc]){ const a = ACC_ALIAS[p.acc]; p.acc = a; p.rows.forEach(r => { r.acc = a; }); if (p.bank === 'Bank' && a === '1735156519') p.bank = 'Golomt'; p.label = `${p.bank} ${a}`; }
+      if (m){ p.per = [`${m[1]}-${m[2]}-${m[3]}`, `${m[4]}-${m[5]}-${m[6]}`].sort(); break; } } }   // TDB writes «to – from»
+    if (p && p.type === 'bank' && ACC_ALIAS[p.acc]){ const a = ACC_ALIAS[p.acc]; p.acc = a; p.rows.forEach(r => { r.acc = a; }); if (p.bank === 'Bank') p.bank = a === '1735156519' ? 'Golomt' : /^4050/.test(a) ? 'TDB' : p.bank; p.label = `${p.bank} ${a}`; }
     return p;
   }
   function parseRows0(rows, name){
@@ -1191,7 +1193,7 @@ const VIVI = (() => {
     if (h >= 0){
       const meta = rows[h].map(str), accCell = meta.find(v => /^Дансны дугаар:/.test(v)) || '';
       const mm = accCell.match(/(\d{8,12})\s*([A-Z]{3})?/), cur = (mm && mm[2]) || 'MNT';
-      const NEW2OLD = {'4002594661':'405095875','4002639706':'405096869','4002636496':'405096868','4002599151':'405095877'};
+      const NEW2OLD = TDB_NEW2OLD;
       const old = name.match(/(4050\d{5})/);                      // keep the old 9-digit number used everywhere else
       const acc = (mm && NEW2OLD[mm[1]]) || (old ? old[1] : (mm ? mm[1] : ''));
       const out = [];
@@ -1557,6 +1559,7 @@ const VIVI = (() => {
     '5224167095':'Энхбаатар 7095','5224167073':'Энхбаатар цалин 7073','1735156519':'Энхбаатар Golomt','1735159300':'VIVI Golomt цалин',
     '1735159334':'VIVI Golomt','1735159299':'VIVI Golomt','405097294':'Мөнхдорж TDB (хувийн)','4002622637':'Мөнхдорж TDB (хувийн)','405097565':'Энхбаатар TDB Хэрэглээ',
     '5310744690':'Энхбаатар Khan','405102965':'VIVI TDB'};
+  for (const [nw, old] of Object.entries(TDB_NEW2OLD)) ACC_NAME[old] = (ACC_NAME[old] || 'TDB') + ' (шинэ ' + nw + ')';
   const PAYACC = new Set(['109500167338','1105249287','1305143697','1735156283','1735156284','1735156286','1735156288','1735156289','1735156291','1735156292','1735156293','1735156295','1735156297','1735156525','1735156571','1905125044','192200046273','2602036637','2715159415','3665109094','405099752','405126369','458055838','500167338','5001676491','5014232703','5019558822','5020906060','5021476161','5026595377','5026814493','5027299990','5033294847','5033608561','5037266101','5039343277','5056029019','5057669311','5058528471','5059435223','5071683237','5111054591','5157244556','5166146682','5171391025','5251418414','5284076229','5543020794','5598243388','5619052521','5622790325','5653105823','5675291358','5753811879','5845541170','5859083983','5926293828','692387378','8200005364']);
   const CAT = {own_md:'Эзэмшигч – Мөнхдорж хувийн / Właściciel prywatne', own_eb:'Энхбаатар Хэрэглээ / Энхбаатар konsumpcja', internal:'Дотоод шилжүүлэг / Wewnętrzne',
     fee:'Банкны шимтгэл / Prowizje', hipay:'hipay (хэтэвч / portfel)', refund:'Буцаалт / Zwroty klientom', salary:'Цалин / Wynagrodzenia', tax:'Татвар, гааль, НДШ / Podatki, cło, ZUS',
