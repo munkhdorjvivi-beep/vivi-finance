@@ -320,7 +320,8 @@ body{margin:0;background:var(--bg)}
         <div class="row"><button class="btn primary" id="rev-xlsx" disabled>📥 Excel тайлан татах</button></div>
       </div>
       <p class="note" id="rev-xlsx-note" style="margin:0 0 8px">Бүтэн Excel тайлан (хураангуй, дэлгүүр өдрөөр, бэлэн мөнгө, зарлага ангиллаар, тодруулах, зээл, дансууд) — дээр Smart тайлан болон хуулгаа оруулсны дараа татна.</p>
-      <div class="tbl"><table><thead><tr><th>Төлбөрийн хэлбэр</th><th class="n">Smart</th><th class="n">Банкинд орсон</th><th class="n">Зөрүү</th><th class="n">%</th><th>Дүгнэлт</th></tr></thead><tbody id="rev-sum"><tr><td colspan="6" class="empty">Хяналт хийгдээгүй байна.</td></tr></tbody></table></div>
+      <div class="tbl"><table><thead><tr><th>Төлбөрийн хэлбэр</th><th class="n">Smart</th><th class="n">Банкинд орсон</th><th class="n">Зөрүү</th><th class="n">%</th><th class="n">Тайлбарласан</th><th class="n">Үлдсэн</th><th>Дүгнэлт</th></tr></thead><tbody id="rev-sum"><tr><td colspan="8" class="empty">Хяналт хийгдээгүй байна.</td></tr></tbody></table></div>
+      <div id="rev-fix" style="margin-top:10px"></div>
       <div id="rev-check" style="margin-top:10px"></div>
       <p class="note" id="rev-accs" style="margin:8px 0 0"></p>
       <p class="note" style="margin:8px 0 0">Карт: банк 0.5% шимтгэл суутгасан гэж бүтэн дүн рүү шилжүүлсэн. QPay: шимтгэлийг нэмж тооцсон. QPay ба «Хаан шилжүүлэг» нэг дансанд ордог тул хамт тулгана. Зээл (StorePay, Pocket) банкинд шимтгэлтэйгээр цэвэр дүнгээр орно.</p>
@@ -337,8 +338,8 @@ body{margin:0;background:var(--bg)}
         <div class="filter chips" id="rev-ch"><button data-f="all" aria-pressed="true">Бүгд</button><button data-f="cash" aria-pressed="false">Бэлэн</button><button data-f="pos" aria-pressed="false">Карт</button><button data-f="qpay" aria-pressed="false">QPay</button></div>
         <div class="filter chips" id="rev-only"><button data-f="diff" aria-pressed="true">Зөрүүтэй</button><button data-f="all" aria-pressed="false">Бүх өдөр</button></div></div>
       </div>
-      <div class="tbl"><table><thead><tr><th>Өдөр</th><th>Дэлгүүр</th><th>Хэлбэр</th><th class="n">Smart</th><th class="n">Банк</th><th class="n">Зөрүү</th></tr></thead><tbody id="rev-days"><tr><td colspan="6" class="empty">–</td></tr></tbody></table></div>
-      <p class="note" style="margin:8px 0 0">Бэлэн мөнгийг тушаасан өдрөөр, картыг хаалтын өдрөөр, QPay/шилжүүлгийг орсон өдрөөр харуулна. Бэлэн мөнгө хэд хоногоор нийлж тушаагддаг тул бэлэн мөнгөний дэлгэрэнгүйг «Бэлэн мөнгө» хэсгээс харна.</p>
+      <div class="tbl"><table><thead><tr><th>Өдөр</th><th>Дэлгүүр</th><th>Хэлбэр</th><th class="n">Smart</th><th class="n">Банк</th><th class="n">Зөрүү</th><th>Шийдвэр</th></tr></thead><tbody id="rev-days"><tr><td colspan="7" class="empty">–</td></tr></tbody></table></div>
+      <p class="note" style="margin:8px 0 0">Бэлэн мөнгийг <b>хуулгын утгад бичсэн борлуулалтын өдрөөр</b> («11/3 бэлэн орлого», «11/7,8 …» — хэд хоногийнх бол Smart-ын бэлэн борлуулалтын харьцаагаар хуваана; утгад огноо байхгүй бол дүнгээр нь тааруулна), картыг хаалтын өдрөөр, QPay/шилжүүлгийг орсон өдрөөр харуулна. Дэлгэрэнгүйг «Бэлэн мөнгө» хэсгээс харна.</p>
     </div>
     <div class="card" id="rev-exp-card">
       <h2>Зөрүү яагаад гарсан бэ</h2>
@@ -562,7 +563,10 @@ body{margin:0;background:var(--bg)}
       <div class="tbl"><table><thead><tr><th>Ажилтан</th><th class="n">Өмнөх үлдэгдэл</th><th class="n">Шинээр авсан</th><th class="n">Цалингаас хаасан</th><th class="n">Өөрөөр төлсөн</th><th class="n">Үлдэгдэл</th><th class="n">Нийт хаасан</th><th>Төлөв</th></tr></thead><tbody id="pay-debt"></tbody></table></div>
       <p class="note" style="margin:8px 0 0">Сүүл цалингийн жагсаалтын «Ажилчидаас авах авлага /N29/» ба «Авлага хаах дүн /N30/» баганаас. Өмнөх үлдэгдэл = өмнөх сүүл цалингийн жагсаалтын дараах үлдэгдэл.</p>
     </div>
-  </section>
+      <div class="card"><h2>💸 Кассчнаас суутгах (орлого тулгалтаас)</h2>
+      <p class="note" style="margin:0 0 8px">«Орлого тулгалт»-д нягтлан «Кассчнаас суутгах» гэж хаасан дутагдал. Цалин бодохдоо суутгаад «Цалингаас суутгасан» дарна. 🖨 — кассчны гарын үсэг зурах акт.</p>
+      <div id="pay-ded"></div></div>
+</section>
 
   <!-- INTERNAL REPORT -->
   <section class="panel" data-panel="pl" hidden>
@@ -1259,6 +1263,8 @@ const VIVI = (() => {
     let s = desc.toUpperCase().split('ХААНААС')[0];
     for (const [r,n] of ROM) s = s.replace(new RegExp('\\b'+r+'/','g'), n+'/');
     s = s.replace(/(\d{1,2})[.\s]?SAR(?:IIN|YN)?\s*(\d{1,2})/g,'$1/$2');
+    s = s.replace(/\b20\d{2}[\/.\-](\d{1,2})[\/.\-](\d{1,2})/g, '$1/$2');   // 2026/11/01, 2026.11.01
+    s = s.replace(/(\d{1,2})\s*-?\s*Р?\s*САР(?:ЫН|ИЙН)?\s*(\d{1,2})/g, '$1/$2');   // 11 сарын 3, 11-р сарын 3
     const depY = +dep.slice(0,4), depM = +dep.slice(5,7);
     const out = [];
     const re = /(\d{1,2})[\/\-.](\d{1,2})((?:\s*[,\-]\s*(?:\d{1,2}[\/\-.])?\d{1,2})*)/g;
@@ -1427,7 +1433,14 @@ const VIVI = (() => {
         ncSmart: nc.reduce((s,x)=>s+x.smart,0), ncBank: nc.reduce((s,x)=>s+x.bank,0)};
     }).sort((a,b)=> b.smartCash - a.smartCash);
     const allDeps = Object.values(deposits).flat().sort((a,b)=>a.dt-b.dt);
-    for (const [st, ps] of Object.entries(deposits)) for (const p of ps) fAdd(st, p.d, 'cash', 'bank', p.cr);
+    // cash: a deposit belongs to the sales day(s) it was for — the day written in the bank description («11/3 бэлэн орлого», «10/31-11/1», «11/7,8»)
+    // or found by the amount (matchCash) — not to the day it reached the bank; split over several days by their Smart cash; days outside the period drop out
+    W.cash.bank = 0;
+    for (const [st, ps] of Object.entries(deposits)) for (const p of ps){
+      const ds = (p.days || []).filter(Boolean), S0 = cashSales[st] || {};
+      if (!ds.length){ if (inWin(p.d)){ fAdd(st, p.d, 'cash', 'bank', p.cr); W.cash.bank += p.cr; } continue; }
+      const tot = ds.reduce((a, d) => a + (S0[d] || 0), 0);
+      ds.forEach(d => { const part = tot > 0 ? p.cr * (S0[d] || 0) / tot : p.cr / ds.length; if (inWin(d)){ fAdd(st, d, 'cash', 'bank', part); W.cash.bank += part; } }); }
     const forms = Object.values(F).filter(o => Math.abs(o.smart) + Math.abs(o.bank) > 0).map(o => ({...o, smart:Math.round(o.smart), bank:Math.round(o.bank)})).sort((a,b) => a.d < b.d ? -1 : a.d > b.d ? 1 : 0);
     for (const k in W){ W[k].smart = Math.round(W[k].smart); W[k].bank = Math.round(W[k].bank); }
     { const C = W.credit, lb = bank.length ? iso(new Date(Math.max(...bank.map(t => +t.dt)))) : d1; C.pk = Math.round(C.pk); C.sp = Math.round(C.sp); C.spPrev = Math.round(C.spPrev); C.spA = spA; C.spZ = addMonth(d1); C.lastBank = lb;
@@ -1655,7 +1668,7 @@ const VIVI = (() => {
       if (XC[f.store + '|' + f.d + '|' + f.ch]) return XC[f.store + '|' + f.d + '|' + f.ch].join('; ');
       const e = (KF[f.store + '|' + f.d] || []).find(x => x.real === CH_NAME[f.ch] || x.rec && smartCh({form: x.rec === 'Бэлэн' ? 'Бэлнээр' : '', bank: x.rec}) === f.ch);
       if (e) return `Буруу хэлбэр: ${e.kas} ${Math.round(e.amt)}₮ «${e.rec}» → ${e.real}${e.sure ? '' : ' (магадгүй)'}`;
-      return f.ch === 'cash' ? 'Тушаалтын өдрөөр (бэлэн)' : dd < 0 ? 'Банкинд дутуу орсон / mniej w banku' : 'Банкинд илүү орсон / więcej w banku'; };
+      return f.ch === 'cash' ? 'Борлуулалтын өдрөөр (хуулгын утгаар)' : dd < 0 ? 'Банкинд дутуу орсон / mniej w banku' : 'Банкинд илүү орсон / więcej w banku'; };
     const dForm = [['Огноо / Data', 'Гараг', 'Дэлгүүр / Sklep', 'Хэлбэр / Forma', 'Smart', 'Банк / Bank', 'Зөрүү / Różnica', '%', 'Тайлбар / Wyjaśnienie']];
     for (const f of m.forms.filter(f => f.store !== '?').slice().sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : a.store.localeCompare(b.store) || a.ch.localeCompare(b.ch))){ const dd = f.bank - f.smart;
       dForm.push([f.d, wdOf(f.d), f.store, CHD[f.ch] || f.ch, R(f.smart), R(f.bank), R(dd), f.smart ? +(dd / f.smart).toFixed(4) : '', why(f, dd)]); }
@@ -3356,6 +3369,7 @@ function renderInner(){
   try{ renderContr(); }catch(e){ console.warn('contr', e); }
   try{ renderChat(); }catch(e){ console.warn('chat', e); }
   try{ renderHR(); }catch(e){ console.warn('hr', e); }
+  try{ renderFixPay(); }catch(e){ console.warn('fixpay', e); }
   try{ renderNav(); }catch(e){ console.warn('nav', e); }
   try{ renderDaily(); }catch(e){ console.warn('daily', e); }
 }
@@ -3463,10 +3477,11 @@ function renderRev(){
     if (Math.abs(p) <= 1) return ['Тохирсон','c-ok'];
     if (d < 0) return [k === 'cash' ? 'Дутуу тушаасан' : 'Дутуу орсон', 'c-bad'];
     return ['Илүү орсон','c-grey']; };
-  $('#rev-sum').innerHTML = Object.keys(CH_LABEL).filter(k => W[k]).map(k => { const s = W[k].smart, b = W[k].bank, d = b - s; ts += s; tb += b; const v = verdict(k, d, s);
-    return `<tr class="${v[1]==='c-bad'?'sev-bad':v[1]==='c-warn'?'sev-warn':v[1]==='c-ok'?'sev-ok':''}"><td>${CH_LABEL[k]}</td><td class="n">${fmt(s)}</td><td class="n">${fmt(b)}</td><td class="n">${sgn(d)}</td><td class="n">${s ? (d/s*100).toFixed(1) : '–'}</td><td><span class="chip ${v[1]}">${v[0]}</span></td></tr>`; }).join('')
-    + (W.credit && W.credit.staffSum ? `<tr><td>Хувь хүний зээл (ажилтан, гэр бүл)<div class="note" style="white-space:normal">${Object.entries(W.credit.staff || {}).sort((x, y) => y[1] - x[1]).map(([n, v]) => esc(n) + ' ' + fmt(Math.round(v))).join(' · ')}</div></td><td class="n">${fmt(W.credit.staffSum)}</td><td class="n">—</td><td class="n"></td><td class="n"></td><td><span class="chip c-grey">Авлага — банкинд орохгүй</span></td></tr>` : '')
-    + `<tr><td><b>Нийт</b></td><td class="n"><b>${fmt(ts)}</b></td><td class="n"><b>${fmt(tb)}</b></td><td class="n"><b>${sgn(tb-ts)}</b></td><td class="n">${ts ? ((tb-ts)/ts*100).toFixed(1) : '–'}</td><td></td></tr>`;
+  const fx = {}; if (typeof fixOf === 'function') for (const f of F) fx[f.ch] = (fx[f.ch] || 0) + fixOf(fixKeyF(f), f.bank - f.smart).on; let tf = 0;
+  $('#rev-sum').innerHTML = Object.keys(CH_LABEL).filter(k => W[k]).map(k => { const s = W[k].smart, b = W[k].bank, d = b - s, ex = Math.round(fx[k] || 0); ts += s; tb += b; tf += ex; const v = verdict(k, d - ex, s);
+    return `<tr class="${v[1]==='c-bad'?'sev-bad':v[1]==='c-warn'?'sev-warn':v[1]==='c-ok'?'sev-ok':''}"><td>${CH_LABEL[k]}</td><td class="n">${fmt(s)}</td><td class="n">${fmt(b)}</td><td class="n">${sgn(d)}</td><td class="n">${s ? (d/s*100).toFixed(1) : '–'}</td><td class="n">${ex ? sgn(ex) : ''}</td><td class="n">${ex ? '<b>' + sgn(d - ex) + '</b>' : ''}</td><td><span class="chip ${v[1]}">${v[0]}</span></td></tr>`; }).join('')
+    + (W.credit && W.credit.staffSum ? `<tr><td>Хувь хүний зээл (ажилтан, гэр бүл)<div class="note" style="white-space:normal">${Object.entries(W.credit.staff || {}).sort((x, y) => y[1] - x[1]).map(([n, v]) => esc(n) + ' ' + fmt(Math.round(v))).join(' · ')}</div></td><td class="n">${fmt(W.credit.staffSum)}</td><td class="n">—</td><td class="n"></td><td class="n"></td><td></td><td></td><td><span class="chip c-grey">Авлага — банкинд орохгүй</span></td></tr>` : '')
+    + `<tr><td><b>Нийт</b></td><td class="n"><b>${fmt(ts)}</b></td><td class="n"><b>${fmt(tb)}</b></td><td class="n"><b>${sgn(tb-ts)}</b></td><td class="n">${ts ? ((tb-ts)/ts*100).toFixed(1) : '–'}</td><td class="n">${tf ? sgn(tf) : ''}</td><td class="n">${tf ? '<b>' + sgn(tb - ts - tf) + '</b>' : ''}</td><td></td></tr>`;
   const by = {};
   for (const f of F){ const o = by[f.store] = by[f.store] || {smart:0, cash:[0,0], pos:[0,0], qpay:[0,0]}; o.smart += f.smart; if (o[f.ch]){ o[f.ch][0] += f.smart; o[f.ch][1] += f.bank; } }
   const cell = a => { const d = a[1] - a[0]; if (!a[0] && !a[1]) return '<td class="n">–</td>'; const c = diffCls(d, a[0]); return `<td class="n">${c ? `<span class="chip ${c}">${sgn(d)}</span>` : sgn(d)}</td>`; };
@@ -3478,9 +3493,10 @@ function renderRev(){
     .sort((a,b) => a.d < b.d ? 1 : a.d > b.d ? -1 : a.store.localeCompare(b.store));
   const lim = rows.slice(0, 150);
   $('#rev-days').innerHTML = lim.length ? lim.map(f => { const d = f.bank - f.smart, c = diffCls(d, f.smart);
-    return `<tr class="${c==='c-bad'?'sev-bad':''}"><td class="mono">${esc(f.d)}</td><td>${esc(f.store)}</td><td>${CH_SHORT[f.ch]||f.ch}</td><td class="n">${fmt(f.smart)}</td><td class="n">${fmt(f.bank)}</td><td class="n">${c ? `<span class="chip ${c}">${sgn(d)}</span>` : sgn(d)}</td></tr>`; }).join('')
-    + (rows.length > lim.length ? `<tr><td colspan="6" class="empty">… өөр ${rows.length - lim.length} мөр. Дэлгүүр эсвэл хэлбэрээр шүүнэ үү.</td></tr>` : '')
-    : '<tr><td colspan="6" class="empty">Зөрүүтэй өдөр алга.</td></tr>';
+    return `<tr class="${c==='c-bad'?'sev-bad':''}"><td class="mono">${esc(f.d)}</td><td>${esc(f.store)}</td><td>${CH_SHORT[f.ch]||f.ch}</td><td class="n">${fmt(f.smart)}</td><td class="n">${fmt(f.bank)}</td><td class="n">${c ? `<span class="chip ${c}">${sgn(d)}</span>` : sgn(d)}</td><td>${typeof fixCell === 'function' && (c || fixOf(fixKeyF(f), d).L.length) ? fixCell('F', f) : ''}</td></tr>`; }).join('')
+    + (rows.length > lim.length ? `<tr><td colspan="7" class="empty">… өөр ${rows.length - lim.length} мөр. Дэлгүүр эсвэл хэлбэрээр шүүнэ үү.</td></tr>` : '')
+    : '<tr><td colspan="7" class="empty">Зөрүүтэй өдөр алга.</td></tr>';
+  try{ renderFix(); }catch(e){ console.warn('fix', e); }
   { const K = run.kas, st = revStore;
     if ((!K || !K.cashiers.length || !run.explain) && run.rawN && run !== pendingRun) refreshRunKas(run);
     renderExp(run, st);
@@ -3526,14 +3542,15 @@ function renderCash(){
   const opts = ['<option value="">Бүх дэлгүүр</option>', ...[...new Set(run.rows.map(r => r.store))].map(s => `<option ${s===cashStore?'selected':''}>${esc(s)}</option>`)].join('');
   if ($('#cash-store').innerHTML !== opts) $('#cash-store').innerHTML = opts;
   const prob = run.rows.filter(g => g.status === 'BRAK' || g.status === 'MNIEJ');
-  const open = prob.filter(g => !(S.notes[rowId(g)] && S.notes[rowId(g)].text));
+  const cRid = run.id && run.id !== 'latest' ? run.id : run.d0 + '_' + run.d1, cFixed = g => typeof fixOf === 'function' && Math.abs(-g.diff - fixOf(fixKeyC(g), -g.diff, cRid).on) < 1;
+  const open = prob.filter(g => !(S.notes[rowId(g)] && S.notes[rowId(g)].text) && !cFixed(g));
   $('#k-cash').textContent = open.length; $('#k-cash-s').textContent = open.length ? fmt(open.reduce((s,g)=>s+g.diff,0)) + ' ₮' : 'Бүгд тайлбартай';
   $('#t-cash').hidden = !open.length; $('#t-cash').textContent = open.length;
   const rows = (cashFilter === 'open' ? open : prob).filter(g => !cashStore || g.store === cashStore);
   const focusId = document.activeElement && document.activeElement.id;
   $('#cash-body').innerHTML = rows.length ? rows.map(g => { const id = rowId(g), n = S.notes[id]; const st = ST_LABEL[g.status] || ['',''];
     return `<tr class="${g.status==='BRAK'?'sev-bad':'sev-warn'}"><td>${esc(g.store)}</td><td class="mono">${esc(g.days.join(', '))}${g.depDates.length ? `<div class="note">Тушаасан: ${esc(g.depDates.join(', '))}</div>` : ''}</td><td class="n">${fmt(g.smart)}</td><td class="n">${fmt(g.dep)}</td><td class="n">${fmt(g.diff)}</td><td><span class="chip ${st[1]}">${st[0]}</span></td>
-    <td>${pendingRun ? '<span class="note">Хадгалсны дараа тайлбар бичнэ</span>' : `<div class="row"><textarea id="nt-${esc(id)}" rows="1" placeholder="Бэлэн мөнгө хаашаа орсон бэ?" ${canWrite?'':'disabled'}>${esc(n ? n.text : '')}</textarea><button class="btn" data-act="note" data-id="${esc(id)}" ${canWrite?'':'disabled'}>Хадгалах</button></div>${n && n.text ? `<div class="note">${esc(nameOf(n.by))} · ${esc(fmtDT(n.at))}</div>` : ''}`}</td></tr>`; }).join('')
+    <td>${pendingRun ? '<span class="note">Хадгалсны дараа тайлбар бичнэ</span>' : `<div class="row"><textarea id="nt-${esc(id)}" rows="1" placeholder="Бэлэн мөнгө хаашаа орсон бэ?" ${canWrite?'':'disabled'}>${esc(n ? n.text : '')}</textarea><button class="btn" data-act="note" data-id="${esc(id)}" ${canWrite?'':'disabled'}>Хадгалах</button></div>${n && n.text ? `<div class="note">${esc(nameOf(n.by))} · ${esc(fmtDT(n.at))}</div>` : ''}${typeof fixCell === 'function' ? fixCell('C', g, cRid) : ''}`}</td></tr>`; }).join('')
     : `<tr><td colspan="7" class="empty">${prob.length ? 'Бүх өдөр тайлбартай.' : 'Асуудалтай өдөр алга.'}</td></tr>`;
   if (focusId && document.getElementById(focusId)) document.getElementById(focusId).focus();
 }
@@ -3978,6 +3995,12 @@ $('#rev-xlsx').addEventListener('click', async () => {
         for (let c = 0; c < 8; c++){ const h = ws[XS.utils.encode_cell({r: 3, c})]; if (h) h.s = {font: {bold: true, color: {rgb: 'FFFFFF'}}, fill: {patternType: 'solid', fgColor: {rgb: '1F5F8B'}}}; }
         C.rows.forEach((x, i) => { for (let c = 0; c < 8; c++){ const cell = ws[XS.utils.encode_cell({r: 4 + i, c})]; if (cell) cell.s = {fill: {patternType: 'solid', fgColor: {rgb: FL[x.st]}}, alignment: {wrapText: c === 7, vertical: 'top'}}; } });
         XS.utils.book_append_sheet(wb, ws, 'Хуулга шалгах'); const N = wb.SheetNames; N.splice(1, 0, N.pop()); }
+      if (typeof FIX !== 'undefined'){ const rid = (sr && sr.id && sr.id !== 'latest') ? sr.id : d0 + '_' + d1, L = FIX.list.filter(x => x.run === rid);
+        if (L.length){ const aoa = [['Засвар, кассчны суутгал: ' + d0 + ' – ' + d1], [], ['Төлөв', 'Үйлдэл', 'Дэлгүүр', 'Өдөр', 'Хэлбэр', 'Зөрүү', 'Хаасан дүн', 'Кассчин', 'Тайлбар', 'Хэн', 'Хэзээ', 'Захирал', 'Цалингаас суутгасан']]
+          .concat(L.map(x => [(FIX_ST[x.status] || [''])[0], (FIX_ACT[x.act] || ['', x.act])[1], x.store, x.d || '', x.ch || '', x.diff || 0, +x.amt || 0, x.kas || '', x.note || '', S.names[x.by] || '', String(x.at || '').slice(0, 16).replace('T', ' '), x.dBy ? (x.status === 'approved' ? 'баталсан ' : 'буцаасан ') + String(x.dAt || '').slice(0, 10) + (x.dNote ? ' · ' + x.dNote : '') : '', x.ded ? String(x.ded).slice(0, 10) : '']));
+          const ws2 = XS.utils.aoa_to_sheet(aoa); ws2['!cols'] = [14, 26, 14, 11, 8, 12, 12, 18, 40, 16, 16, 24, 14].map(w => ({wch: w})); if (ws2.A1) ws2.A1.s = {font: {bold: true, sz: 13}};
+          for (let c = 0; c < 13; c++){ const h = ws2[XS.utils.encode_cell({r: 2, c})]; if (h) h.s = {font: {bold: true, color: {rgb: 'FFFFFF'}}, fill: {patternType: 'solid', fgColor: {rgb: '1F5F8B'}}}; }
+          XS.utils.book_append_sheet(wb, ws2, 'Засвар, суутгал'); const N2 = wb.SheetNames; N2.splice(2, 0, N2.pop()); } }
       XS.writeFile(wb, r.filename); }
     catch(err){ console.warn(err); alert('Excel үүсгэж чадсангүй: ' + (err.message || err)); }
     finally{ btn.disabled = false; btn.textContent = '📥 Excel тайлан татах'; }
@@ -6518,6 +6541,98 @@ document.addEventListener('submit', async e => {
     catch(err){ $('#hr-lv-msg').textContent = 'Алдаа: ' + (err.code || err.message); } }
   if (e.target.id === 'hr-vac-form'){ e.preventDefault(); try{ await db.collection('hrrec').add({title: $('#hr-vac-t').value.trim(), unit: $('#hr-vac-u').value, n: +$('#hr-vac-n').value || 1, status: 'open', cands: [], by: me, at: new Date().toISOString()}); $('#hr-vac-t').value = ''; }catch(err){ alert('Алдаа: ' + (err.code || err.message)); } }
 });
+// ===================== revenue control: closing differences (charge a cashier, another day / store, wrong form, bank fee, other) =====================
+// revfix/{id}: {run, key, link?, store, d, ch, diff, act, amt, kas, note, status: done (< 100 000, the accountant closes) | pending → approved / rejected (the owner), by, at, dBy, dAt, dNote, ded?}
+const FIX = {list: [], open: '', LIMIT: 100000};
+const FIX_ACT = {kas: ['💸', 'Кассчнаас суутгах'], shift: ['🔁', 'Өөр өдөр / дэлгүүрт орсон'], form: ['🔀', 'Буруу хэлбэрээр бүртгэсэн'], fee: ['🏦', 'Банкны шимтгэл, бутархай'], other: ['✍️', 'Бусад тайлбар']};
+const FIX_ST = {done: ['✓ хаасан', 'c-ok'], pending: ['⏳ захирлын шийдвэр', 'c-warn'], approved: ['✓ баталсан', 'c-ok'], rejected: ['✗ буцаасан', 'c-bad']};
+const fixOn = x => x.status === 'done' || x.status === 'approved';
+const runIdOf = r => r ? (r.id === 'latest' || !r.id ? r.d0 + '_' + r.d1 : r.id) : '';
+const fixRunId = () => { const r = typeof pendingRun !== 'undefined' && pendingRun ? null : (typeof selectedRun === 'function' ? selectedRun() : null); return r ? (r.id === 'latest' ? r.d0 + '_' + r.d1 : r.id) : ''; };
+const fixKeyF = f => 'F|' + f.store + '|' + f.d + '|' + f.ch;
+const fixKeyC = g => 'C|' + g.store + '|' + (g.first || (g.days || [])[0] || '');
+// how much of a row's difference the fixes explain (signed like the difference): the row itself, or the other side of a «shift» / «wrong form» pair
+function fixOf(key, diff, rid){ const run = rid || fixRunId(), L = FIX.list.filter(x => x.run === run && (x.key === key || x.link === key) && x.status !== 'rejected');
+  const s = Math.sign(diff) || 1; let on = 0, wait = 0; for (const x of L){ const v = Math.min(+x.amt || 0, Math.abs(diff)); if (fixOn(x)) on += v; else wait += v; } return {L, on: s * Math.min(on, Math.abs(diff)), wait: s * wait}; }
+function fixCell(kind, row, rid){
+  rid = rid || fixRunId(); const key = kind === 'F' ? fixKeyF(row) : fixKeyC(row), diff = kind === 'F' ? row.bank - row.smart : -(row.diff || 0), X = fixOf(key, diff, rid), left = diff - X.on;
+  const chips = X.L.map(x => `<span class="chip ${FIX_ST[x.status][1]}" title="${esc((FIX_ACT[x.act] || ['', ''])[1] + (x.kas ? ' · ' + x.kas : '') + (x.note ? ' · ' + x.note : '') + ' — ' + nameOf(x.by))}">${(FIX_ACT[x.act] || [''])[0]} ${fmt(x.amt)}${x.status === 'pending' ? ' ⏳' : ''}</span>${x.act === 'kas' && fixOn(x) ? ` <a href="#" data-fix-print="${esc(x.id)}" title="Акт хэвлэх">🖨</a>` : ''}`).join(' ');
+  const can = !!rid && Math.abs(diff) >= 1 && (typeof ALLOW === 'undefined' || ALLOW.rev || ALLOW.cash);
+  return `<div style="white-space:normal;min-width:150px">${chips}${Math.abs(left) >= 1 && X.L.length ? `<div class="note">үлдсэн ${sgn(left)}</div>` : ''}${can && Math.abs(left) >= 1 ? ` <button class="btn" type="button" data-fix-open="${esc(key)}" data-fix-diff="${diff}" data-fix-run="${esc(rid)}" style="padding:2px 8px;margin-top:2px">Шийдвэрлэх</button>` : !X.L.length && !rid && Math.abs(diff) >= 1 ? '<span class="note">хадгалсны дараа</span>' : ''}</div>`;
+}
+// the inline form under a row
+function fixForm(key, diff, rid){
+  const run = (typeof revRuns === 'function' && revRuns().find(r => runIdOf(r) === rid)) || (typeof selectedRun === 'function' && selectedRun()) || {}, [kind, store, d, ch] = key.split('|'), left = diff - fixOf(key, diff, rid).on;
+  const K = run.kas || {}, sugg = (K.errors || []).filter(e => e.store === store && (!d || e.d === d)).map(e => e.kas);
+  const kas = [...new Set(sugg.concat((K.cashiers || []).filter(c => c.store === store).map(c => c.kas)))].filter(Boolean);
+  // other open differences of the same store ±3 days with the opposite sign (to pair a «shift» / «wrong form»)
+  const F = (run.forms || []).filter(f => f.store === store && fixKeyF(f) !== key && Math.sign(f.bank - f.smart) === -Math.sign(diff) && Math.abs(f.bank - f.smart) >= 1000 && (!d || Math.abs(Date.parse(f.d) - Date.parse(d)) <= 3 * 864e5));
+  const pairs = F.map(f => [fixKeyF(f), `${f.d} · ${CH_SHORT[f.ch] || f.ch} · ${sgn(f.bank - f.smart)}`]);
+  return `<div class="card" style="margin:6px 0;padding:10px;border:2px solid #1f5f8b" data-fix-form="${esc(key)}" data-fix-diff="${diff}" data-fix-run="${esc(rid)}">
+    <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+      <label class="f" style="width:auto">Үйлдэл<select data-fx="act" style="width:auto">${Object.entries(FIX_ACT).map(([k, [i, l]]) => `<option value="${k}"${k === (diff < 0 ? 'kas' : 'shift') ? ' selected' : ''}>${i} ${l}</option>`).join('')}</select></label>
+      <label class="f" style="width:auto">Дүн ₮<input data-fx="amt" inputmode="decimal" value="${fmt(Math.abs(left))}" style="width:130px"></label>
+      <label class="f" style="width:auto" data-fx-w="kas">Кассчин<input data-fx="kas" list="fx-kas-list" value="${esc(sugg[0] || '')}" placeholder="нэр" style="width:170px"><datalist id="fx-kas-list">${kas.map(k => `<option value="${esc(k)}">`).join('')}</datalist></label>
+      <label class="f" style="width:auto" data-fx-w="link" hidden>Хос зөрүү<select data-fx="link" style="width:auto"><option value="">— сонгох —</option>${pairs.map(([k, l]) => `<option value="${esc(k)}">${esc(l)}</option>`).join('')}</select></label>
+      <label class="f" style="flex:1;min-width:200px">Тайлбар<input data-fx="note" placeholder="юу болсон, хэн хариуцах…"></label>
+      <button class="btn primary" type="button" data-fix-save>Хадгалах</button><button class="btn" type="button" data-fix-cancel>✕</button>
+    </div><p class="note" style="margin:6px 0 0">${FIX.LIMIT.toLocaleString('ru-RU')} ₮-өөс бага бол шууд хаагдана; түүнээс дээш бол захирал баталсны дараа хаагдана. Кассчнаас суутгасан дүн «Цалин»-д суутгалын жагсаалтад орж, акт хэвлэх боломжтой.</p></div>`;
+}
+async function fixSave(box){
+  const key = box.dataset.fixForm, diff = +box.dataset.fixDiff, v = k => (box.querySelector(`[data-fx="${k}"]`) || {}).value || '', act = v('act'), amt = Math.abs(parseAmt(v('amt')) || 0);
+  if (!amt){ alert('Дүн оруулна уу.'); return; } if (act === 'kas' && !v('kas').trim()){ alert('Кассчны нэр оруулна уу.'); return; }
+  if ((act === 'shift' || act === 'form') && !v('link') && !v('note').trim()){ alert('Хос зөрүүг сонгох эсвэл хаана орсныг тайлбарт бичнэ үү.'); return; }
+  const rid = box.dataset.fixRun || fixRunId(), parts = key.split('|'), store = parts[1], d = parts[2] || '', ch = parts[0] === 'F' ? parts[3] : 'cash', now = new Date().toISOString(), status = amt < FIX.LIMIT || isOwner ? 'done' : 'pending';
+  try{ await db.collection('revfix').add({run: rid, key, link: v('link') || '', store, d: d || '', ch: ch || 'cash', diff: Math.round(diff), act, amt, kas: v('kas').trim(), note: v('note').trim(), status, by: me, at: now, ownerNotified: status !== 'pending'});
+    FIX.open = ''; render(); }
+  catch(err){ alert('Хадгалж чадсангүй: ' + (err.code || err.message)); }
+}
+// the owner's queue (≥ 100 000) + the cashier charges of this control
+function renderFix(){
+  const el = $('#rev-fix'); if (!el) return; const run = fixRunId(), L = FIX.list.filter(x => x.run === run), P = FIX.list.filter(x => x.status === 'pending');
+  const kas = L.filter(x => x.act === 'kas' && fixOn(x)), by = {}; for (const x of L.filter(fixOn)) by[x.act] = (by[x.act] || 0) + (+x.amt || 0);
+  el.innerHTML = (P.length ? `<div class="banner" style="background:var(--warn-soft);margin-bottom:8px"><b>⏳ Захирлын шийдвэр хүлээж буй засвар (${P.length})</b> — ${FIX.LIMIT.toLocaleString('ru-RU')} ₮ ба түүнээс дээш</div>
+      <div class="tbl" style="margin-bottom:10px"><table><tbody>${P.map(x => `<tr><td class="mono">${esc(x.d || '')}</td><td>${esc(x.store)}</td><td>${(FIX_ACT[x.act] || ['', x.act]).join(' ')}${x.kas ? ' · <b>' + esc(x.kas) + '</b>' : ''}</td><td class="n"><b>${fmt(x.amt)}</b></td><td class="note" style="white-space:normal">${esc(x.note || '')}<div>${esc(nameOf(x.by))} · ${esc(fmtDT(x.at))}</div></td>
+        <td style="white-space:nowrap">${isOwner ? `<button class="btn primary" type="button" data-fix-dec="${esc(x.id)}|approved" style="padding:2px 10px">✓ Батлах</button> <button class="btn bad" type="button" data-fix-dec="${esc(x.id)}|rejected" style="padding:2px 10px">✗</button>` : '<span class="note">захирал шийднэ</span>'}</td></tr>`).join('')}</tbody></table></div>` : '')
+    + (L.length ? `<div class="note" style="margin-bottom:6px"><b>Энэ хяналтын засвар:</b> ${Object.entries(by).map(([k, v]) => `${FIX_ACT[k][0]} ${esc(FIX_ACT[k][1])} ${fmt(v)} ₮`).join(' · ') || '—'}</div>` : '')
+    + (kas.length ? `<div class="tbl"><table><thead><tr><th>Кассчин</th><th>Дэлгүүр</th><th>Өдөр</th><th class="n">Суутгах ₮</th><th>Тайлбар</th><th>Цалингаас</th><th></th></tr></thead><tbody>${kas.map(x => `<tr><td><b>${esc(x.kas)}</b></td><td>${esc(x.store)}</td><td class="mono">${esc(x.d || '')}</td><td class="n">${fmt(x.amt)}</td><td class="note" style="white-space:normal">${esc(x.note || '')}</td><td>${x.ded ? '<span class="chip c-ok">✓ суутгасан ' + esc(String(x.ded).slice(0, 10)) + '</span>' : '<span class="chip c-warn">суутгаагүй</span>'}</td><td><button class="btn" type="button" data-fix-print="${esc(x.id)}" style="padding:2px 8px">🖨 Акт</button></td></tr>`).join('')}</tbody></table></div>` : '');
+  renderFixPay();
+}
+// «Цалин»: cashier charges not yet deducted
+function renderFixPay(){
+  const el = $('#pay-ded'); if (!el) return; const L = FIX.list.filter(x => x.act === 'kas' && fixOn(x)).sort((a, b) => !!a.ded - !!b.ded || String(b.at).localeCompare(String(a.at)));
+  el.innerHTML = L.length ? `<div class="tbl"><table><thead><tr><th>Кассчин</th><th>Дэлгүүр</th><th>Дутагдлын өдөр</th><th class="n">Суутгах ₮</th><th>Тайлбар</th><th>Төлөв</th><th></th></tr></thead><tbody>${L.slice(0, 200).map(x => `<tr><td><b>${esc(x.kas)}</b></td><td>${esc(x.store)}</td><td class="mono">${esc(x.d || '')}</td><td class="n">${fmt(x.amt)}</td><td class="note" style="white-space:normal">${esc(x.note || '')}</td>
+      <td>${x.ded ? '<span class="chip c-ok">✓ ' + esc(String(x.ded).slice(0, 10)) + '</span>' : `<button class="btn" type="button" data-fix-ded="${esc(x.id)}" style="padding:2px 8px">Цалингаас суутгасан</button>`}</td><td><button class="btn" type="button" data-fix-print="${esc(x.id)}" style="padding:2px 8px">🖨</button></td></tr>`).join('')}</tbody></table></div>
+    <p class="note" style="margin:6px 0 0">Нийт суутгаагүй: <b>${fmt(L.filter(x => !x.ded).reduce((a, x) => a + (+x.amt || 0), 0))} ₮</b> (${L.filter(x => !x.ded).length})</p>` : '<p class="note">Кассчнаас суутгах дүн алга.</p>';
+}
+// the act the cashier signs
+function fixPrint(x){
+  const d = new Date(x.at), no = 'АКТ-' + String(x.at || '').slice(2, 10).replace(/-/g, '') + '-' + String(x.id).slice(-4).toUpperCase(), amt = +x.amt || 0;
+  const ok = x.status === 'approved' || (x.status === 'done' && amt < FIX.LIMIT), line = (l, v) => `<tr><th>${l}</th><td>${v}</td></tr>`;
+  printHTML(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(no)}</title><style>@page{size:A4;margin:16mm} body{font:13px/1.5 Arial,Helvetica,sans-serif;color:#000}
+    h1{text-align:center;font-size:17px;margin:4px 0} .sub{text-align:center;margin-bottom:12px} table{width:100%;border-collapse:collapse} th{width:38%;text-align:left;font-weight:normal;padding:5px 6px;border-bottom:1px dotted #777;vertical-align:top} td{padding:5px 6px;border-bottom:1px dotted #777;font-weight:bold}
+    .txt{margin:16px 0;text-align:justify} .sig{display:grid;grid-template-columns:1fr 1fr;gap:26px 40px;margin-top:28px} .meta{margin-top:24px;font-size:10.5px;color:#444} img.logo{height:34px}</style></head><body>
+    <div style="display:flex;justify-content:space-between;align-items:center"><img class="logo" src="${BRAND_LOGO}" alt=""><span>Вивекавикториа ХХК</span></div>
+    <h1>КАССЫН ДУТАГДЛЫН АКТ</h1><div class="sub">№ ${esc(no)} &nbsp;·&nbsp; ${d.getFullYear()} оны ${d.getMonth() + 1} сарын ${d.getDate()}</div>
+    <table>${line('Дэлгүүр', esc(x.store))}${line('Кассчин', esc(x.kas))}${line('Дутагдал гарсан өдөр', esc(x.d || ''))}${line('Төлбөрийн хэлбэр', esc(({cash: 'Бэлэн мөнгө', pos: 'Карт (POS)', qpay: 'QPay / шилжүүлэг'})[x.ch] || x.ch || ''))}
+      ${line('Smart ба банкны зөрүү', fmt(Math.abs(x.diff || 0)) + ' ₮')}${line('Кассчнаас суутгах дүн', fmt(amt) + ' төгрөг')}${line('/үсгээр/', '<i style="font-weight:normal">' + esc(mnWords(amt)) + ' төгрөг</i>')}${line('Тайлбар', esc(x.note || ''))}</table>
+    <div class="txt">Би, кассчин <b>${esc(x.kas)}</b>, дээрх өдөр миний хариуцсан кассаас Smart систем болон банкны тооцоогоор <b>${fmt(amt)}</b> төгрөгийн дутагдал гарсныг хүлээн зөвшөөрч, уг дүнг миний цалингаас суутгахыг зөвшөөрч байна.</div>
+    <div class="sig"><div>Кассчин: ............................ /${esc(x.kas)}/</div><div>Дэлгүүрийн менежер: ............................ /&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/</div>
+      <div>Нягтлан бодогч: ............................ /${esc(S.names[x.by] || '')}/</div><div>Захирал: ${ok && x.status === 'approved' ? '<b>✓ Баталсан (цахимаар)</b> ' + esc(fmtDT(x.dAt)) : '............................ /&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/'}</div></div>
+    <div class="meta">VIVI Санхүүгийн хяналт · Орлого тулгалт ${esc(String(x.run || '').replace('_', ' – '))} · бүртгэсэн ${esc(fmtDT(x.at))}</div></body></html>`);
+}
+document.addEventListener('click', async e => {
+  const op = e.target.closest('[data-fix-open]'); if (op){ const key = op.dataset.fixOpen; FIX.open = FIX.open === key ? '' : key; document.querySelectorAll('[data-fix-form]').forEach(x => x.remove());
+    if (FIX.open){ const tr = op.closest('tr'), n = tr.children.length, row = document.createElement('tr'); row.innerHTML = `<td colspan="${n}">${fixForm(key, +op.dataset.fixDiff, op.dataset.fixRun)}</td>`; tr.after(row); row.querySelector('[data-fx="act"]').dispatchEvent(new Event('change', {bubbles: true})); } return; }
+  if (e.target.closest('[data-fix-cancel]')){ FIX.open = ''; e.target.closest('tr').remove(); return; }
+  const sv = e.target.closest('[data-fix-save]'); if (sv){ sv.disabled = true; await fixSave(sv.closest('[data-fix-form]')); sv.disabled = false; return; }
+  const dc = e.target.closest('[data-fix-dec]'); if (dc && isOwner){ const [id, st] = dc.dataset.fixDec.split('|'), x = FIX.list.find(y => y.id === id); if (!x) return;
+    const note = st === 'rejected' ? (prompt('Яагаад буцаах вэ? (нягтланд харагдана)') || '') : ''; await db.doc('revfix/' + id).set({status: st, dBy: me, dAt: new Date().toISOString(), dNote: note, notified: false}, {merge: true}); return; }
+  const pr = e.target.closest('[data-fix-print]'); if (pr){ e.preventDefault(); const x = FIX.list.find(y => y.id === pr.dataset.fixPrint); if (x){ try{ await resolveNames([x.by]); }catch(_){} fixPrint(x); } return; }
+  const dd = e.target.closest('[data-fix-ded]'); if (dd){ const x = FIX.list.find(y => y.id === dd.dataset.fixDed); if (x && confirm(`${x.kas}: ${fmt(x.amt)} ₮ цалингаас суутгасан гэж тэмдэглэх үү?`)) await db.doc('revfix/' + x.id).set({ded: new Date().toISOString(), dedBy: me}, {merge: true}); return; }
+});
+document.addEventListener('change', e => { const s = e.target.closest('[data-fx="act"]'); if (!s) return; const box = s.closest('[data-fix-form]'), a = s.value;
+  box.querySelector('[data-fx-w="kas"]').hidden = a !== 'kas' && a !== 'form'; box.querySelector('[data-fx-w="link"]').hidden = a !== 'shift' && a !== 'form'; });
 // ---------- sales analyser (Борлуулалтын шинжилгээ) ----------
 const AN = {date: '', mode: 'day', cmp: 'w1', unit: '', from: '', to: '', last: null, init: false, snaps: {}, loading: ''};
 const anPct = v => v == null || !isFinite(v) ? '–' : (v > 0 ? '+' : '') + v.toFixed(1) + '%';
@@ -7292,6 +7407,7 @@ else VIVIFB.start(async () => {
   chLoadUsers().then(render);
   (isOwner ? db.collection('chats') : db.collection('chats').where('members', 'array-contains', me)).onSnapshot(s => { CH.chats = s.docs.map(d => ({id: d.id, ...d.data()})); CH.loaded = true; render(); }, onErr);
   if (ALLOW.contr) db.collection('contracts').onSnapshot(s => { CT.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+  if (ALLOW.rev || ALLOW.cash || ALLOW.pay) db.collection('revfix').onSnapshot(s => { FIX.list = s.docs.map(d => ({id: d.id, ...d.data()})); resolveNames(FIX.list.map(x => x.by)); render(); }, onErr);
   if (ALLOW.hr){ db.collection('hremp').onSnapshot(s => { HR.emp = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); db.collection('hrleave').onSnapshot(s => { HR.lv = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); db.collection('hrrec').onSnapshot(s => { HR.rec = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); }
   if (ALLOW.inv) db.collection('inv').onSnapshot(s => { IV.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.wh || ALLOW.rcv) db.doc('config/wh').onSnapshot(d => { WS.cfg = d.exists ? d.data() : null; render(); }, onErr);
