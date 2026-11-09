@@ -1301,7 +1301,7 @@ const VIVI = (() => {
     let m = t.desc.match(/(\d\d)\/(\d\d)\/(\d{4}) SETTLEMENT - (.*)$/);
     if (m){ const term = m[4].trim(); return {ch:'pos', store: TERM_STORE[term] || ACC_STORE[t.acc] || '?', sd: mk(+m[3],+m[2],+m[1]), g: t.cr/0.995, term}; }
     m = t.desc.match(/хаалт:\s*\d+:(\d{4})(\d\d)(\d\d)/i);
-    if (m) return {ch:'pos', store: ACC_STORE[t.acc] || '?', sd: mk(+m[1],+m[2],+m[3]), g: t.cr/0.995, term:'Golomt'};
+    if (m) return {ch:'pos', store: ACC_STORE[t.acc] || '?', sd: mk(+m[1],+m[2],+m[3]), g: Math.round(t.cr/0.99*100)/100, term:'Golomt'};   // Golomt merchant fee 1 % (Khan SETTLEMENT 0.5 %)
     if (/картын хаалт/.test(s)) return {ch:'pos', store:'Эрдэнэт салбар', sd: iso(t.dt), g: t.cr, term:'TDB'};
     if (isCashDeposit(t) && cashStore(t)) return {ch:'cash', store: cashStore(t)};
     if (/qpay/.test(s)) return ACC_STORE[t.acc] ? {ch:'qpay', store: ACC_STORE[t.acc], sd: iso(t.dt), g: grossQPay(t)} : {ch:'other'};
@@ -1433,7 +1433,7 @@ const VIVI = (() => {
       totals[c.ch] = (totals[c.ch]||0) + t.cr;
       const d = iso(t.dt);
       if (c.ch === 'storepay') spRec.push({d, amt: Math.round(t.cr * 100) / 100, acc: t.acc});   // every StorePay receipt in the statements (closes earlier months)
-      if (LED && d >= d0 && d <= d1 && ['cash', 'pos', 'qpay', 'transfer', 'storepay', 'pocket'].includes(c.ch)) LED.push({store: c.store || (c.ch === 'storepay' ? 'StorePay' : 'Pocket'), dt: t.dt, d, cr: t.cr, g: c.ch === 'qpay' ? c.g : t.cr, desc: t.desc, ch: c.ch, acc: t.acc});   // QPay booked gross (the fee separately)   // the ledger: every store receipt on its bank day
+      if (LED && d >= d0 && d <= d1 && ['cash', 'pos', 'qpay', 'transfer', 'storepay', 'pocket'].includes(c.ch)) LED.push({store: c.store || (c.ch === 'storepay' ? 'StorePay' : 'Pocket'), dt: t.dt, d, cr: t.cr, g: c.ch === 'qpay' || c.ch === 'pos' ? c.g : t.cr, sd: c.sd || '', desc: t.desc, ch: c.ch, acc: t.acc});   // QPay booked gross (the fee separately)   // the ledger: every store receipt on its bank day
       if (c.ch === 'cash'){ if (d >= d0 && d <= addDays(d1,1)){ (deposits[c.store] = deposits[c.store] || []).push({d, dt:t.dt, cr:t.cr, desc:t.desc, acc:t.acc}); W.cash.bank += t.cr; } }
       else if (['pos','qpay','transfer'].includes(c.ch) && c.sd && inWin(c.sd)){ const k = c.store+'|'+c.sd; ncBank[k] = (ncBank[k]||0) + c.g; ncBankRows.push({...c, acc:t.acc, cr:t.cr, desc:t.desc}); const fc = c.ch === 'pos' ? 'pos' : 'qpay'; W[fc].bank += c.g; fdP(c.store, c.sd, c.ch === 'pos' ? 'pos' : 'qpay', 'b', {dt: t.dt, amt: c.g, cr: t.cr, desc: t.desc, acc: t.acc}); fAdd(c.store, c.sd, fc, 'bank', c.g); }
       else if (c.ch === 'pocket' && d >= d0 && d <= addDays(d1, 2)){ W.credit.bank += t.cr; W.credit.pk += t.cr; }
@@ -1441,6 +1441,10 @@ const VIVI = (() => {
     }
     const stores = [...new Set([...Object.keys(cashSales), ...Object.keys(deposits)])];
     const cash = stores.flatMap(st => matchCash(st, cashSales[st] || {}, deposits[st] || []));
+    if (LED) for (const x of LED){
+      if (x.ch === 'pos') x.pre = x.sd && x.sd < d0 ? x.g : 0;
+      else if (x.ch === 'cash'){ const p = (deposits[x.store] || []).find(q => +q.dt === +x.dt && q.cr === x.cr), ds = p && p.days || []; x.pre = ds.length ? x.cr * ds.filter(d => d < d0).length / ds.length : (addDays(x.d, -1) < d0 ? x.cr : 0); }   // a deposit with no day on the period's first day = the day before's cash
+      else x.pre = 0; }
     const ncKeys = [...new Set([...Object.keys(ncSales), ...Object.keys(ncBank)])].sort();
     const noncash = ncKeys.map(k => { const [store, d] = k.split('|'); const s = ncSales[k]||0, b = ncBank[k]||0; return {store, d, smart:s, bank:b, diff:b-s}; });
     const summary = stores.map(st => {
@@ -3906,7 +3910,7 @@ document.addEventListener('click', async e => {
   catch(err){ alert('Уншиж чадсангүй: ' + (err.message || err)); } finally { b.disabled = false; }
 });
 // bumped when the calculation itself changes (e.g. cash by the sales day of the bank description): older saved controls are recomputed from their saved files once
-const CALC_V = 4;
+const CALC_V = 5;
 async function refreshRunKas(run, manual){
   if (!run || !run.rawN || !db || (!manual && KAS_TRIED[run.id])) return;
   const full = (run.calcV || 0) < CALC_V;
@@ -4146,15 +4150,17 @@ $('#rev-xlsx').addEventListener('click', async () => {
           for (const r of D.s){ const kk = (r.kas || '') + '|' + ch; (g[kk] = g[kk] || {kas: r.kas || '', ch, amt: 0, n: 0}); g[kk].amt += r.amt; g[kk].n++; }
           for (const o of Object.values(g)) add(A[1], {d, t: '0', no: '1', txt: `Дэлгүүрийн борлуулалт. ${st}. ${o.kas || '(кассчингүй)'}-${ymd(d)}`, dr: Math.round(o.amt * 100) / 100, cr: 0, form: FN[o.ch] || o.ch}); }
         const other = [];
-        for (const x of (m2.ledger || [])){ const A = /storepay|pocket/.test(x.ch) ? null : acOf(x.store), e = {d: x.d, t: '1' + new Date(x.dt).toISOString(), no: docNo(x.desc), txt: x.desc || '', dr: 0, cr: Math.round((x.g || x.cr) * 100) / 100, fee: Math.round(((x.g || x.cr) - x.cr) * 100) / 100, form: FN[x.ch] || x.ch, acc: x.acc, st: x.store}; if (A) add(A[1], e); else other.push(e); }
-        const L = [['', '', '', '', '', 'ВивекаВикториа ХХК'], ['Дансны хуулга'], ['', '', '', '', '', d0.replace(/-/g, '/') + ' - ' + d1.replace(/-/g, '/')], ['Баримтын №', 'Огноо', 'Гүйлгээний утга', 'Дебет', 'Кредит', 'Үлдэгдэл', 'Хэлбэр', 'Шимтгэл (QPay)']], sty = [];
+        for (const x of (m2.ledger || [])){ const A = /storepay|pocket/.test(x.ch) ? null : acOf(x.store), e = {d: x.d, t: '1' + new Date(x.dt).toISOString(), no: docNo(x.desc), txt: x.desc || '', dr: 0, cr: Math.round((x.g || x.cr) * 100) / 100, fee: Math.round(((x.g || x.cr) - x.cr) * 100) / 100, pre: x.ch === 'pos' ? (x.pre || 0) : (x.pre || 0), form: FN[x.ch] || x.ch, acc: x.acc, st: x.store}; if (A) add(A[1], e); else other.push(e); }
+        const L = [['', '', '', '', '', 'ВивекаВикториа ХХК'], ['Дансны хуулга'], ['', '', '', '', '', d0.replace(/-/g, '/') + ' - ' + d1.replace(/-/g, '/')], ['Баримтын №', 'Огноо', 'Гүйлгээний утга', 'Дебет', 'Кредит', 'Үлдэгдэл', 'Хэлбэр', 'Шимтгэл (карт, QPay)']], sty = [];
         const XL = (r, c) => XS.utils.encode_cell({r, c});
         const sections = ACCT.map(([, code, nm]) => [code, nm]).concat(other.length ? [['—', 'Бусад данс (дэлгүүр тодорхойгүй)']] : []);
         for (const [code, nm] of sections){ const E = (code === '—' ? other : ent[code] || []).sort((a, b) => a.d < b.d ? -1 : a.d > b.d ? 1 : a.t < b.t ? -1 : a.t > b.t ? 1 : 0); if (!E.length && code !== '121229') continue;
-          const h = L.length; L.push([code === '—' ? nm : `${code} - Дэлгүүрийн борлуулалт - ${nm}`, '', '', '', 'Эхний үлдэгдэл :', 0]); sty.push([h, 'sec']); let bal = 0, sd = 0, sc = 0;
+          // opening = what was still to come in at the start: the card settlements and cash deposits in the period that pay sales from before it
+          const open0 = Math.round(E.reduce((a, e) => a + (e.pre || 0), 0) * 100) / 100;
+          const h = L.length; L.push([code === '—' ? nm : `${code} - Дэлгүүрийн борлуулалт - ${nm}`, '', `(тооцоолсон эхний үлдэгдэл = ${d0}-ээс өмнөх борлуулалтын карт, бэлэн энэ хугацаанд орсон; програмын үлдэгдлээр солиж болно)`, '', 'Эхний үлдэгдэл :', open0]); sty.push([h, 'sec']); let bal = open0, sd = 0, sc = 0;
           const first = L.length; for (const e of E){ const r = L.length; bal += e.dr - e.cr; sd += e.dr; sc += e.cr; L.push([e.no, {xd: e.d}, e.txt, e.dr, e.cr, {f: `${XL(r - 1, 5)}+${XL(r, 3)}-${XL(r, 4)}`, v: bal}, e.form + (e.st && code === '—' ? ' · ' + e.st : ''), e.fee || '']); }
           const last = L.length - 1, tr = L.length; L.push(['Дансны дүн', '', '', E.length ? {f: `SUM(${XL(first, 3)}:${XL(last, 3)})`, v: sd} : 0, E.length ? {f: `SUM(${XL(first, 4)}:${XL(last, 4)})`, v: sc} : 0, {f: E.length ? XL(last, 5) : XL(h, 5), v: bal}, '']); sty.push([tr, 'tot']); L.push([]); }
-        const ws5 = XS.utils.aoa_to_sheet([]); L.forEach((row, r) => row.forEach((v, c) => { if (v === '' || v == null) return; const cell = v && v.f ? {t: 'n', f: v.f, v: v.v || 0} : v && v.xd ? {t: 'n', v: (Date.parse(v.xd + 'T00:00:00Z') - Date.UTC(1899, 11, 30)) / 864e5, z: 'yyyy/mm/dd'} : typeof v === 'number' ? {t: 'n', v, z: '#,##0.00'} : {t: 's', v: String(v)}; if (cell.t === 'n' && c >= 3 && c !== 6) cell.z = '#,##0.00'; ws5[XL(r, c)] = cell; }));
+        const ws5 = XS.utils.aoa_to_sheet([]); L.forEach((row, r) => row.forEach((v, c) => { if (v === '' || v == null) return; const cell = v && v.f ? {t: 'n', f: v.f, v: v.v || 0, z: '#,##0.00'} : v && v.xd ? {t: 'n', v: (Date.parse(v.xd + 'T00:00:00Z') - Date.UTC(1899, 11, 30)) / 864e5, z: 'yyyy/mm/dd'} : typeof v === 'number' ? {t: 'n', v, z: '#,##0.00'} : {t: 's', v: String(v)}; if (cell.t === 'n' && c >= 3 && c !== 6) cell.z = '#,##0.00'; ws5[XL(r, c)] = cell; }));
         ws5['!ref'] = XS.utils.encode_range({s: {r: 0, c: 0}, e: {r: L.length, c: 7}}); ws5['!cols'] = [18, 11, 62, 15, 15, 17, 12, 12].map(w => ({wch: w}));
         const HB = {font: {bold: true, color: {rgb: 'FFFFFF'}}, fill: {patternType: 'solid', fgColor: {rgb: '1F5F8B'}}, alignment: {horizontal: 'center'}};
         for (let c = 0; c < 7; c++){ const x = ws5[XL(3, c)]; if (x) x.s = HB; } if (ws5.A2) ws5.A2.s = {font: {bold: true, sz: 14}}; if (ws5.F1) ws5.F1.s = {font: {bold: true}};
