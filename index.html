@@ -1293,8 +1293,9 @@ const VIVI = (() => {
     if (t.cr <= 0) return null;
     if (OWN.has(cpn) || /данс хооронд|шилжүүлэг 709|шилжүүлэг 707|хаалт: \d+:\d{8}/.test(s) && OWN.has(cpn)) return {ch:'internal'};
     if (/зээл олгол|зээл олгов|згбөо/.test(s)) return {ch:'loan'};
-    if (/sp manual/.test(s)) return {ch:'storepay'};
-    if (/покет|pocket/.test(s)) return {ch:'pocket'};
+    const who = (s + ' ' + String(t.cpName || '') + ' ' + String(t.cp || '')).toLowerCase();   // the payer's name / account (TDB gives «СТОР ПЭЙ ББСБ ХХК», MN…4002281424)
+    if (/sp manual/.test(s) || /store\s*pay|стор\s*пэй|сторпэй|4002281424/.test(who)) return {ch:'storepay'};
+    if (/покет|pocket/.test(who)) return {ch:'pocket'};
     let m = t.desc.match(/(\d\d)\/(\d\d)\/(\d{4}) SETTLEMENT - (.*)$/);
     if (m){ const term = m[4].trim(); return {ch:'pos', store: TERM_STORE[term] || ACC_STORE[t.acc] || '?', sd: mk(+m[3],+m[2],+m[1]), g: t.cr/0.995, term}; }
     m = t.desc.match(/хаалт:\s*\d+:(\d{4})(\d\d)(\d\d)/i);
