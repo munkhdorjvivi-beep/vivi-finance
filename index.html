@@ -3498,7 +3498,7 @@ function renderRev(){
     : '<tr><td colspan="7" class="empty">Зөрүүтэй өдөр алга.</td></tr>';
   try{ renderFix(); }catch(e){ console.warn('fix', e); }
   { const K = run.kas, st = revStore;
-    if ((!K || !K.cashiers.length || !run.explain) && run.rawN && run !== pendingRun) refreshRunKas(run);
+    if ((!K || !K.cashiers.length || !run.explain || (run.calcV || 0) < CALC_V) && run.rawN && run !== pendingRun) refreshRunKas(run);
     renderExp(run, st);
     const cov = K && K.cov, covTxt = cov ? `Кассчны мэдээлэлтэй өдөр: ${cov.withKas} / ${cov.days}${cov.miss && cov.miss.length ? ' · дутуу: ' + cov.miss.slice(0, 12).map(d => d.slice(5)).join(', ') + (cov.miss.length > 12 ? '…' : '') : ''}` : '';
     $('#rev-kas-cov').innerHTML = (covTxt ? esc(covTxt) + ' ' : '') + (run.rawN && !run.pending ? '<button class="btn" id="rev-kas-re" style="padding:4px 10px">↻ Кассчны шинжилгээг шинэчлэх</button>' : '');
@@ -3772,7 +3772,7 @@ async function runRev(){
   const m = VIVI.build(lastFiles, {d0, d1});
   if (m.error){ $('#cash-msg').textContent = parsedFiles.some(f => f.type === 'bank') ? (window.REV_DAILY === false ? 'Smart «Борлуулалтын жагсаалт /төлбөрийн хэлбэрээр/» тайланг хуулгатай хамт оруулна уу.' : 'Хуулгын хугацаанд «Өдрийн тайлан»-д төлбөрийн хэлбэрийн өгөгдөл алга — тухайн өдрүүдийн Smart тайланг «Өдрийн тайлан»-д оруулна уу.') : 'Банкны хуулгаа оруулна уу.'; return; }
   const CHK = stmtCheck(lastFiles, m.d0, m.d1); $('#cash-check').innerHTML = stmtCheckHTML(CHK);
-  pendingRun = {check: CHK, d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, kas: m.kas ? {cashiers: m.kas.cashiers, errors: m.kas.errors.slice(0, 400), unres: m.kas.unres.slice(0, 200),  cov: m.kas.cov || null} : null, explain: trimExp(m.explain), accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
+  pendingRun = {calcV: CALC_V, check: CHK, d0: m.d0, d1: m.d1, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), forms: m.forms, waterfall: m.waterfall, kas: m.kas ? {cashiers: m.kas.cashiers, errors: m.kas.errors.slice(0, 400), unres: m.kas.unres.slice(0, 200),  cov: m.kas.cov || null} : null, explain: trimExp(m.explain), accs: parsedFiles.filter(p => p.type === 'bank').map(p => p.label)};
   $('#cash-save').disabled = false; $('#cash-msg').textContent = 'Тооцоолсон. Хадгалбал нягтлан тайлбар бичих боломжтой болно.';
   render();
 }
@@ -3796,13 +3796,19 @@ async function freshSmart(files, d0, d1){
 const KAS_TRIED = {};
 // what is kept of the explanation in the saved run (Firestore doc size)
 const trimExp = E => E ? {byForm: E.byForm, credit: E.credit, kinds: E.kinds, items: E.items.filter(i => i.kind !== 'shift' || i.amt >= 500000).slice(0, 200).map(i => ({kind: i.kind, d: i.d, amt: i.amt, conf: i.conf, text: i.text, stores: [...new Set(i.parts.map(p => p.store))]}))} : null;
+// bumped when the calculation itself changes (e.g. cash by the sales day of the bank description): older saved controls are recomputed from their saved files once
+const CALC_V = 2;
 async function refreshRunKas(run, manual){
   if (!run || !run.rawN || !db || (!manual && KAS_TRIED[run.id])) return;
+  const full = (run.calcV || 0) < CALC_V;
   if (typeof DR === 'undefined' || !DR.days || !Object.keys(DR.days).some(d => d >= run.d0 && d <= run.d1)) return;   // the daily reports are not loaded yet — try at the next render
   KAS_TRIED[run.id] = true;
   try{ const files = await freshSmart(await loadRaw(run.rawN, run.id), run.d0, run.d1); const m = VIVI.build(files, {d0: run.d0, d1: run.d1}); if (m.error || !m.kas) return;
     const kas = {cashiers: m.kas.cashiers, errors: m.kas.errors.slice(0, 400), unres: m.kas.unres.slice(0, 200), cov: m.kas.cov || null};
     const explain = trimExp(m.explain);
+    if (full){   // the whole result again: daily forms, totals, cash days, statement check
+      const up = {kas, explain, forms: m.forms, waterfall: m.waterfall, summary: m.summary, rows: m.cash.map(g => ({store:g.store, days:g.days, first:g.first, smart:Math.round(g.smart), dep:Math.round(g.dep), diff:Math.round(g.diff), depDates:g.depDates, status:g.status, how:g.how})), check: stmtCheck(files, run.d0, run.d1), calcV: CALC_V};
+      Object.assign(run, up); if (canWrite){ try{ await db.doc('cashruns/' + run.id).update(up); if (S.cash && S.cash.runId === run.id) await db.doc('cash/latest').update(up); }catch(e){ console.warn('recalc save', e); } } render(); return; }
     if (!kas.cashiers.length && !manual && run.explain) return;
     if (canWrite){ await db.doc('cashruns/' + run.id).update({kas, explain}); if (S.cash && S.cash.runId === run.id) await db.doc('cash/latest').update({kas, explain}); }
     run.kas = kas; run.explain = explain; render();
