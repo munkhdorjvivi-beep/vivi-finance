@@ -5198,9 +5198,18 @@ function drDiag(F, E, outAll){
   // e) which accounts sent outflow e-mails: an account with outflows but no e-mails makes the expected balance too high
   const byAcc = {}; for (const t of outAll) if (t.date >= E.from && t.date < c.date){ const k = ACC_LABEL[VIVI.norm(t.fromAcc)] || t.fromAcc || '?'; byAcc[k] = (byAcc[k] || 0) + t.amount; }
   L.push(['warn', `Гарсан мөнгө тооцсон данснууд (имэйл + хуулга): ${Object.entries(byAcc).sort((x, y) => y[1] - x[1]).map(([k, v]) => esc(k) + ' ' + fmt(v)).join(' · ') || '<b>алга</b>'} — энд байхгүй данснаас мөнгө гарсан бол (имэйл ирдэггүй/хүрээгүй) хүлээгдэж буй үлдэгдэл хэт өндөр гарна.`]);
+  // e2) approved recurring (automatic) transfers due in the period: found among the outflows, or missing
+  const RCs = (S.recurring || []).filter(r => r.appr && !r.off && r.status !== 'rejected'), recL = [];
+  for (const r of RCs){ const doms = String(r.day || '').split(/[ ,;]+/).map(Number).filter(Boolean), A = +r.appr.amount || 0; if (!doms.length || !A) continue;
+    for (const d of days){ const ld = new Date(Date.UTC(+d.slice(0, 4), +d.slice(5, 7), 0)).getUTCDate(); if (!doms.some(x => Math.min(x, ld) === +d.slice(8))) continue;
+      const hit = outAll.find(t => Math.abs(Date.parse(t.date) - Date.parse(d)) <= 3 * 864e5 && PAY.accShort(t.toAcc) === r.appr.accN && Math.abs(t.amount - A) <= Math.max(1, A * 0.02));
+      recL.push([d, r.appr.name || r.name, A, !!hit, hit && hit.src]); } }
+  if (recL.length) L.push([recL.some(x => !x[3]) ? 'bad' : 'ok', `Давтамжит (автомат) шилжүүлэг энэ хугацаанд: ${recL.map(x => `${esc(x[0].slice(5))} ${esc(x[1])} ${fmt(x[2])} — ${x[3] ? '✓ гарсанд тооцсон (' + (x[4] === 'stmt' ? 'хуулга' : 'имэйл') + ')' : '<b style="color:var(--bad)">имэйл/хуулгад олдсонгүй — банк автоматаар хийсэн бол тооцоонд ороогүй</b>'}`).join(' · ')}`]);
   // f) the real change per account between the two recorded balances
   const ch = b0 && b1 ? BAL_ACCS.map(([k, l]) => [l, (+((b1.items || {})[k]) || 0) - (+((b0.items || {})[k]) || 0), +((b0.items || {})[k]) || 0, +((b1.items || {})[k]) || 0]).filter(x => x[2] || x[3]) : [];
   const exp = c.expected - E.open;
+  const sum = days.reduce((q, d) => { const r = R(d); q.bank += r.bank; q.cash += r.cash; return q; }, {bank: 0, cash: 0}), outP = outAll.filter(t => t.date >= E.from && t.date < c.date).reduce((q, t) => q + t.amount, 0), crP = c.expected - E.open - sum.bank - sum.cash + outP;
+  L.unshift(['ok', `Хүлээгдэж буй дүн хэрхэн гарсан: эхлэх үлдэгдэл ${fmt(E.open)} + бэлэн бус борлуулалт ${fmt(sum.bank)} + бэлэн ${fmt(sum.cash)} + зээлээс орох (StorePay/Pocket) ${fmt(crP)} − гарсан ${fmt(outP)} = <b>${fmt(c.expected)}</b>`]);
   return `<details open style="margin-top:10px"><summary><b>🔎 ${esc(c.date)}-ны зөрүү ${sgn(c.diff)} — боломжит шалтгаан</b></summary><ul style="margin:6px 0 0 18px;padding:0">${L.map(([k, h]) => `<li style="margin:4px 0">${k === 'bad' ? '❗ ' : k === 'ok' ? '✓ ' : ''}${h}</li>`).join('')}</ul>
     ${ch.length ? `<div class="tbl" style="margin-top:8px"><table><thead><tr><th>Данс</th><th class="n">${esc(E.from)}</th><th class="n">${esc(c.date)}</th><th class="n">Бодит өөрчлөлт</th></tr></thead><tbody>${ch.map(x => `<tr><td>${esc(x[0])}</td><td class="n">${fmt(x[2])}</td><td class="n">${fmt(x[3])}</td><td class="n">${sgn(x[1])}</td></tr>`).join('')}<tr style="font-weight:700"><td>Нийт</td><td class="n">${fmt(E.open)}</td><td class="n">${fmt(c.actual)}</td><td class="n">${sgn(c.actual - E.open)} <span class="note">(тооцоогоор ${sgn(exp)})</span></td></tr></tbody></table></div><p class="note">Аль дансны өсөлт бага/сөрөг байгааг хараарай — тэр дансны хуулгыг шалгавал шалтгаан тодорно.</p>` : ''}</details>`;
 }
