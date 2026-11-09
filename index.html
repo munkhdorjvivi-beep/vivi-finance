@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd118</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd119</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -4947,12 +4947,15 @@ function plCashflow(){
   const hm = b => b && b.at ? ' ' + fmtDT(b.at).slice(11) : '';
   const line = (l, v, o = {}) => `<tr${o.b ? ' style="font-weight:700"' : ''}${o.bg ? ` style="background:${o.bg}${o.b ? ';font-weight:700' : ''}"` : ''}><td style="padding-left:${o.ind ? 22 : 8}px">${l}</td><td class="n">${v == null ? '—' : (o.sign ? sgnC(v) : fmt(v))}</td><td class="note">${o.note || ''}</td></tr>`;
   PLS.cfOpen = PLS.cfOpen || {};
-  const who = t => t.toName || t.name || (t.toAcc || t.cp ? (PAYEES.get(VIVI.norm(t.toAcc || t.cp)) || {}).name || (t.toAcc || t.cp) : '') || 'данс тодорхойгүй';
+  const NM = plNameIndex(), accOf = t => PAY.accShort(t.toAcc || t.cp || '');
+  const who = t => { const ac = accOf(t); return ac ? 'acc:' + ac : 'name:' + (t.toName || t.name || 'данс тодорхойгүй'); };
+  const whoLabel = (k, L) => { if (k.startsWith('name:')) return esc(k.slice(5)); const ac = k.slice(4), nm = NM[ac] || L.map(t => t.toName || t.name).find(Boolean) || '';
+    return (nm ? esc(nm) : '<span class="note">нэр тодорхойгүй</span>') + ` <span class="note mono">${esc(ac)}</span>`; };
   const det = g => Object.entries(G[g]).sort((x, y) => y[1] - x[1]).map(([k, v]) => { const open = PLS.cfOpen[k], L = TX[k] || [];
     let h = `<tr data-cf-open="${esc(k)}" style="cursor:pointer"><td style="padding-left:22px">${open ? '▾' : '▸'} ${esc(VIVI_CAT_LABEL(k))} <span class="note">· ${L.length} гүйлгээ</span></td><td class="n">${sgnC(-v)}</td><td class="note">${open ? '' : 'дарж задлах'}</td></tr>`;
     if (open){ const by = {}; for (const t of L){ const w = who(t), o = by[w] = by[w] || {w, n: 0, a: 0, tx: []}; o.n++; o.a += t.amount; o.tx.push(t); }
       for (const o of Object.values(by).sort((x, y) => y.a - x.a)){ const ok = k + '|' + o.w, op2 = PLS.cfOpen[ok];
-        h += `<tr data-cf-open="${esc(ok)}" style="cursor:pointer;background:var(--sunk)"><td style="padding-left:40px">${op2 ? '▾' : '▸'} <b>${esc(o.w)}</b> <span class="note">${o.n} удаа</span></td><td class="n">${sgnC(-o.a)}</td><td class="note">${esc(o.tx.map(t => t.date.slice(5)).sort().filter((d, i, A) => A.indexOf(d) === i).slice(0, 8).join(', '))}${o.tx.length > 8 ? '…' : ''}</td></tr>`;
+        h += `<tr data-cf-open="${esc(ok)}" style="cursor:pointer;background:var(--sunk)"><td style="padding-left:40px">${op2 ? '▾' : '▸'} <b>${whoLabel(o.w, o.tx)}</b> <span class="note">${o.n} удаа</span></td><td class="n">${sgnC(-o.a)}</td><td class="note">${esc(o.tx.map(t => t.date.slice(5)).sort().filter((d, i, A) => A.indexOf(d) === i).slice(0, 8).join(', '))}${o.tx.length > 8 ? '…' : ''}</td></tr>`;
         if (op2) h += o.tx.sort((x, y) => String(x.dt).localeCompare(String(y.dt))).map(t => `<tr style="background:var(--sunk)"><td style="padding-left:58px" class="note mono">${esc(String(t.dt).replace('T', ' ').slice(0, 16))} · ${esc(ACC_LABEL[VIVI.norm(t.fromAcc || t.acc)] || t.fromAcc || t.acc || '')}</td><td class="n note">${fmt(t.amount)}</td><td class="note">${esc(t.desc || '')} <span class="chip c-grey">${t.src === 'stmt' ? 'хуулга' : 'имэйл'}</span></td></tr>`).join(''); } }
     return h; }).join('');
   // stock and receivables
@@ -5054,6 +5057,18 @@ document.addEventListener('click', e => {
     const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet(rows); ws['!cols'] = [{wch: 28}, {wch: 24}, {wch: 17}, {wch: 26}, {wch: 28}, {wch: 14}, {wch: 40}, {wch: 14}, {wch: 9}]; XLSX.utils.book_append_sheet(wb, ws, 'Гарсан мөнгө');
     XLSX.writeFile(wb, 'VIVI_mongon_urgal_' + (M ? M.a + '_' + M.z : '') + '.xlsx'); }
 });
+
+// account → receiver name, from everything the system knows: the counterparty base, bank e-mails, statements, payment requests, recurring transfers, own accounts
+function plNameIndex(){
+  const N = {}, put = (acc, name) => { const a = PAY.accShort(acc || ''); name = String(name || '').trim(); if (a && name && !/^\d+$/.test(name) && !N[a]) N[a] = name; };
+  for (const p of Object.values(PAYEES.all())) put(p.acc, p.name || p.holder);
+  for (const r of S.requests || []) put(r.payeeAcc, r.payee);
+  for (const r of S.recurring || []) put((r.appr || {}).accN || r.acc, (r.appr || {}).name || r.name);
+  for (const t of S.banktx || []) put(t.toAcc, t.toName);
+  for (const D of Object.values(DR.stmt || {})) for (const t of D.tx || []) put(t.cp, t.name);
+  for (const [a, n] of Object.entries(VIVI.ACC_NAME || {})) put(a, n);
+  return N;
+}
 // ---------- daily report (Өдрийн тайлан) ----------
 // days before DR_FROM are not kept live — they load on demand for the period being looked at
 const DR_FROM = (() => { const t = new Date(Date.now() + 8 * 3600e3 - 150 * 86400e3); return t.toISOString().slice(0, 10); })();
