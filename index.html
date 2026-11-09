@@ -914,16 +914,26 @@ body{margin:0;background:var(--bg)}
         <div class="tbl" style="margin-top:6px;max-height:520px;overflow:auto"><table><thead><tr><th>Ажилтан</th><th>Төрөл</th><th>Хугацаа</th><th class="n">Ажлын өдөр</th><th>Тайлбар</th><th>Төлөв</th><th></th></tr></thead><tbody id="hr-lv-list"></tbody></table></div>
       </div>
 
-      <!-- the employee app: check-ins, sites (printed QR + GPS), shift start times -->
+      <!-- the employee app: check-ins → the month for payroll; stores (printed QR + GPS); shift times -->
       <div data-hr="att" style="margin-top:10px" hidden>
-        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label class="f" style="width:auto">Өдөр<input type="date" id="hr-att-d" style="width:auto"></label><label class="f" style="width:auto">Сар (нийт цаг)<input type="month" id="hr-att-m" style="width:auto"></label><button class="btn" type="button" id="hr-att-x">📥 Excel</button></div>
-        <h3 style="margin:12px 0 6px">Өдрийн ирц</h3><div class="tbl" style="overflow:auto"><table><thead><tr><th>Ажилтан</th><th>Салбар</th><th>Ээлж</th><th>Ирсэн</th><th>Явсан</th><th class="n">Цаг</th><th>Тэмдэглэл</th></tr></thead><tbody id="hr-att-day"></tbody></table></div>
-        <h3 style="margin:16px 0 6px">Сарын нийт</h3><div class="tbl" style="overflow:auto;max-height:420px"><table><thead><tr><th>Ажилтан</th><th class="n">Ирсэн өдөр</th><th class="n">Нийт цаг</th><th class="n">Хоцорсон</th><th class="n">Хоцролт (мин)</th><th class="n">Явахаа бүртгээгүй</th></tr></thead><tbody id="hr-att-mon"></tbody></table></div>
-        <h3 style="margin:16px 0 6px">Салбарууд — хэвлэсэн QR + GPS</h3>
-        <p class="note" style="margin:0 0 6px">Салбар бүрд QR хэвлэж ажилчдын орох хаалганд наана. Ажилтан утсаараа QR-ийг уншуулахад утасны GPS дэлгүүрийн радиус дотор байх ёстой. «📍 Энд байна» — дэлгүүр дотор зогсож байхдаа дарж байршлыг хадгална. QR алдагдсан/хуулагдсан бол «↻ QR шинэчлэх».</p>
+        <h3 style="margin:4px 0 6px">💰 Сарын ирц — цалин бодоход</h3>
+        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end"><label class="f" style="width:auto">Сар<input type="month" id="hr-att-m" style="width:auto"></label><button class="btn primary" type="button" id="hr-att-x">📥 Нягтланд Excel</button><span class="note" id="hr-att-pl"></span></div>
+        <div class="tbl" style="overflow:auto;max-height:520px;margin-top:6px"><table><thead><tr><th>Ажилтан</th><th class="n">Хуваарьт өдөр</th><th class="n">Ирсэн өдөр</th><th class="n">Ажилласан цаг</th><th class="n">Илүү цаг</th><th class="n">Хоцорсон (удаа / мин)</th><th class="n">Тасалсан</th><th class="n">Цалинтай чөлөө</th><th class="n">Өвчтэй</th><th class="n">Цалингүй</th><th class="n">Явахаа бүртгээгүй</th><th class="n">Цалингийн хүснэгтэд (зөрүү)</th></tr></thead><tbody id="hr-att-mon"></tbody></table></div>
+        <h3 style="margin:16px 0 6px">📋 Өдрийн ирц</h3>
+        <div class="row" style="gap:8px;align-items:flex-end"><label class="f" style="width:auto">Өдөр<input type="date" id="hr-att-d" style="width:auto"></label><span class="note">Мартсан, буруу бүртгэсэн бол ✏️ дарж засна (засвар нь тухайн өдрийн бүртгэлийг орлоно).</span></div>
+        <div class="tbl" style="overflow:auto;margin-top:6px"><table><thead><tr><th>Ажилтан</th><th>Салбар</th><th>Ээлж</th><th>Ирсэн</th><th>Явсан</th><th class="n">Цаг</th><th>Тэмдэглэл</th><th></th></tr></thead><tbody id="hr-att-day"></tbody></table></div>
+        <h3 style="margin:16px 0 6px">⚙️ Тохиргоо</h3>
+        <p class="note" style="margin:0 0 6px"><b>QR хэрхэн авах вэ:</b> 1) салбарын нэрийг бичээд «＋ Нэмэх» → 2) тэр дэлгүүр дотор утсаараа энэ хуудсыг нээгээд «📍 Энд байна» → 3) «🖨 QR хэвлэх» — A4 хуудас гарна, ажилчдын орох хаалганд наана. QR алдагдсан/хуулагдсан бол «↻ QR шинэчлэх» дараад шинээр хэвлэнэ.</p>
         <div id="hr-sites"></div>
-        <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap;align-items:flex-end"><label class="f" style="width:auto">Шинэ салбар<input id="hr-site-n" placeholder="Нийслэл" style="width:160px"></label><button class="btn" type="button" id="hr-site-add">＋ Нэмэх</button>
-          <span class="note" style="margin-left:12px">Ээлж эхлэх цаг:</span><label class="f" style="width:auto">Б<input id="hr-cfg-Б" type="time" style="width:auto"></label><label class="f" style="width:auto">Ө<input id="hr-cfg-Ө" type="time" style="width:auto"></label><label class="f" style="width:auto">О<input id="hr-cfg-О" type="time" style="width:auto"></label><label class="f" style="width:auto">Хоцролт тооцох (мин)<input id="hr-cfg-grace" type="number" min="0" style="width:70px"></label><button class="btn" type="button" id="hr-cfg-save">Хадгалах</button><span class="note" id="hr-cfg-msg"></span></div>
+        <div class="row" style="gap:8px;margin-top:8px;flex-wrap:wrap;align-items:flex-end"><label class="f" style="width:auto">Шинэ салбар<input id="hr-site-n" placeholder="Нийслэл" style="width:160px"></label><button class="btn" type="button" id="hr-site-add">＋ Нэмэх</button></div>
+        <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap;align-items:flex-end"><span class="note">Ээлж — эхлэх цаг / үргэлжлэх цаг:</span>
+          <label class="f" style="width:auto">Б (бүтэн)<span class="row" style="gap:4px"><input id="hr-cfg-Б" type="time" style="width:auto"><input id="hr-cfg-Б_h" type="number" min="0" step="0.5" placeholder="цаг" style="width:64px"></span></label>
+          <label class="f" style="width:auto">Ө (өглөө)<span class="row" style="gap:4px"><input id="hr-cfg-Ө" type="time" style="width:auto"><input id="hr-cfg-Ө_h" type="number" min="0" step="0.5" placeholder="цаг" style="width:64px"></span></label>
+          <label class="f" style="width:auto">О (орой)<span class="row" style="gap:4px"><input id="hr-cfg-О" type="time" style="width:auto"><input id="hr-cfg-О_h" type="number" min="0" step="0.5" placeholder="цаг" style="width:64px"></span></label>
+          <label class="f" style="width:auto">Хоцролт тооцох (мин)<input id="hr-cfg-grace" type="number" min="0" style="width:70px"></label>
+          <label class="f" style="width:auto">Цайны цаг хасах (мин)<input id="hr-cfg-brk" type="number" min="0" style="width:70px" placeholder="0"></label>
+          <button class="btn" type="button" id="hr-cfg-save">Хадгалах</button><span class="note" id="hr-cfg-msg"></span></div>
+        <p class="note">Илүү цаг = ээлжийн үргэлжлэх цагаас 30+ минут илүү ажилласан хэсэг. Цайны цаг 6+ цаг ажилласан өдрөөс хасагдана.</p>
       </div>
 
       <!-- hiring and leaving -->
@@ -6683,8 +6693,8 @@ function hrRenderSch(){
   $('#hr-sch-body').innerHTML = E.length ? E.map(e => { const P = (D.plan || {})[e.id] || {}, A = (D.att || {})[e.id] || {}; let w = 0, late = 0, abs = 0;
     const cells = Array.from({length: n}, (_, i) => { const dd = String(i + 1).padStart(2, '0'), d = m + '-' + dd, lv = HR.lv.find(l => l.emp === e.id && l.status === 'approved' && l.a <= d && l.z >= d);
       const mat = e.status === 'maternity' && (!e.matFrom || e.matFrom <= d) && (!e.matTo || e.matTo >= d);
-      const ap = !A[dd] && HR.att.length ? hrAttOf(HR.m)[e.id + '|' + d] : null, ai = ap && ap.ins.sort()[0];
-      const p = mat ? 'Д' : lv ? 'Э' : P[dd] || '', a = A[dd] || (ai ? (hrLate(e.id, e.unit, d, ai) ? 'Х' : '✓') : ''); if (/[БӨО]/.test(p)) w++; if (a === 'Х') late++; if (a === 'Т') abs++;
+      const ap = !A[dd] && HR.att.length ? hrAttDay(e, d) : null, ai = ap && ap.I;
+      const p = mat ? 'Д' : lv ? 'Э' : P[dd] || '', a = A[dd] || (ai ? (ap.late ? 'Х' : '✓') : ''); if (/[БӨО]/.test(p)) w++; if (a === 'Х') late++; if (a === 'Т') abs++;
       const show = HR.mode === 'plan' ? p : (a || (lv ? 'Э' : mat ? 'Д' : ''));
       const cls = mat ? 'hr-mat' : lv ? 'hr-lv' : HR.mode === 'att' ? ({'✓': 'hr-ok', 'Х': 'hr-late', 'Т': 'hr-abs', 'Ш': 'hr-sick', 'Э': 'hr-lv'}[a] || (/[БӨО]/.test(p) && d < t ? 'hr-miss' : '')) : (p === '-' ? 'hr-off' : p ? 'hr-on' : '');
       return `<td class="hr-c ${cls}" data-hr-cell="${esc(e.id)}|${dd}"${mat || lv ? ' data-lock="1"' : ''} title="${esc(hrName(e))} ${d}${HR.mode === 'att' && p ? ' · хуваарь: ' + p : ''}">${esc(show)}</td>`; }).join('');
@@ -6728,28 +6738,82 @@ async function hrPin(e, off){
 document.addEventListener('click', e => { if (e.target.closest('#hr-pin')) hrPin(hrById(HR.open)); else if (e.target.closest('#hr-pin-off')) hrPin(hrById(HR.open), true); });
 // ---------- ⏱ the employee app: check-ins per day / month, sites (printed QR + GPS), shift start times ----------
 const hrLocal = iso => new Date(new Date(iso).getTime() + 8 * 3600e3).toISOString();
-let hrAttC = {}; function hrAttOf(m){ const ck = m + '|' + HR.att.length + '|' + (HR.att._v || 0); if (hrAttC.k === ck) return hrAttC.v; const by = {}; for (const a of HR.att){ const L = hrLocal(a.at), d = L.slice(0, 10); if (m && !d.startsWith(m)) continue; const k = (a.emp || a.email) + '|' + d, o = by[k] = by[k] || {emp: a.emp, email: a.email, name: a.name, unit: a.unit, d, ins: [], outs: [], devs: new Set(), far: 0};
-    (a.type === 'in' ? o.ins : o.outs).push(L.slice(11, 16)); o.devs.add(a.dev); } hrAttC = {k: ck, v: by}; return by; }
+let hrAttC = {}; function hrAttOf(m){ const ck = m + '|' + HR.att.length + '|' + (HR.att._v || 0); if (hrAttC.k === ck) return hrAttC.v; const by = {}; for (const a of HR.att){ const L = hrLocal(a.at), d = a.manual ? a.d : L.slice(0, 10); if (m && !d.startsWith(m)) continue; const k = (a.emp || a.email) + '|' + d, o = by[k] = by[k] || {emp: a.emp, email: a.email, name: a.name, unit: a.unit, d, ins: [], outs: [], devs: new Set(), far: 0};
+    if (a.manual){ if (!a.off) o.fix = {in: a.in || '', out: a.out || '', why: a.why || '', by: a.by}; continue; } (a.type === 'in' ? o.ins : o.outs).push(L.slice(11, 16)); o.devs.add(a.dev); } hrAttC = {k: ck, v: by}; return by; }
 function hrSchLoad(unit, m){ const id = (unit + '_' + m).replace(/[\/.#$\[\]]/g, '_'); if (!unit || HR.sch[id] || !db || HR['_l' + id]) return; HR['_l' + id] = true; db.doc('hrsched/' + id).onSnapshot(d => { HR.sch[id] = d.exists ? d.data() : {plan: {}, att: {}}; if (HR.t === 'att') hrRenderAtt(); else if (HR.t === 'sch') hrRenderSch(); }, e => console.warn(e)); }
 function hrPlanOf(empId, unit, d){ const D = HR.sch[(unit + '_' + d.slice(0, 7)).replace(/[\/.#$\[\]]/g, '_')] || {}; return ((D.plan || {})[empId] || {})[d.slice(8)] || ''; }
 function hrLate(empId, unit, d, first){ const p = hrPlanOf(empId, unit, d), st = p && HR.cfg[p]; if (!st || !first) return 0; const [h, mi] = st.split(':').map(Number), [h2, m2] = first.split(':').map(Number), late = (h2 * 60 + m2) - (h * 60 + mi); return late > (+HR.cfg.grace || 0) ? late : 0; }
+const hrMin = t => t ? +t.slice(0, 2) * 60 + +t.slice(3, 5) : null, hrH = m => m ? (m / 60).toFixed(1) : '';
+const hrInLv = (e, d) => { if (e.status === 'maternity' && e.matFrom && d >= e.matFrom && (!e.matTo || d <= e.matTo)) return 'mat'; const l = HR.lv.find(l => l.emp === e.id && l.status === 'approved' && d >= l.a && d <= l.z && !['fix', 'ot', 'swap'].includes(l.kind)); return l ? l.kind : ''; };
+// one employee, one day: plan, first in / last out (HR correction wins), worked minutes, late, early leave, overtime
+function hrAttDay(e, d){
+  const o = hrAttOf(d.slice(0, 7))[e.id + '|' + d], p = hrPlanOf(e.id, e.unit, d), C = HR.cfg, fx = o && o.fix;
+  const I = fx ? fx.in || '' : o ? o.ins.slice().sort()[0] || '' : '', U = fx ? fx.out || '' : o ? o.outs.slice().sort().at(-1) || '' : '';
+  let w = I && U && U > I ? hrMin(U) - hrMin(I) : 0; if (w > 360 && +C.brk) w -= +C.brk;
+  const st = /[БӨО]/.test(p) && C[p] ? hrMin(C[p]) : null, L = /[БӨО]/.test(p) ? +C[p + '_h'] || 0 : 0, g = +C.grace || 0;
+  const late = st != null && I && hrMin(I) - st > g ? hrMin(I) - st : 0, early = st != null && L && U && st + L * 60 - hrMin(U) > g ? st + L * 60 - hrMin(U) : 0;
+  const Ln = L * 60 - (L * 60 > 360 ? +C.brk || 0 : 0), ot = L && w - Ln >= 30 ? w - Ln : 0;   // the shift length includes the lunch break
+  return {p, I, U, w, late, early, ot, fx, o, lv: hrInLv(e, d), devs: o ? o.devs.size : 0};
+}
+const hrMonthDays = m => { const n = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).getUTCDate(); return Array.from({length: n}, (_, i) => m + '-' + String(i + 1).padStart(2, '0')); };
+const hrPayList = m => (PS.lists || []).filter(l => l.per === m).sort((a, b) => (a.kind === 'final' ? 0 : 1) - (b.kind === 'final' ? 0 : 1))[0];
+// the month for payroll: one row per employee
+function hrPayRows(m){
+  const t = today(), PL = hrPayList(m), A = hrAttOf(m), days = hrMonthDays(m);
+  const emps = HR.emp.filter(e => e.status !== 'left' || (e.end && e.end >= m + '-01') || Object.keys(A).some(k => k.startsWith(e.id + '|')));
+  return emps.map(e => { const R = {e, plan: 0, came: 0, w: 0, ot: 0, late: 0, lateMin: 0, early: 0, abs: 0, noOut: 0, fix: 0, lvPaid: 0, lvSick: 0, lvUnp: 0, mat: 0, absD: []};
+    const hasPlan = days.some(d => /[БӨО]/.test(hrPlanOf(e.id, e.unit, d)));
+    for (const d of days){ const D = hrAttDay(e, d), work = hasPlan ? /[БӨО]/.test(D.p) : ![0, 6].includes(new Date(d + 'T00:00:00Z').getUTCDay());
+      if (/[БӨО]/.test(D.p)) R.plan++; if (D.fx) R.fix++;
+      if (D.I){ R.came++; R.w += D.w; R.ot += D.ot; if (D.late){ R.late++; R.lateMin += D.late; } if (D.early) R.early++; if (!D.U && d < t) R.noOut++; }
+      else if (work && D.lv){ if (D.lv === 'mat') R.mat++; else if (D.lv === 'sick') R.lvSick++; else if (D.lv === 'unpaid') R.lvUnp++; else R.lvPaid++; }
+      else if (/[БӨО]/.test(D.p) && d < t){ R.abs++; R.absD.push(d.slice(8)); } }
+    const pp = PL && e.payKey ? (PL.people || []).find(x => x.key === e.payKey) : null; R.payW = pp ? (pp.parts || []).reduce((s, q) => s + (+q.worked || 0), 0) : null; R.payF = pp ? (pp.parts || []).reduce((s, q) => s + (+q.fund || 0), 0) : null;
+    return R; }).filter(R => R.plan || R.came || R.e.status === 'active').sort((a, b) => String(a.e.unit + hrName(a.e)).localeCompare(b.e.unit + hrName(b.e)));
+}
 function hrRenderAtt(){
   if (!HR.attD) HR.attD = today(); if (!HR.attM) HR.attM = today().slice(0, 7); $('#hr-att-d').value = HR.attD; $('#hr-att-m').value = HR.attM;
-  for (const k of ['Б', 'Ө', 'О', 'grace']) if (document.activeElement !== $('#hr-cfg-' + k)) $('#hr-cfg-' + k).value = HR.cfg[k] || (k === 'grace' ? '10' : '');
-  for (const u of new Set(HR.emp.filter(e => e.status === 'active').map(e => e.unit))){ hrSchLoad(u, HR.attD.slice(0, 7)); hrSchLoad(u, HR.attM); }
-  const D = Object.values(hrAttOf(HR.attD.slice(0, 7))).filter(o => o.d === HR.attD), byEmp = Object.fromEntries(D.map(o => [o.emp || o.email, o]));
-  const act = HR.emp.filter(e => e.status === 'active' || byEmp[e.id]);
-  const rows = act.map(e => { const o = byEmp[e.id], p = hrPlanOf(e.id, e.unit, HR.attD), i = o && o.ins.sort()[0], u = o && o.outs.sort().at(-1), late = o ? hrLate(e.id, e.unit, HR.attD, i) : 0, h = i && u && u > i ? ((+u.slice(0, 2) * 60 + +u.slice(3)) - (+i.slice(0, 2) * 60 + +i.slice(3))) / 60 : 0;
-    const note = [!e.appEmail ? 'апп-д холбогдоогүй' : '', /[БӨО]/.test(p) && !o && HR.attD <= today() ? '<b style="color:var(--bad)">ирээгүй</b>' : '', late ? `<b style="color:var(--warn)">${late} мин хоцорсон</b>` : '', o && o.devs.size > 1 ? 'өөр утаснаас' : '', o && i && !u && HR.attD < today() ? 'явахаа бүртгээгүй' : ''].filter(Boolean).join(' · ');
-    return [e, `<tr><td>${esc(hrName(e))}</td><td>${esc(e.unit || '')}</td><td>${esc(p)}</td><td class="mono">${i || '—'}</td><td class="mono">${u || '—'}</td><td class="n">${h ? h.toFixed(1) : ''}</td><td class="note">${note}</td></tr>`, o ? 0 : /[БӨО]/.test(p) ? 1 : 2]; })
-    .sort((a, b) => a[2] - b[2] || String(a[0].unit).localeCompare(String(b[0].unit))).map(x => x[1]).join('');
-  $('#hr-att-day').innerHTML = rows || '<tr><td colspan="7" class="empty">—</td></tr>';
-  const M = Object.values(hrAttOf(HR.attM)), sum = {}; for (const o of M){ const k = o.emp || o.email, S = sum[k] = sum[k] || {name: o.name, unit: o.unit, days: 0, h: 0, late: 0, lateMin: 0, noOut: 0}; S.days++; const i = o.ins.sort()[0], u = o.outs.sort().at(-1);
-    if (i && u && u > i) S.h += ((+u.slice(0, 2) * 60 + +u.slice(3)) - (+i.slice(0, 2) * 60 + +i.slice(3))) / 60; else if (i && o.d < today()) S.noOut++; const l = hrLate(o.emp, o.unit, o.d, i); if (l){ S.late++; S.lateMin += l; } }
-  $('#hr-att-mon').innerHTML = Object.entries(sum).sort((a, b) => String(a[1].unit + a[1].name).localeCompare(b[1].unit + b[1].name)).map(([k, S]) => `<tr><td>${esc(S.name || k)}<div class="note">${esc(S.unit || '')}</div></td><td class="n">${S.days}</td><td class="n"><b>${S.h.toFixed(1)}</b></td><td class="n">${S.late || ''}</td><td class="n">${S.lateMin || ''}</td><td class="n">${S.noOut || ''}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Энэ сард аппаар бүртгүүлсэн ирц алга.</td></tr>';
+  for (const k of ['Б', 'Ө', 'О', 'Б_h', 'Ө_h', 'О_h', 'grace', 'brk']){ const x = $('#hr-cfg-' + k); if (x && document.activeElement !== x) x.value = HR.cfg[k] != null && HR.cfg[k] !== '' ? HR.cfg[k] : k === 'grace' ? '10' : ''; }
+  for (const u of new Set(HR.emp.filter(e => e.status !== 'left').map(e => e.unit))){ hrSchLoad(u, HR.attD.slice(0, 7)); hrSchLoad(u, HR.attM); }
+  // the day
+  const d = HR.attD, act = HR.emp.filter(e => e.status !== 'left' || hrAttOf(d.slice(0, 7))[e.id + '|' + d]);
+  const rows = act.map(e => { const D = hrAttDay(e, d), plan = /[БӨО]/.test(D.p);
+    const note = [D.fx ? '✏️ HR зассан' : '', D.lv ? (D.lv === 'mat' ? 'декрет' : 'чөлөөтэй') : '', !D.I && plan && !D.lv && d <= today() ? '<b style="color:var(--bad)">ирээгүй</b>' : '', D.late ? `<b style="color:var(--warn)">${D.late} мин хоцорсон</b>` : '', D.early ? `${D.early} мин эрт явсан` : '', D.ot ? `илүү ${hrH(D.ot)} ц` : '', D.devs > 1 ? '⚠ өөр утаснаас' : '', D.I && !D.U && d < today() ? 'явахаа бүртгээгүй' : '', !e.appEmail && !e.appPinPhone ? '<span class="note">апп-д холбогдоогүй</span>' : ''].filter(Boolean).join(' · ');
+    return [D.I ? 0 : plan && !D.lv ? 1 : 2, e, `<tr><td>${esc(hrName(e))}</td><td>${esc(e.unit || '')}</td><td>${esc(D.p)}</td><td class="mono">${D.I || '—'}</td><td class="mono">${D.U || '—'}</td><td class="n">${hrH(D.w)}</td><td>${note}</td><td><button class="btn" type="button" data-att-fix="${esc(e.id)}" style="padding:1px 8px" title="Ирсэн / явсан цагийг засах">✏️</button></td></tr>`]; })
+    .sort((a, b) => a[0] - b[0] || String(a[1].unit).localeCompare(String(b[1].unit))).map(x => x[2]).join('');
+  $('#hr-att-day').innerHTML = rows || '<tr><td colspan="8" class="empty">—</td></tr>';
+  // the month for payroll
+  const PR = hrPayRows(HR.attM), PL = hrPayList(HR.attM);
+  $('#hr-att-pl').innerHTML = PL ? `Цалингийн хүснэгт (${esc(PL.kind === 'final' ? 'сүүл цалин' : 'урьдчилгаа')}) байна — «Ажилласан цаг»-ийг харьцуулав.` : 'Энэ сарын цалингийн хүснэгт системд ороогүй — орсны дараа «Ажилласан цаг»-ийг автоматаар харьцуулна.';
+  $('#hr-att-mon').innerHTML = PR.map(R => { const df = R.payW != null ? Math.round(R.payW - R.w / 60) : null;
+    return `<tr><td>${esc(hrName(R.e))}<div class="note">${esc(R.e.unit || '')}${R.e.payKey ? ' · ' + esc(R.e.payKey) : ''}</div></td><td class="n">${R.plan || ''}</td><td class="n">${R.came || ''}</td><td class="n"><b>${hrH(R.w)}</b></td><td class="n">${hrH(R.ot)}</td>
+      <td class="n">${R.late ? R.late + ' / ' + R.lateMin + 'м' : ''}</td><td class="n">${R.abs ? `<b style="color:var(--bad)" title="${esc(R.absD.join(', '))}">${R.abs}</b>` : ''}</td><td class="n">${R.lvPaid || ''}</td><td class="n">${R.lvSick || ''}</td><td class="n">${R.lvUnp || ''}</td><td class="n">${R.noOut ? `<span style="color:var(--warn)">${R.noOut}</span>` : ''}</td>
+      <td class="n">${R.payW != null ? R.payW + (df ? ` <b style="color:${Math.abs(df) >= 4 ? 'var(--bad)' : 'var(--warn)'}">(${df > 0 ? '+' : ''}${df})</b>` : ' ✓') : '<span class="note">—</span>'}</td></tr>`; }).join('') || '<tr><td colspan="12" class="empty">—</td></tr>';
   const SI = Object.values(HR.sites).sort((a, b) => String(a.name).localeCompare(b.name));
-  $('#hr-sites').innerHTML = SI.length ? `<div class="tbl"><table><thead><tr><th>Салбар</th><th>Байршил</th><th class="n">Радиус (м)</th><th></th></tr></thead><tbody>${SI.map(x => `<tr><td><b>${esc(x.name)}</b> <span class="note mono">${esc(x.id)}</span></td><td class="note">${x.lat ? x.lat.toFixed(5) + ', ' + x.lng.toFixed(5) + ` <a href="https://maps.google.com/?q=${x.lat},${x.lng}" target="_blank" rel="noopener">газрын зураг</a>` : '<b style="color:var(--bad)">тохируулаагүй</b>'}</td>
-      <td class="n"><input data-site-r="${esc(x.id)}" type="number" min="30" value="${+x.r || 150}" style="width:80px"></td><td style="white-space:nowrap"><button class="btn" type="button" data-site-here="${esc(x.id)}" style="padding:2px 8px">📍 Энд байна</button> <button class="btn" type="button" data-site-qr="${esc(x.id)}" style="padding:2px 8px">🖨 QR</button> <button class="btn" type="button" data-site-tok="${esc(x.id)}" style="padding:2px 8px">↻ QR шинэчлэх</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="note">Салбар нэмээгүй байна.</p>';
+  $('#hr-sites').innerHTML = SI.length ? `<div class="tbl"><table><thead><tr><th>Салбар</th><th>Байршил</th><th class="n">Радиус (м)</th><th></th></tr></thead><tbody>${SI.map(x => `<tr><td><b>${esc(x.name)}</b> <span class="note mono">${esc(x.id)}</span></td><td class="note">${x.lat ? x.lat.toFixed(5) + ', ' + x.lng.toFixed(5) + ` <a href="https://maps.google.com/?q=${x.lat},${x.lng}" target="_blank" rel="noopener">газрын зураг</a>` : '<b style="color:var(--bad)">тохируулаагүй — дэлгүүр дотор «📍 Энд байна» дарна</b>'}</td>
+      <td class="n"><input data-site-r="${esc(x.id)}" type="number" min="30" value="${+x.r || 150}" style="width:80px"></td><td style="white-space:nowrap"><button class="btn" type="button" data-site-here="${esc(x.id)}" style="padding:2px 8px">📍 Энд байна</button> <button class="btn primary" type="button" data-site-qr="${esc(x.id)}" style="padding:2px 8px" ${x.lat ? '' : 'disabled title="Эхлээд байршлаа тохируулна"'}>🖨 QR хэвлэх</button> <button class="btn" type="button" data-site-tok="${esc(x.id)}" style="padding:2px 8px">↻ QR шинэчлэх</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="note"><b>1-р алхам:</b> доор салбарын нэрийг бичээд «＋ Нэмэх» дарна.</p>';
+}
+// HR correction of a day (forgot to check out, approved «ирц засуулах» request): one document per person per day, it replaces the app check-ins of that day
+async function hrAttFix(e, d){
+  const D = hrAttDay(e, d), v = prompt(`${hrName(e)} — ${d}\nИрсэн-Явсан цаг (жишээ 09:00-18:00).\nИрээгүй гэж тэмдэглэх бол «0». Засварыг цуцлах бол хоосон.`, D.I || D.U ? (D.I || '') + '-' + (D.U || '') : '');
+  if (v == null) return; const id = 'fix_' + e.id + '_' + d;
+  if (!v.trim()){ if (D.fx) await db.doc('hratt/' + id).set({manual: true, off: true, by: me, mAt: new Date().toISOString()}, {merge: true}); return; }
+  const m = v.trim() === '0' ? ['', '', ''] : v.match(/^\s*(\d{1,2})[:.](\d{2})\s*[-–]\s*(?:(\d{1,2})[:.](\d{2}))?\s*$/);
+  if (!m){ alert('Жишээ: 09:00-18:00 эсвэл 09:00- (явсан цаг мэдэгдэхгүй)'); return; }
+  const tm = (h, mi) => h == null || h === '' ? '' : String(h).padStart(2, '0') + ':' + mi;
+  const why = prompt('Шалтгаан (жишээ: явахаа бүртгэхээ мартсан, хүсэлтээр):', '') || '';
+  await db.doc('hratt/' + id).set({manual: true, off: false, emp: e.id, name: hrName(e), unit: e.unit || '', email: '', type: 'fix', d, at: new Date(d + 'T00:00:00+08:00').toISOString(), in: v.trim() === '0' ? '' : tm(m[1], m[2]), out: v.trim() === '0' ? '' : tm(m[3], m[4]), why, by: me, mAt: new Date().toISOString()});
+}
+function hrPayXlsx(){
+  if (typeof XLSX === 'undefined') return; const m = HR.attM, PR = hrPayRows(m), wb = XLSX.utils.book_new();
+  const A = [['Ажилтны код', 'Овог', 'Нэр', 'Албан тушаал', 'Салбар', 'Хуваарьт өдөр', 'Ирсэн өдөр', 'Ажилласан цаг', 'Илүү цаг', 'Хоцорсон удаа', 'Хоцролт (мин)', 'Эрт явсан удаа', 'Тасалсан өдөр', 'Цалинтай чөлөө / ээлжийн амралт (өдөр)', 'Өвчтэй (өдөр)', 'Цалингүй чөлөө (өдөр)', 'Декрет (өдөр)', 'Явахаа бүртгээгүй', 'HR зассан өдөр', 'Цалингийн хүснэгтийн ажилласан цаг']]
+    .concat(PR.map(R => [R.e.payKey || '', R.e.ovog || '', R.e.name || '', R.e.pos || '', R.e.unit || '', R.plan, R.came, +(R.w / 60).toFixed(2), +(R.ot / 60).toFixed(2), R.late, R.lateMin, R.early, R.abs, R.lvPaid, R.lvSick, R.lvUnp, R.mat, R.noOut, R.fix, R.payW == null ? '' : R.payW]));
+  const ws = XLSX.utils.aoa_to_sheet(A); ws['!cols'] = A[0].map((h, i) => ({wch: i < 5 ? 16 : 12})); XLSX.utils.book_append_sheet(wb, ws, 'Цалингийн ирц');
+  const det = [['Ажилтан', 'Салбар', 'Өдөр', 'Ээлж', 'Ирсэн', 'Явсан', 'Ажилласан цаг', 'Хоцролт (мин)', 'Эрт явсан (мин)', 'Илүү цаг', 'Тэмдэглэл']];
+  for (const R of PR) for (const d of hrMonthDays(m)){ const D = hrAttDay(R.e, d); if (!D.I && !D.U && !/[БӨО]/.test(D.p) && !D.lv) continue;
+    det.push([hrName(R.e), R.e.unit || '', d, D.p, D.I, D.U, D.w ? +(D.w / 60).toFixed(2) : '', D.late || '', D.early || '', D.ot ? +(D.ot / 60).toFixed(2) : '', [D.fx ? 'HR зассан: ' + (D.fx.why || '') : '', D.lv ? (D.lv === 'mat' ? 'декрет' : (HR_LV.find(x => x[0] === D.lv) || ['', D.lv])[1]) : '', !D.I && /[БӨО]/.test(D.p) && !D.lv && d < today() ? 'тасалсан' : ''].filter(Boolean).join('; ')]); }
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(det), 'Өдөр бүрээр');
+  XLSX.writeFile(wb, 'VIVI_tsalingiin_irts_' + m + '.xlsx');
 }
 let qrLibP = null; const loadQRLib = () => qrLibP || (qrLibP = new Promise((ok, no) => { if (window.qrcode) return ok(window.qrcode); const sc = document.createElement('script'); sc.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js'; sc.onload = () => ok(window.qrcode); sc.onerror = () => { qrLibP = null; no(new Error('QR library')); }; document.head.appendChild(sc); }));
 async function hrSiteQR(x){ const q = (await loadQRLib())(0, 'M'); q.addData('VIVI-ATT|' + x.id + '|' + x.token); q.make();
@@ -6827,10 +6891,9 @@ document.addEventListener('click', async e => { if (!e.target.closest('[data-hr=
     catch(err){ alert('Байршил олдсонгүй: ' + (err.message || err.code)); } hb.disabled = false; hb.textContent = '📍 Энд байна'; return; }
   const qb = e.target.closest('[data-site-qr]'); if (qb){ const x = HR.sites[qb.dataset.siteQr]; if (x) hrSiteQR(x).catch(err => alert(err.message)); return; }
   const tb = e.target.closest('[data-site-tok]'); if (tb && confirm('Шинэ QR үүсгэх үү? Хуучин хэвлэсэн QR ажиллахаа болино — шинийг хэвлэж солих хэрэгтэй.')){ await db.doc('hrsites/' + tb.dataset.siteTok).set({token: tok(), by: me}, {merge: true}); return; }
-  if (e.target.closest('#hr-cfg-save')){ const c = {}; for (const k of ['Б', 'Ө', 'О']) c[k] = $('#hr-cfg-' + k).value || ''; c.grace = +$('#hr-cfg-grace').value || 0; await db.doc('hrsites/_cfg').set({...c, by: me}, {merge: true}); $('#hr-cfg-msg').textContent = '✓'; return; }
-  if (e.target.closest('#hr-att-x') && typeof XLSX !== 'undefined'){ const M = Object.values(hrAttOf(HR.attM)).sort((a, b) => (a.unit + a.name + a.d).localeCompare(b.unit + b.name + b.d));
-    const aoa = [['Ажилтан', 'Салбар', 'Өдөр', 'Ээлж', 'Ирсэн', 'Явсан', 'Цаг', 'Хоцролт (мин)']].concat(M.map(o => { const i = o.ins.sort()[0], u = o.outs.sort().at(-1), h = i && u && u > i ? ((+u.slice(0, 2) * 60 + +u.slice(3)) - (+i.slice(0, 2) * 60 + +i.slice(3))) / 60 : ''; return [o.name, o.unit, o.d, hrPlanOf(o.emp, o.unit, o.d), i || '', u || '', h === '' ? '' : +h.toFixed(2), hrLate(o.emp, o.unit, o.d, i) || '']; }));
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa), 'Ирц'); XLSX.writeFile(wb, 'VIVI_irts_' + HR.attM + '.xlsx'); }
+  if (e.target.closest('#hr-cfg-save')){ const c = {}; for (const k of ['Б', 'Ө', 'О']){ c[k] = $('#hr-cfg-' + k).value || ''; c[k + '_h'] = +$('#hr-cfg-' + k + '_h').value || 0; } c.grace = +$('#hr-cfg-grace').value || 0; c.brk = +$('#hr-cfg-brk').value || 0; await db.doc('hrsites/_cfg').set({...c, by: me}, {merge: true}); $('#hr-cfg-msg').textContent = '✓'; return; }
+  if (e.target.closest('#hr-att-x')){ hrPayXlsx(); return; }
+  const fb = e.target.closest('[data-att-fix]'); if (fb){ const em = hrById(fb.dataset.attFix); if (em) hrAttFix(em, HR.attD).catch(err => alert('Хадгалж чадсангүй: ' + (err.code || err.message))); }
 });
 document.addEventListener('submit', async e => {
   if (e.target.id === 'hr-lv-form'){ e.preventDefault(); const emp = $('#hr-lv-emp').value, a = $('#hr-lv-a').value, z = $('#hr-lv-z').value; if (!emp || !a || !z || z < a){ $('#hr-lv-msg').textContent = 'Огноогоо шалгана уу.'; return; }
