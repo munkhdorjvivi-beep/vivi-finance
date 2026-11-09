@@ -1651,8 +1651,12 @@ const VIVI = (() => {
     const whyF = k => { if (!EX) return ''; if (k === 'credit') return EX.credit.text.slice(1).join(' ');
       if (k === 'cash'){ const cx = EX.items.filter(i => i.kind === 'cashx'); const miss = m.summary.reduce((a, x) => a + (x.missAmt || 0), 0); return [miss ? 'тушаагаагүй өдрүүд ' + fM(miss) + ' («Бэлэн – тайлбар авах»)' : '', ...cx.map(i => i.parts[0].store + ': Smart-д бэлэн, бодитоор шилжүүлэг ≈' + fM(i.cash))].filter(Boolean).join('; '); }
       const B = EX.byForm[k]; if (!B) return ''; return Object.entries(B.parts).filter(([, v]) => Math.abs(v) >= 1000).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).map(([kk, v]) => EX.kinds[kk] + ' ' + (v > 0 ? '+' : '') + fM(v)).join('; '); };
-    for (const k of ['cash','pos','qpay','credit']){ const s = W[k].smart, b = W[k].bank; ts += s; tb += b; sum.push([CH_TXT[k], s, b, b - s, s ? +((b - s) / s).toFixed(4) : '', whyF(k)]); }
-    sum.push(['Нийт / Razem', ts, tb, tb - ts, ts ? +((tb - ts) / ts).toFixed(4) : '']);
+    // credit: StorePay that is due next month is expected money, not a difference; a person's / company's credit is a receivable (never the bank)
+    let tw = 0;
+    for (const k of ['cash','pos','qpay','credit']){ const s = W[k].smart, b = W[k].bank, wait = k === 'credit' ? Math.min(Math.max(0, s - b), +(W.credit.pending || 0)) : 0; ts += s; tb += b; tw += wait;
+      sum.push([CH_TXT[k] + (wait ? ' — StorePay ирэх ' + fM(wait) + ' / wpłynie' : ''), s, b, b - s + wait, s ? +((b - s + wait) / s).toFixed(4) : '', (wait ? `StorePay ${W.credit.spA} – ${W.credit.spZ}-нд орох ёстой ${fM(wait)} — зөрүү биш (сарын дараа орох мөнгө). ` : '') + whyF(k)]); }
+    if (W.credit.staffSum){ ts += W.credit.staffSum; sum.push(['Хувь хүн, байгууллагын зээл / Kredyt osób, firm', W.credit.staffSum, 0, 0, '', 'Авлага — банкинд орохгүй, хүн бүрт нэхэмжлэх: ' + Object.entries(W.credit.staff || {}).sort((x, y) => y[1] - x[1]).map(([n, v]) => n + ' ' + fM(v)).join(', ')]); }
+    sum.push(['Нийт / Razem' + (tw ? ' (StorePay ирэхийг тооцсон)' : ''), ts, tb, tb - ts + tw + (W.credit.staffSum || 0), ts ? +((tb - ts + tw + (W.credit.staffSum || 0)) / ts).toFixed(4) : '']);
     sum.push([], ['Дэлгүүр / Sklep', 'Smart бэлэн бус / bezgotówka', 'Банк бэлэн бус / Bank', 'Зөрүү / Różnica', 'Smart бэлэн / Gotówka', 'Тушаасан / Wpłacono', 'Бэлэн зөрүү / Brak gotówki', 'Тушаагаагүй өдөр / Dni bez wpłaty', 'Тушаагаагүй дүн / Kwota']);
     for (const s of m.summary) sum.push([s.store, R(s.ncSmart), R(s.ncBank), R(s.ncBank - s.ncSmart), R(s.smartCash), R(s.dep), R(s.smartCash - s.dep), s.missDays, R(s.missAmt)]);
     // outflow categories
