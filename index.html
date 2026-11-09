@@ -5153,6 +5153,8 @@ const r2x = x => Math.round(x * 100) / 100;
 
 
 // ----- money flow -----
+// accounts that are NOT part of «Дансны үлдэгдэл»: a transfer into them is money leaving the recorded balance
+const DR_OUTSIDE = new Set(['4002622637', '405097294', '405097565']);
 function drFlowTx(a, z){
   // owner keeps the last 45 days of bank e-mails live; older ranges are loaded once
   const since = new Date(Date.now() - 44 * 86400e3).toISOString().slice(0, 10);
@@ -5160,8 +5162,36 @@ function drFlowTx(a, z){
   if (a < since){ const key = a + '|' + z;
     if (!DR.txExtra[key]){ DR.txExtra[key] = {tx: []}; db.collection('banktx').where('dt', '>=', a).where('dt', '<', shiftDay(z, 1)).get().then(s => { DR.txExtra[key] = {tx: s.docs.map(d => ({id: d.id, ...d.data()}))}; render(); }).catch(e => console.warn(e)); }
     const seen = new Set(tx.map(t => t.id)); tx = tx.concat(DR.txExtra[key].tx.filter(t => !seen.has(t.id))); }
-  return tx.filter(t => { const d = String(t.dt || '').slice(0, 10); return d >= a && d <= z && +t.amount > 0 && !VIVI.OWN.has(VIVI.norm(t.toAcc)) && !['4002622637', '5026747956'].includes(String(t.fromAcc)); })
+  return tx.filter(t => { const d = String(t.dt || '').slice(0, 10), to = VIVI.norm(t.toAcc); return d >= a && d <= z && +t.amount > 0 && (!VIVI.OWN.has(to) || DR_OUTSIDE.has(to)) && !DR_OUTSIDE.has(VIVI.norm(t.fromAcc)) && String(t.fromAcc) !== '5026747956'; })
     .map(t => ({...t, date: String(t.dt).slice(0, 10), amount: +t.amount, cat: VIVI.outCat({desc: t.desc, cpName: t.toName, cp: t.toAcc, dr: +t.amount})}));
+}
+// why the expected and the recorded balance differ: each likely cause with its amount
+function drDiag(F, E, outAll){
+  const c = F.checks.filter(x => Math.abs(x.diff) > 100000).pop(); if (!c) return '';
+  const B = S.balances.slice().sort((x, y) => x.date.localeCompare(y.date)), b0 = B.find(b => b.date === E.from), b1 = B.find(b => b.date === c.date);
+  const days = []; for (let d = E.from; d < c.date; d = shiftDay(d, 1)) days.push(d);
+  const R = d => DAILY.flow(Object.values(DR.days), [], [], d, d, 0).rows[0] || {bank: 0, cash: 0};
+  const hm = b => { const t = b && b.at ? new Date(b.at) : null; return t && !isNaN(t) ? {h: t.getHours(), s: String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0'), d: fmtDT(b.at).slice(0, 10)} : null; };
+  const t0 = hm(b0), t1 = hm(b1), L = [];
+  // a) the opening balance was entered late in the day → that day's money is in it already, and the roll-forward adds it again
+  const r0 = R(E.from); if (t0) L.push([t0.h >= 12 || t0.d > E.from ? 'bad' : 'ok', `Эхлэх үлдэгдэл (${esc(E.from)}) бүртгэсэн цаг: <b>${esc(t0.d)} ${t0.s}</b>` + (t0.h >= 12 || t0.d > E.from ? ` — үдээс хойш/дараа нь бүртгэсэн тул тэр өдрийн орлого (банк ${fmt(r0.bank)} + бэлэн ${fmt(r0.cash)}) үлдэгдэлд аль хэдийн орсон байж, <b>давхар тооцогдсон</b> байж магадгүй. Үлдэгдлийг өглөө (ажлын өдрийн эхэнд) бүртгэх нь зөв.` : ' — өглөө бүртгэсэн, зөв.')]);
+  if (t1) L.push([t1.h >= 12 ? 'warn' : 'ok', `Шалгах үлдэгдэл (${esc(c.date)}) бүртгэсэн цаг: <b>${esc(t1.d)} ${t1.s}</b>`]);
+  // b) card / POS money of the last days may land only on the next business day
+  const lastDays = []; for (let d = shiftDay(c.date, -1); d >= E.from && lastDays.length < 3; d = shiftDay(d, -1)){ lastDays.push(d); const w = new Date(d + 'T00:00:00Z').getUTCDay(); if (w !== 0 && w !== 6) break; }
+  const lag = lastDays.reduce((q, d) => q + R(d).bank, 0); L.push(['warn', `${lastDays.slice().reverse().join(', ')}-ний бэлэн бус борлуулалт <b>${fmt(lag)} ₮</b> — POS/картын мөнгө дараагийн ажлын өдөр ордог бол ${esc(c.date)}-ны өглөөний үлдэгдэлд хараахан ороогүй. Ингэвэл зөрүү өдрийн дундуур арилна.`]);
+  // c) cash counted as deposited
+  const cash = days.reduce((q, d) => q + R(d).cash, 0); L.push(['warn', `Бэлэн мөнгө <b>${fmt(cash)} ₮</b> тушаасан гэж тооцсон — дэлгүүрт/сейфэнд үлдсэн, эсвэл тооцсон данснаас өөр дансанд тушаасан бол зөрүү болно («Бэлэн мөнгө» хяналтаас шалгана).`]);
+  // d) transfers to private accounts outside the balance (now counted as money out)
+  const priv = outAll.filter(t => t.date >= E.from && t.date < c.date && DR_OUTSIDE.has(VIVI.norm(t.toAcc))).reduce((q, t) => q + t.amount, 0);
+  if (priv) L.push(['ok', `Үлдэгдэлд ордоггүй хувийн данс руу шилжүүлсэн <b>${fmt(priv)} ₮</b> — гарсан мөнгөнд тооцсон.`]);
+  // e) which accounts sent outflow e-mails: an account with outflows but no e-mails makes the expected balance too high
+  const byAcc = {}; for (const t of outAll) if (t.date >= E.from && t.date < c.date){ const k = ACC_LABEL[VIVI.norm(t.fromAcc)] || t.fromAcc || '?'; byAcc[k] = (byAcc[k] || 0) + t.amount; }
+  L.push(['warn', `Гарсан шилжүүлгийн имэйл ирсэн данснууд: ${Object.entries(byAcc).sort((x, y) => y[1] - x[1]).map(([k, v]) => esc(k) + ' ' + fmt(v)).join(' · ') || '<b>алга</b>'} — энд байхгүй данснаас мөнгө гарсан бол (имэйл ирдэггүй/хүрээгүй) хүлээгдэж буй үлдэгдэл хэт өндөр гарна.`]);
+  // f) the real change per account between the two recorded balances
+  const ch = b0 && b1 ? BAL_ACCS.map(([k, l]) => [l, (+((b1.items || {})[k]) || 0) - (+((b0.items || {})[k]) || 0), +((b0.items || {})[k]) || 0, +((b1.items || {})[k]) || 0]).filter(x => x[2] || x[3]) : [];
+  const exp = c.expected - E.open;
+  return `<details open style="margin-top:10px"><summary><b>🔎 ${esc(c.date)}-ны зөрүү ${sgn(c.diff)} — боломжит шалтгаан</b></summary><ul style="margin:6px 0 0 18px;padding:0">${L.map(([k, h]) => `<li style="margin:4px 0">${k === 'bad' ? '❗ ' : k === 'ok' ? '✓ ' : ''}${h}</li>`).join('')}</ul>
+    ${ch.length ? `<div class="tbl" style="margin-top:8px"><table><thead><tr><th>Данс</th><th class="n">${esc(E.from)}</th><th class="n">${esc(c.date)}</th><th class="n">Бодит өөрчлөлт</th></tr></thead><tbody>${ch.map(x => `<tr><td>${esc(x[0])}</td><td class="n">${fmt(x[2])}</td><td class="n">${fmt(x[3])}</td><td class="n">${sgn(x[1])}</td></tr>`).join('')}<tr style="font-weight:700"><td>Нийт</td><td class="n">${fmt(E.open)}</td><td class="n">${fmt(c.actual)}</td><td class="n">${sgn(c.actual - E.open)} <span class="note">(тооцоогоор ${sgn(exp)})</span></td></tr></tbody></table></div><p class="note">Аль дансны өсөлт бага/сөрөг байгааг хараарай — тэр дансны хуулгыг шалгавал шалтгаан тодорно.</p>` : ''}</details>`;
 }
 function renderFlow(a, z){
   $('#dr-flow-card').hidden = !DR.canFlow; if (!DR.canFlow) return;
@@ -5178,7 +5208,7 @@ function renderFlow(a, z){
   const E = F.exp;
   if (!E) $('#dr-exp').innerHTML = `<div class="banner" style="background:var(--warn-soft)">Хүлээгдэж буй үлдэгдэл тооцохын тулд «Дансны үлдэгдэл» хэсэгт эхлэх өдрийн (эсвэл түүнээс өмнөх) үлдэгдлийг бүртгэнэ үү.</div>`;
   else $('#dr-exp').innerHTML = `<div class="banner">Бүртгэсэн үлдэгдэл <b>${esc(E.from)}</b>: <b>${fmt(E.open)} ₮</b> → түүнээс хойших цэвэр урсгал ${sgn(E.value - E.open)} → <b>${esc(E.at)}-ны өглөөний хүлээгдэж буй үлдэгдэл: ${fmt(E.value)} ₮</b> <span class="note">(бэлэн мөнгийг тушаасан гэж тооцсон; зээл: StorePay сарын өмнөх борлуулалтынх орсон гэж тооцсон)</span>${E.missing.length ? `<div class="note" style="color:var(--bad)">Өдрийн тайлангүй өдөр (орлого тооцогдоогүй): ${E.missing.join(', ')}</div>` : ''}</div>`
-    + (F.checks.length ? `<div class="tbl" style="margin-top:8px"><table><thead><tr><th>Өдөр (өглөө)</th><th class="n">Хүлээгдэж буй</th><th class="n">Бүртгэсэн бодит</th><th class="n">Зөрүү</th></tr></thead><tbody>${F.checks.map(c => `<tr class="${Math.abs(c.diff) > 100000 ? 'sev-bad' : 'sev-ok'}"><td class="mono">${esc(c.date)}</td><td class="n">${fmt(c.expected)}</td><td class="n">${fmt(c.actual)}</td><td class="n">${Math.abs(c.diff) > 100000 ? `<span class="chip c-bad">${sgn(c.diff)}</span>` : sgn(c.diff)}</td></tr>`).join('')}</tbody></table></div>` : '');
+    + (F.checks.length ? `<div class="tbl" style="margin-top:8px"><table><thead><tr><th>Өдөр (өглөө)</th><th class="n">Хүлээгдэж буй</th><th class="n">Бүртгэсэн бодит</th><th class="n">Зөрүү</th></tr></thead><tbody>${F.checks.map(c => `<tr class="${Math.abs(c.diff) > 100000 ? 'sev-bad' : 'sev-ok'}"><td class="mono">${esc(c.date)}</td><td class="n">${fmt(c.expected)}</td><td class="n">${fmt(c.actual)}</td><td class="n">${Math.abs(c.diff) > 100000 ? `<span class="chip c-bad">${sgn(c.diff)}</span>` : sgn(c.diff)}</td></tr>`).join('')}</tbody></table></div>` + drDiag(F, E, outAll) : '');
   $('#dr-flow').innerHTML = F.rows.slice().reverse().map(r => `<tr><td class="mono">${esc(r.date)}${r.has ? '' : ' <span class="chip c-warn">тайлангүй</span>'}</td><td class="n">${fmt(r.bank)}</td><td class="n">${fmt(r.cash)}</td><td class="n">${fmt(r.credit)}${r.crIn >= 1 ? `<div class="note">орсон ${fmt(Math.round(r.crIn))}</div>` : ''}</td><td class="n">${r.out ? '−' + fmt(r.out) : '0'}</td><td class="n"><b>${sgn(r.net)}</b></td></tr>`).join('');
   $('#dr-out').innerHTML = F.cats.length ? F.cats.map(c => `<tr><td>${esc(VIVI_CAT_LABEL(c.cat))}</td><td class="n">${c.n}</td><td class="n">${fmt(c.a)}</td></tr>`).join('') + `<tr style="font-weight:700"><td>Нийт</td><td class="n">${out.length}</td><td class="n">${fmt(T.out)}</td></tr>` : '<tr><td colspan="3" class="empty">Гарсан шилжүүлэг алга (имэйл ирээгүй).</td></tr>';
   $('#dr-outlist').innerHTML = out.sort((x, y) => String(y.dt).localeCompare(String(x.dt))).slice(0, 300).map(t => `<tr><td class="mono">${esc(String(t.dt).replace('T', ' ').slice(0, 16))}</td><td>${esc(ACC_LABEL[VIVI.norm(t.fromAcc)] || t.fromAcc)}</td><td>${esc(t.toName || '')}<div class="note mono">${esc(t.toAcc || '')}</div></td><td class="n">${fmt(t.amount)}</td><td>${esc(t.desc || '')}</td><td><span class="chip c-grey">${esc(VIVI_CAT_LABEL(t.cat))}</span></td></tr>`).join('');
