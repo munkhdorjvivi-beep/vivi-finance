@@ -621,6 +621,10 @@ body{margin:0;background:var(--bg)}
       <p class="note" style="margin:8px 0 0">Бохир ашиг = цэвэр борлуулалт − өртөг. ORION-ы өртөг 0 бараа 6 500 ₮/ш-ээр. Тогтмол зардал (ᵀ) ба цалинг хугацааны хоногоор хувааж тооцно (жишээ: 7 хоног = сарын дүн × 7/31). Салбарын ашиг = бохир ашиг − салбарын цалин − түрээс − ашиглалт − бусад зардал. ᵀ = гараар тохируулсан тогтмол дүн. Салбарт хуваарилаагүй зардал болон оффисын зардлыг доор нийт компанийн түвшинд хасна.</p>
     </div>
     <div class="card">
+      <h2 style="margin:0 0 8px">💵 Мөнгөн урсгал</h2>
+      <div id="pl-cf"><p class="note">—</p></div>
+    </div>
+    <div class="card">
       <h2>Тогтмол зардал — гараар тохируулах</h2>
       <p class="note" style="margin:0 0 8px">Салбар бүрийн сар бүрийн тогтмол зардлыг (түрээс, цалин, ашиглалт) эндээс тохируулбал тайлан шилжүүлэг/цалингийн жагсаалтыг хүлээлгүй энэ дүнгээр тооцно. Шилжүүлгээр орсон бодит дүнтэй доорх хүснэгтэд харьцуулна. «Хүчинтэй» сараас хойших бүх сард хэрэглэгдэнэ — дүнг өөрчлөхдөө шинэ сарыг сонгоно (өмнөх сарууд хуучин дүнгээрээ үлдэнэ). Хоосон = бодит дүнгээр.</p>
       <div class="tbl"><table><thead><tr><th>Салбар</th><th class="n">Түрээс</th><th class="n">Цалин</th><th class="n">Ашиглалт</th><th class="n">Бусад тогтмол</th><th>Бусдын нэр</th><th>Хүчинтэй</th><th></th></tr></thead><tbody id="pl-fixed"></tbody></table></div>
@@ -2234,8 +2238,8 @@ const PL = (() => {
   // rent accounts given by the owner (receiver account → store)
   const ACC_STORE_DEFAULT = {'444017046':'Фүүд сити', '5581001313':'Фүүд сити', '5128024567':'Фүүд сити', '1205266311':'Драгон'};
   const CAT_DEFAULT = {rent:'cost', f1:'cost', media:'cost', repair:'cost', travel:'cost', cargo:'cost', fuel:'cost', fee:'cost', tax:'cost', other:'cost', bank:'debt', ploan:'debt',
-    ops:'cost', salary:'skip', goods:'skip', internal:'skip', own_md:'owner', own_eb:'owner', hipay:'owner', fx:'skip', refund:'skip'};
-  const CAT_MODE_LABEL = {cost:'Зардал', debt:'Зээлийн төлбөр (тусад нь)', owner:'Эзэмшигч (тусад нь)', skip:'Тооцохгүй'};
+    ops:'cost', salary:'skip', goods:'stock', internal:'skip', own_md:'owner', own_eb:'owner', hipay:'owner', fx:'skip', refund:'skip'};
+  const CAT_MODE_LABEL = {cost:'Зардал', stock:'Бараа худалдан авалт (өртгөөр аль хэдийн хасагдсан — тусад нь)', debt:'Зээлийн төлбөр (тусад нь)', owner:'Эзэмшигч (тусад нь)', skip:'Тооцохгүй'};
 
   // pl = saved month (sales + stmtTx), payCost = PAY.costs month entry, extTx = e-mail transfers of the month
   // opts: {catMode:{cat:mode}, accStore:{acc:unit}, manual:[{unit, cat, amount, note}], officeUnits:Set}
@@ -2249,12 +2253,14 @@ const PL = (() => {
     if (payCost) for (const P of Object.values(payCost.units || {})){ const x = U(P.unit); x.payroll = P.cost != null ? P.cost : P.paid; x.payrollAdvOnly = P.cost == null; }
     // bank outflows → cost lines
     const tx = (pl.stmtTx || []).concat(extTx || []);
-    const company = {byCat: {}, debt: 0, owner: 0, unassigned: 0, lines: []};
+    const company = {byCat: {}, debt: 0, owner: 0, stock: 0, unassigned: 0, lines: []};
     for (const t of tx){
       const mode = catMode[t.cat] || 'cost';
       if (mode === 'skip') continue;
       if (mode === 'debt'){ company.debt += t.amount; company.lines.push({...t, mode}); continue; }
       if (mode === 'owner'){ company.owner += t.amount; company.lines.push({...t, mode}); continue; }
+      // paying a supplier buys stock (an asset); the profit already carries the cost of the goods SOLD — deducting the payment too would count goods twice
+      if (mode === 'stock'){ company.stock += t.amount; company.lines.push({...t, mode}); continue; }
       const many = String(t.store || '').split(',').map(x => x.trim()).filter(Boolean);
       if (many.length > 1){   // one cost for several stores: split by sales share (default), floor area or equally
         const AREA = {...AREA_DEFAULT, ...(opts.area || {})};
@@ -2300,7 +2306,7 @@ const PL = (() => {
     const storeTot = {sales: sum(stores, 'sales'), cost: sum(stores, 'cost'), gp: sum(stores, 'gp'), payroll: sum(stores, 'payroll'), direct: sum(stores, 'direct'), rent: sum(stores, 'rent'), media: sum(stores, 'media'), otherFixed: sum(stores, 'otherFixed'), rest: sum(stores, 'rest'), result: sum(stores, 'result')};
     const officeCost = r2(sum(office, 'payroll') + sum(office, 'direct') - sum(office, 'gp'));
     const net = r2(storeTot.result - officeCost - company.unassigned);
-    return {stores, office, storeTot, officeCost, company: {...company, debt: r2(company.debt), owner: r2(company.owner), unassigned: r2(company.unassigned)}, net,
+    return {stores, office, storeTot, officeCost, company: {...company, debt: r2(company.debt), owner: r2(company.owner), stock: r2(company.stock), unassigned: r2(company.unassigned)}, net,
       netPct: storeTot.sales ? net / storeTot.sales * 100 : null};
   }
 
@@ -4789,7 +4795,7 @@ function plModel(){
   const baseStore = Object.fromEntries(Object.values(PAYEES.all()).filter(p => p.store).map(p => [p.acc, PAY.unitOf(p.store)]));
   const accStoreN = Object.fromEntries(Object.entries(PLS.accStore || {}).map(([a, u]) => [a, u ? PAY.unitOf(u) : u]));
   const out = PL.build(pl, Object.keys(pay.units).length ? pay : null, tx, {catMode: PLS.cfg.catMode || {}, accStore: accStoreN, baseStore, manual: (manual || []).map(m => m.unit ? {...m, unit: PAY.unitOf(m.unit)} : m), officeUnits: PAY.OFFICE_UNITS, fixed, area: PLS.area || {}, monthSales, order: PAY.STORE_ORDER});
-  return {...out, a, z, months, pl, tx, A, docs, payMissing, payAdv, hasStmt: months.some(m => ((PLS.months[m.per] || {}).stmtAccs || []).length)};
+  return {...out, a, z, months, pl, tx, A, docs, payMissing, payAdv, hasStmt: months.some(m => ((PLS.months[m.per] || {}).stmtAccs || []).length || Object.values(DR.stmt || {}).some(D => D.per === m.per))};
 }
 // period bar shared with «Өдрийн тайлан»
 $('#pl-range').addEventListener('click', e => { const b = e.target.closest('button[data-f]'); if (!b) return; DR.range = b.dataset.f; if (DR.range === 'custom'){ const [x, y] = drRange(); DR.from = DR.from || x; DR.to = DR.to || y; } drSyncBar(); });
@@ -4823,7 +4829,7 @@ function renderPL(){
   if (!$('#pl-body')) return;
   $$('#pl-range button').forEach(b2 => b2.setAttribute('aria-pressed', b2.dataset.f === DR.range)); $('#pl-custom').hidden = DR.range !== 'custom';
   { const [x, y] = drRange(); $('#pl-day').value = DR.day || y; $('#pl-from').value = DR.from || x; $('#pl-to').value = DR.to || y; }
-  const M = plModel(); const ST = M.stores; const pl = M.pl;
+  const M = plModel(); const ST = M.stores; const pl = M.pl; PLS.lastM = M;
   $('#pl-title').textContent = `Дотоод тайлан · ${M.a === M.z ? M.a : M.a + ' – ' + M.z} (${daysBetween(M.a, M.z)} хоног)`;
   const warn = [];
   const L = daysBetween(M.a, M.z), noRep = []; for (let d = M.a; d <= M.z; d = shiftDay(d, 1)) if (!DR.days[d] && d < today()) noRep.push(d);
@@ -4845,7 +4851,10 @@ function renderPL(){
   const cmp = [['Дэлгүүрүүдийн ашиг', M.storeTot.result], ['− Оффисын зардал (цалин, оффист оноосон)', -(M.officeCost - closedCost)], ...(closedCost ? [['± Хаагдсан салбарууд (Е-март, Эрдэнэт, УИД, Хан-Уул, Кинг тауэр): бохир ашиг − зардал', -closedCost]] : []), ...Object.entries(M.company.byCat).sort((a, b) => b[1] - a[1]).map(([k, v]) => [`− ${esc(VIVI_CAT_LABEL(k))} (салбарт хуваарилаагүй)`, -v])];
   $('#pl-company').innerHTML = cmp.map(([l, v]) => `<tr><td>${l}</td><td class="n">${sgnC(v)}</td></tr>`).join('')
     + `<tr style="font-weight:700"><td>Компанийн цэвэр ашиг</td><td class="n">${sgnC(M.net)} <span class="note">(${pct(M.netPct)})</span></td></tr>`
-    + `<tr><td class="note">Тусад нь: зээл, хүүгийн төлбөр</td><td class="n note">${fmt(M.company.debt)}</td></tr><tr><td class="note">Тусад нь: эзэмшигч рүү (хувийн)</td><td class="n note">${fmt(M.company.owner)}</td></tr>`;
+    + `<tr><td class="note">Тусад нь: зээл, хүүгийн төлбөр</td><td class="n note">${fmt(M.company.debt)}</td></tr><tr><td class="note">Тусад нь: эзэмшигч рүү (хувийн)</td><td class="n note">${fmt(M.company.owner)}</td></tr>`
+    + `<tr><td class="note">Тусад нь: бараа худалдан авалт — нийлүүлэгчид төлсөн</td><td class="n note">${fmt(M.company.stock || 0)}</td></tr>`
+    + `<tr><td colspan="2" style="padding-top:10px"><b>📦 Бараа ба мөнгө</b><div class="note" style="margin-top:4px">Зарагдсан барааны өртөг (ашгаас аль хэдийн хассан): <b>${fmt(M.storeTot.cost)}</b> · Энэ хугацаанд нийлүүлэгчид төлсөн: <b>${fmt(M.company.stock || 0)}</b> → ${M.storeTot.cost - (M.company.stock || 0) >= 0 ? `бараа нөөц ойролцоогоор <b>${fmt(M.storeTot.cost - (M.company.stock || 0))}</b>-аар буурч мөнгө болсон (зарсан барааг нөхөж аваагүй)` : `бараа нөөц ойролцоогоор <b>${fmt((M.company.stock || 0) - M.storeTot.cost)}</b>-аар нэмэгдсэн (зарснаасаа их бараа авсан)`}.</div></td></tr>`;
+  if ((PLS.cfg.catMode || {}).goods === 'cost') $('#pl-company').innerHTML = `<tr><td colspan="2"><div class="banner bad">«Бараа, нийлүүлэгч» ангиллыг <b>Зардал</b> гэж тохируулсан байна — бараа хоёр удаа хасагдаж байна (өртгөөр нэг, төлбөрөөр дахин). Доорх «Ангилал» хүснэгтээс «Бараа худалдан авалт» болгоно уу.</div></td></tr>` + $('#pl-company').innerHTML;
   // fixed costs settings + comparison
   const FXC = (PLS.fixedCfg || {}).units || {}, perZ = M.z.slice(0, 7), cur = PL.fixedFor(FXC, perZ);
   const fu = [...new Set([...M.stores.map(x => x.unit), ...M.office.map(x => x.unit), ...Object.keys(FXC), ...plUnits()])].filter(u => u !== PAY.CLOSED && !/Е-март|Эрдэнэт|^УИД$|Хан-Уул|Кинг/.test(u));
@@ -4930,6 +4939,64 @@ document.addEventListener('click', async e => {
 $('#pl-area-save').addEventListener('click', async () => { if (!db) return; const area = {};
   $$('#pl-area input').forEach(el => { const v = (parseAmt(String(el.value)) || 0); if (v) area[el.dataset.unit] = v; });
   try{ await db.doc('config/plarea').set({area, at: new Date().toISOString(), by: me}); $('#pl-area-msg').textContent = 'Хадгаллаа.'; }catch(e){ $('#pl-area-msg').textContent = 'Хадгалж чадсангүй.'; } });
+
+// ===================== 💵 cash flow of the period: where the money came from and where it went =====================
+// opening = recorded balance on the first day (morning); closing = the morning AFTER the last day (card / POS money of the last day lands then)
+const CF_GROUP = {rent: 'op', f1: 'op', media: 'op', repair: 'op', travel: 'op', fuel: 'op', fee: 'op', tax: 'op', ops: 'op', other: 'op', salary: 'op', refund: 'op', fx: 'op',
+  goods: 'stock', cargo: 'stock', bank: 'debt', ploan: 'debt', own_md: 'owner', own_eb: 'owner', hipay: 'owner'};
+const CF_LABEL = {op: 'Үйл ажиллагааны зардал', stock: 'Бараа худалдан авалт (нийлүүлэгч, тээвэр)', debt: 'Зээл, хүү (банк, ББСБ, хувийн)', owner: 'Эзэмшигч (хувийн)'};
+function plCashflow(){
+  const box = $('#pl-cf'); if (!box) return; const M = PLS.lastM; if (!M || !DR.canFlow){ box.innerHTML = '<p class="note">Мөнгөн урсгал харахад «Банкны гүйлгээ» ба «Дансны үлдэгдэл» эрх хэрэгтэй.</p>'; return; }
+  const a = M.a, z = M.z, end = shiftDay(z, 1);
+  if (typeof stmtFromRuns === 'function') stmtFromRuns(a, z);
+  const bals = S.balances.map(b => ({date: b.date, at: b.at, total: BAL_ACCS.reduce((q, [k]) => q + (+((b.items || {})[k]) || 0), 0)})).sort((x, y) => x.date.localeCompare(y.date));
+  const open = bals.filter(b => b.date <= a).pop() || null, close = bals.find(b => b.date === end) || null;
+  const out = drFlowTx(open && open.date < a ? open.date : a, z);
+  const pkRun = (S.runs || []).filter(r => r.waterfall && r.waterfall.credit && r.waterfall.credit.smart > 0 && r.waterfall.credit.pk != null).sort((x, y) => String(y.d1).localeCompare(String(x.d1)))[0];
+  const F = DAILY.flow(Object.values(DR.days), out, bals, a, z, pkRun ? Math.min(1, pkRun.waterfall.credit.pk / pkRun.waterfall.credit.smart) : 0);
+  const inP = F.rows.reduce((q, r) => ({bank: q.bank + r.bank, cash: q.cash + r.cash, sp: q.sp + (r.crSp || 0), pk: q.pk + (r.crPk || 0)}), {bank: 0, cash: 0, sp: 0, pk: 0});
+  const G = {op: {}, stock: {}, debt: {}, owner: {}}; for (const t of out.filter(t => t.date >= a && t.date <= z)){ const g = CF_GROUP[t.cat] || 'op'; G[g][t.cat] = (G[g][t.cat] || 0) + t.amount; }
+  const gs = g => Object.values(G[g]).reduce((q, v) => q + v, 0), inT = inP.bank + inP.cash + inP.sp + inP.pk, opT = gs('op'), opCash = inT - opT, net = opCash - gs('stock') - gs('debt') - gs('owner');
+  // if the opening balance is older than the first day, roll it forward to the first morning
+  let openV = open ? open.total : null; if (open && open.date < a){ const pre = DAILY.flow(Object.values(DR.days), out, bals, open.date, shiftDay(a, -1), 0); openV = pre.exp ? pre.exp.value : open.total; }
+  const calcEnd = openV != null ? openV + net : null, diff = calcEnd != null && close ? close.total - calcEnd : null;
+  const hm = b => b && b.at ? ' ' + fmtDT(b.at).slice(11) : '';
+  const line = (l, v, o = {}) => `<tr${o.b ? ' style="font-weight:700"' : ''}${o.bg ? ` style="background:${o.bg}${o.b ? ';font-weight:700' : ''}"` : ''}><td style="padding-left:${o.ind ? 22 : 8}px">${l}</td><td class="n">${v == null ? '—' : (o.sign ? sgnC(v) : fmt(v))}</td><td class="note">${o.note || ''}</td></tr>`;
+  const det = g => Object.entries(G[g]).sort((x, y) => y[1] - x[1]).map(([k, v]) => line(esc(VIVI_CAT_LABEL(k)), -v, {ind: 1, sign: 1})).join('');
+  // stock and receivables
+  const crSales = Object.entries(F.creditBy), spSold = crSales.filter(([f]) => /store\s*pay|стор\s*пэй|сторпэй/i.test(f)).reduce((q, [, v]) => q + v, 0), stSold = crSales.filter(([f]) => !/store\s*pay|стор\s*пэй|сторпэй|pocket|покет|zero/i.test(f) && /^Зээл:/.test(f)).reduce((q, [, v]) => q + v, 0);
+  const cogs = M.storeTot ? M.storeTot.cost : 0, buy = gs('stock');
+  // weeks
+  const W = {}; const wk = d => { const t = new Date(d + 'T00:00:00Z'), w = (t.getUTCDay() + 6) % 7; return new Date(t.getTime() - w * 864e5).toISOString().slice(0, 10); };
+  for (const r of F.rows){ const k = wk(r.date), o = W[k] = W[k] || {in: 0, op: 0, stock: 0, debt: 0, owner: 0}; o.in += r.bank + r.cash + (r.crSp || 0) + (r.crPk || 0); }
+  for (const t of out.filter(t => t.date >= a && t.date <= z)){ const o = W[wk(t.date)] = W[wk(t.date)] || {in: 0, op: 0, stock: 0, debt: 0, owner: 0}; o[CF_GROUP[t.cat] || 'op'] += t.amount; }
+  const miss = []; if (!open) miss.push(`${a}-ны (эсвэл өмнөх) дансны үлдэгдэл бүртгэлгүй`); if (!close) miss.push(`${end}-ны өглөөний дансны үлдэгдэл бүртгэлгүй — хаалтын үлдэгдлийг дараа өдрийн өглөө бүртгэнэ (сүүлийн өдрийн карт/POS мөнгө тэр өглөө ордог)`);
+  if (F.exp && F.exp.missing.length) miss.push(`Өдрийн тайлангүй: ${F.exp.missing.length} өдөр`);
+  box.innerHTML = `${miss.length ? `<div class="banner" style="background:var(--warn-soft)">${miss.map(esc).join('<br>')}</div>` : ''}
+    <div class="tbl"><table><tbody>
+      ${line(`<b>Эхлэх үлдэгдэл</b> (${esc(a)} өглөө${open && open.date < a ? `; ${esc(open.date)}-ны бүртгэлээс тооцсон` : hm(open)})`, openV, {b: 1})}
+      ${line('<b>+ Борлуулалтаас орсон</b>', inT, {b: 1, note: 'Smart-ын төлбөрийн хэлбэрээр'})}
+      ${line('Карт, QPay, шилжүүлэг (шимтгэлгүй)', inP.bank, {ind: 1})}${line('Бэлэн мөнгө', inP.cash, {ind: 1, note: 'тушаасан гэж үзсэн'})}
+      ${line('StorePay', inP.sp, {ind: 1, note: 'өмнөх сарын StorePay борлуулалт — сарын дараа орно'})}${inP.pk >= 1 ? line('Pocket', inP.pk, {ind: 1, note: 'тухайн өдөртөө'}) : ''}
+      ${line('<b>− ' + CF_LABEL.op + '</b>', -opT, {b: 1, sign: 1})}${det('op')}
+      ${line('= Үйл ажиллагааны мөнгөн урсгал', opCash, {b: 1, sign: 1, bg: 'var(--sunk)', note: 'дэлгүүрүүд өөрсдийгөө санхүүжүүлж байна уу'})}
+      ${line('<b>− ' + CF_LABEL.stock + '</b>', -buy, {b: 1, sign: 1})}${det('stock')}
+      ${line('<b>− ' + CF_LABEL.debt + '</b>', -gs('debt'), {b: 1, sign: 1})}${det('debt')}
+      ${line('<b>− ' + CF_LABEL.owner + '</b>', -gs('owner'), {b: 1, sign: 1})}${det('owner')}
+      ${line('= Мөнгөний цэвэр өөрчлөлт', net, {b: 1, sign: 1, bg: 'var(--sunk)'})}
+      ${line(`<b>Тооцоолсон хаалтын үлдэгдэл</b> (${esc(end)} өглөө)`, calcEnd, {b: 1})}
+      ${line(`Бүртгэсэн бодит үлдэгдэл (${esc(end)}${hm(close)})`, close ? close.total : null)}
+      ${diff != null ? line('<b>Тайлбаргүй зөрүү</b>', diff, {b: 1, sign: 1, bg: Math.abs(diff) > 1000000 ? 'var(--bad-soft, #fde8e8)' : 'var(--ok-soft, #e8f6ec)', note: Math.abs(diff) > 1000000 ? '«Борлуулалт → Хүлээгдэж буй үлдэгдэл»-ийн 🔎 хэсгээс шалгана' : 'бараг таарч байна'}) : ''}
+    </tbody></table></div>
+    <div class="row" style="gap:16px;flex-wrap:wrap;margin-top:10px;align-items:flex-start">
+      <div style="flex:1;min-width:280px"><b>📦 Бараа</b><div class="note" style="margin-top:4px">Зарагдсан барааны өртөг: <b>${fmt(cogs)}</b><br>Худалдан авсан (төлсөн): <b>${fmt(buy)}</b><br>${cogs - buy >= 0 ? `→ нөөц ~<b>${fmt(cogs - buy)}</b>-аар буурч мөнгө болсон — энэ барааг дараа нь нөхөж авах хэрэгтэй` : `→ нөөц ~<b>${fmt(buy - cogs)}</b>-аар өссөн — мөнгө бараанд суусан`}</div></div>
+      <div style="flex:1;min-width:280px"><b>🧾 Авлага</b><div class="note" style="margin-top:4px">StorePay-ээр зарсан (дараа сард орно): <b>${fmt(spSold)}</b><br>Ажилтан, гэр бүл зээлээр авсан бараа: <b>${fmt(stSold)}</b></div></div>
+    </div>
+    <h3 style="margin:14px 0 6px">7 хоногоор</h3>
+    <div class="tbl"><table><thead><tr><th>7 хоног</th><th class="n">Орсон</th><th class="n">Үйл ажиллагаа</th><th class="n">Бараа</th><th class="n">Зээл</th><th class="n">Эзэмшигч</th><th class="n">Цэвэр</th></tr></thead><tbody>${Object.entries(W).sort().map(([k, o]) => { const n = o.in - o.op - o.stock - o.debt - o.owner; return `<tr><td class="mono">${esc(k > a ? k : a)} – ${esc(shiftDay(k, 6) < z ? shiftDay(k, 6) : z)}</td><td class="n">${fmt(o.in)}</td><td class="n">−${fmt(o.op)}</td><td class="n">−${fmt(o.stock)}</td><td class="n">−${fmt(o.debt)}</td><td class="n">−${fmt(o.owner)}</td><td class="n"><b>${sgnC(n)}</b></td></tr>`; }).join('')}</tbody></table></div>
+    <p class="note">Гарсан мөнгө: банкны хуулга (хяналтад оруулсан) + хуулгагүй өдрүүдэд имэйл мэдэгдэл. Данс хоорондын шилжүүлэг тооцохгүй. 👤 тэмдэглэсэн гүйлгээ «Эзэмшигч» мөрөнд.</p>`;
+}
+{ const _rp = renderPL; renderPL = function(){ _rp(); try{ plCashflow(); }catch(e){ console.warn('cashflow', e); } }; }
 // ---------- daily report (Өдрийн тайлан) ----------
 // days before DR_FROM are not kept live — they load on demand for the period being looked at
 const DR_FROM = (() => { const t = new Date(Date.now() + 8 * 3600e3 - 150 * 86400e3); return t.toISOString().slice(0, 10); })();
