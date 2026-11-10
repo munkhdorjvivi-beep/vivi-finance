@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd121</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd124</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -4398,7 +4398,13 @@ function draftFlags(d){
 $('#pay-send').addEventListener('click', async () => {
   const d = PS.draft; if (!d || !db) return;
   if (!/^\d{4}-\d{2}$/.test(d.per)){ $('#pay-msg').textContent = 'Сарыг сонгоно уу.'; return; }
-  const id = d.per + '-' + d.kind + (PS.lists.some(l => l.id === d.per + '-' + d.kind) ? '-' + Date.now().toString(36) : '');
+  const ex = PS.lists.filter(l => l.per === d.per && l.kind === d.kind && payStatus(l) !== 'rejected').sort((a, b) => String(b.at).localeCompare(String(a.at)))[0];
+  const canRep = ex && (isOwner || (ex.by === me && !PS.decs[ex.id]));
+  let replace = false;
+  if (ex && canRep) replace = confirm(`${d.per} · ${PAY.KIND_LABEL[d.kind] || d.kind} жагсаалт аль хэдийн байна (${ex.file || ''}, ${fmtDT(ex.at)}).\n\nOK — хуучныг энэ шинэ файлаар СОЛИХ.\nCancel — болих.`);
+  else if (ex && !canRep){ $('#pay-msg').textContent = 'Энэ сарын жагсаалт аль хэдийн зөвшөөрөгдсөн — солих бол эзэмшигч солино (эсвэл эзэмшигчээр устгуулна).'; return; }
+  if (ex && !replace) return;
+  const id = replace ? ex.id : d.per + '-' + d.kind;
   $('#pay-send').disabled = true; $('#pay-msg').textContent = 'Илгээж байна…';
   if (typeof upLog === 'function') upLog({kind: 'payroll', file: d.file || '', a: d.per, z: d.per, n: (d.people || []).length, note: d.per + ' · ' + (d.kind || '')});
   const arch = isOwner && $('#pay-arch').checked;
@@ -4406,10 +4412,11 @@ $('#pay-send').addEventListener('click', async () => {
     const flags = draftFlags(d);
     const people = d.people.map(p => ({key: p.key, name: p.name, ovog: p.ovog, pos: p.pos, dept: p.dept, amt: p.amt, accs: p.accs, owed: p.owed, closed: p.closed,
       parts: p.parts.map(q => { const o = {sheet: q.sheet, dept: q.dept, code: q.code, acc: q.acc, accRaw: q.accRaw, bank: q.bank, amt: q.amt, base: q.base, fund: q.fund, worked: q.worked, ins: q.ins, owed: q.owed, closed: q.closed,
-        gross: q.gross || 0, ndshEmp: q.ndshEmp || 0, ndshEe: q.ndshEe || 0, pit: q.pit || 0, calc: q.calc || 0, extra: q.extra || 0};
+        gross: q.gross || 0, ndshEmp: q.ndshEmp || 0, ndshEe: q.ndshEe || 0, pit: q.pit || 0, calc: q.calc || 0, extra: q.extra || 0, advPaid: q.advPaid || 0};
         if (q.expected != null){ o.expected = q.expected; o.ruleDiff = q.ruleDiff; } return o; })}));
     await db.doc('payroll/' + id).set({per: d.per, kind: d.kind, file: d.file, by: me, at: new Date().toISOString(), people, total: d.total, count: d.count, nTotal: d.nTotal,
-      warnings: d.warnings || [], flags, accs: [...new Set(people.flatMap(p => p.accs))], marks: {}, extra: {}, stmtTx: [], ownerNotified: arch, archive: arch});
+      warnings: d.warnings || [], flags, accs: [...new Set(people.flatMap(p => p.accs))], marks: replace ? ex.marks || {} : {}, extra: replace ? ex.extra || {} : {}, stmtTx: replace ? ex.stmtTx || [] : [], ownerNotified: arch, archive: arch,
+      ...(replace ? {replacedAt: new Date().toISOString(), replacedFile: ex.file || '', replacedBy: me} : {})});
     PS.draft = null; $('#pay-file').value = ''; PS.sel = id; $('#pay-arch').checked = false; $('#pay-msg').textContent = arch ? 'Архивт хадгаллаа.' : 'Илгээгдлээ. Эзэмшигч зөвшөөрсний дараа шилжүүлнэ үү.';
   }catch(err){ console.warn(err); $('#pay-msg').textContent = 'Илгээж чадсангүй: ' + (err.code || err.message || ''); }
   finally{ $('#pay-send').disabled = false; renderPay(); }
@@ -4458,8 +4465,10 @@ document.addEventListener('click', async e => {
         to: l.by, per: l.per, kind: l.kind, total: l.total, count: l.count, notified: false});
     } else if (act === 'resend'){
       await db.doc('payroll/' + l.id).update({resentAt: new Date().toISOString(), ownerNotified: false});
+    } else if (act === 'replace'){
+      $('#pay-file').scrollIntoView({behavior: 'smooth', block: 'center'}); $('#pay-msg').textContent = `${perLabel(l)}: шинэ файлаа сонгоод «Илгээх» дарна уу — хуучныг солих эсэхийг асууна.`; $('#pay-file').click();
     } else if (act === 'delete'){
-      if (confirm('Энэ жагсаалтыг устгах уу?')){ await db.doc('payroll/' + l.id).delete(); PS.sel = null; }
+      const sAp = payStatus(l) === 'approved'; if (confirm(sAp ? 'Энэ жагсаалт ЗӨВШӨӨРӨГДСӨН байна. Устгавал зардал, шалгалтаас хасагдана (шилжүүлсэн гүйлгээ өөрчлөгдөхгүй). Устгах уу?' : 'Энэ жагсаалтыг устгах уу? Дараа нь зөв файлаа дахин оруулж болно.')){ await db.doc('payroll/' + l.id).delete(); if (PS.decs[l.id]) await db.doc('paydec/' + l.id).delete().catch(() => {}); PS.sel = null; }
     } else if (act === 'cash'){
       const p = l.people.find(x => x.key === b.dataset.key); const r = payModel().lists[l.id].people[p.key];
       const left = Math.round((p.amt - (r ? r.sum : 0)) * 100) / 100;
@@ -4527,7 +4536,8 @@ function renderPayList(l, m){
   let acts = '';
   if (isOwner && (s === 'pending' || s === 'hold') && !l.archive) acts = `<input id="pay-cm" placeholder="Тайлбар (заавал биш)" style="max-width:300px"><button class="btn ok" data-pay="approve">Зөвшөөрөх</button><button class="btn hold" data-pay="hold">⏸ Хүлээлгэх</button><button class="btn bad" data-pay="reject">Татгалзах</button>`;
   if (!isOwner && s === 'hold') acts += `<button class="btn primary" data-pay="resend">↻ Дахин илгээх</button>`;
-  if ((isOwner || l.by === me) && (s !== 'approved')) acts += `<button class="btn" data-pay="delete">Устгах</button>`;
+  if (isOwner || (l.by === me && s !== 'approved')) acts += `<button class="btn" data-pay="delete">🗑 Устгах</button>`;
+  if (isOwner || (l.by === me && !PS.decs[l.id])) acts += `<button class="btn" data-pay="replace" title="Шинэ файл сонгоод «Илгээх» дарвал энэ жагсаалтыг солино">↻ Файлаар солих</button>`;
   acts += `<button class="btn" data-pay="xlsx">📥 Excel</button>`;
   const pct = l.total ? Math.round(r.paidSum / l.total * 100) : 0;
   $('#pay-head').innerHTML = `<div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(perLabel(l))}</h2><span class="chip ${st[1]}">${st[0]}</span></div>
@@ -4629,7 +4639,9 @@ const STORES_ALL = '★ Бүх салбар';
 function payCostData(){
   const C = PAY.costs(PS.lists.filter(l => payStatus(l) !== 'rejected'));
   const from = $('#pc-from').value, to = $('#pc-to').value;
-  return C.filter(m => (!from || m.per >= from) && (!to || m.per <= to));
+  // the history starts at the first month with a final list (Oct 2026): older months with only an advance are left out, so nothing half-done is compared
+  const first = (C.find(m => m.final) || {}).per;
+  return C.filter(m => (!from || m.per >= from) && (!to || m.per <= to) && (!first || m.final || m.per > first));
 }
 function unitOrder(C){
   const tot = {}; for (const m of C) for (const u of Object.values(m.units)) tot[u.unit] = (tot[u.unit] || 0) + (u.cost != null ? u.cost : u.paid);
@@ -4684,10 +4696,10 @@ function renderPayCost(){
   if (mm){
     const us = pcUnit === '' ? Object.values(mm.units) : pcUnit === STORES_ALL ? Object.values(mm.units).filter(x => !x.office) : [mm.units[pcUnit]].filter(Boolean);
     const rows = us.flatMap(u => u.people.map(p => ({...p, unit: u.unit}))).sort((a, b) => a.unit.localeCompare(b.unit) || (b.cost - a.cost));
-    $('#pc-people').innerHTML = `<h2 style="font-size:14px">${esc(mm.per.replace('-', '.'))} · ${esc(pcUnit === '' ? 'бүх салбар' : pcUnit === STORES_ALL ? 'бүх дэлгүүр' : pcUnit)} — ${rows.length} ажилтан</h2>
+    $('#pc-people').innerHTML = payCheckHTML(mm.per) + `<h2 style="font-size:14px">${esc(mm.per.replace('-', '.'))} · ${esc(pcUnit === '' ? 'бүх салбар' : pcUnit === STORES_ALL ? 'бүх дэлгүүр' : pcUnit)} — ${rows.length} ажилтан</h2>
       <div class="tbl"><table><thead><tr><th>Салбар</th><th>Ажилтан</th><th>Албан тушаал</th><th class="n">Олговол зохих</th><th class="n">Нийт зардал</th><th class="n">Урьдчилгаа</th><th class="n">Сүүл цалин</th></tr></thead><tbody>
       ${rows.map(p => `<tr><td>${esc(p.unit)}</td><td>${esc(p.name)}</td><td class="note">${esc(p.pos || '')}</td><td class="n">${mm.final ? fmt(p.gross) : '–'}</td><td class="n">${mm.final ? fmt(p.cost) : '–'}</td><td class="n">${fmt(p.adv)}</td><td class="n">${fmt(p.net)}</td></tr>`).join('')}</tbody></table></div>`;
-  } else $('#pc-people').innerHTML = '<p class="note" style="margin:0">Сарын мөр дээр дарж ажилчдын жагсаалтыг харна.</p>';
+  } else { const lf = C.filter(m => m.final).pop(); $('#pc-people').innerHTML = (lf ? payCheckHTML(lf.per) : '') + '<p class="note" style="margin:0">Сарын мөр дээр дарж ажилчдын жагсаалтыг харна.</p>'; }
 }
 $('#pc-xlsx').addEventListener('click', () => {
   const C = payCostData(); if (!C.length) return; const units = unitOrder(C);
@@ -4710,6 +4722,39 @@ $('#pc-xlsx').addEventListener('click', () => {
     XS.writeFile(wb, `VIVI_tsalingiin_zardal_${C[0].per}_${C[C.length - 1].per}.xlsx`);
   });
 });
+
+// ---------- ✔ checks of one month's payroll lists: duplicated rows, the net pay formula, advance vs final, jump vs previous month ----------
+function payCheckHTML(per){
+  const pick = kind => (PS.lists || []).filter(l => l.per === per && l.kind === kind).sort((a, b) => String(b.at).localeCompare(String(a.at)))[0];
+  const fin = pick('final'), adv = pick('adv'), I = [];
+  if (!fin) return `<div class="banner" style="background:var(--warn-soft);margin-bottom:8px">${esc(per)}: <b>сүүл цалингийн жагсаалт ороогүй</b> — хүснэгтэд зөвхөн урьдчилгаа харагдаж байна, тиймээс бусад сартай харьцуулахад хагас мэт харагдана.</div>`;
+  const parts = fin.people.flatMap(p => (p.parts || []).map(q => ({...q, pname: p.name, pkey: p.key})));
+  // 1) the same row twice (e.g. a summary sheet repeating everyone)
+  const seen = {}; for (const q of parts){ const k = q.code + '|' + (q.ndsh ? 1 : 0) + '|' + q.gross; (seen[k] = seen[k] || []).push(q); }
+  const dup = Object.values(seen).filter(L => L.length > 1);
+  if (dup.length) I.push(['bad', `Давхардсан мөр: <b>${dup.length}</b> ажилтан нэг жагсаалтад 2+ удаа (нийт илүү «Олговол зохих» ${fmt(dup.reduce((s2, L) => s2 + L.slice(1).reduce((q, x) => q + x.gross, 0), 0))}) — хуудсууд: ${esc([...new Set(dup.flatMap(L => L.map(x => x.sheet)))].join(', '))}. ${dup.slice(0, 8).map(L => esc(L[0].pname)).join(', ')}${dup.length > 8 ? '…' : ''}`]);
+  else I.push(['ok', 'Давхардсан мөр алга']);
+  const oldList = !parts.some(q => q.advPaid !== undefined);
+  if (oldList) I.push(['warn', 'Энэ жагсаалт хуучин хувилбараар орсон тул «урьдчилгаа суутгасан» багана хадгалагдаагүй — урьдчилгаа ба «Гарт олгох» томъёог шалгахын тулд жагсаалтыг нээгээд <b>«↻ Файлаар солих»</b>-оор ижил файлаа дахин оруулна уу.']);
+  // 2) net pay = gross − social insurance − income tax − advance − receivables closed
+  const bad = oldList ? [] : parts.map(q => ({q, d: Math.round((q.gross || 0) - (q.ndshEe || 0) - (q.pit || 0) - (q.advPaid || 0) - (q.closed || 0) - (q.amt || 0))})).filter(x => Math.abs(x.d) > 1000);
+  if (!oldList) I.push([bad.length ? 'warn' : 'ok', bad.length ? `«Гарт олгох» = Олговол зохих − НДШ − ХХОАТ − урьдчилгаа − авлага хаах томъёонд таарахгүй: <b>${bad.length}</b> мөр (нийт зөрүү ${sgn(bad.reduce((s2, x) => s2 + x.d, 0))}) — бусад суутгал байж болно: ${bad.slice(0, 6).map(x => `${esc(x.q.pname)} ${sgn(x.d)}`).join(', ')}${bad.length > 6 ? '…' : ''}` : '«Гарт олгох» бүх мөрөнд томъёогоор таарч байна']);
+  // 3) the advance deducted in the final list = the advance actually paid
+  if (adv && !oldList){ const A = {}, F = {}; for (const p of adv.people) A[p.key] = (A[p.key] || 0) + p.amt; for (const q of parts) F[q.pkey] = (F[q.pkey] || 0) + (q.advPaid || 0);
+    const keys = new Set([...Object.keys(A), ...Object.keys(F)]), nm = Object.fromEntries(fin.people.concat(adv.people).map(p => [p.key, p.name]));
+    const df = [...keys].map(k => ({k, d: Math.round((F[k] || 0) - (A[k] || 0))})).filter(x => Math.abs(x.d) > 1000);
+    I.push([df.length ? 'warn' : 'ok', df.length ? `Урьдчилгаа: сүүл цалингийн жагсаалтад суутгасан ≠ урьдчилгааны жагсаалтаар олгосон — <b>${df.length}</b> ажилтан: ${df.slice(0, 8).map(x => `${esc(nm[x.k] || x.k)} ${sgn(x.d)}`).join(', ')}${df.length > 8 ? '…' : ''}` : `Урьдчилгаа таарч байна (олгосон ${fmt(Object.values(A).reduce((a, b) => a + b, 0))})`]);
+    const onlyF = fin.people.filter(p => !A[p.key] && p.parts.some(q => q.gross > 0)).length; if (onlyF) I.push(['note', `${onlyF} ажилтан урьдчилгаа аваагүй (шинэ эсвэл урьдчилгаагүй)`]); }
+  else if (!adv) I.push(['warn', 'Энэ сарын урьдчилгааны жагсаалт системд алга — суутгасан урьдчилгааг шалгах боломжгүй']);
+  // 4) compared with the previous month that has a final list
+  const C = payCostData(), cur = C.find(m => m.per === per), prev = C.filter(m => m.final && m.per < per).pop();
+  if (cur && prev){ const ch = (cur.total.cost - prev.total.cost) / prev.total.cost * 100; I.push([Math.abs(ch) > 20 ? 'warn' : 'ok', `Өмнөх бүрэн сар (${esc(prev.per)}) ${fmt(prev.total.cost)} → ${fmt(cur.total.cost)} (${ch > 0 ? '+' : ''}${ch.toFixed(1)}%, ажилтан ${prev.total.n} → ${cur.total.n})`]); }
+  else if (cur) I.push(['note', 'Харьцуулах өмнөх бүрэн сар алга — өмнөх сарын сүүл цалингийн файлыг «Архив»-аар оруулбал сар сараар харьцуулна']);
+  const sum = f => fmt(parts.reduce((s2, q) => s2 + (q[f] || 0), 0));
+  return `<div class="card" style="margin:0 0 10px;padding:10px 12px"><b>✔ ${esc(per.replace('-', '.'))} цалингийн шалгалт</b>
+    <div class="note" style="margin:4px 0">Олговол зохих ${sum('gross')} + ажил олгогчийн НДШ ${sum('ndshEmp')} = <b>зардал ${fmt(parts.reduce((s2, q) => s2 + (q.gross || 0) + (q.ndshEmp || 0), 0))}</b> · үүнээс урьдчилгаа ${sum('advPaid')}, сүүл цалин (гарт) ${sum('amt')}, НДШ (ажилтан) ${sum('ndshEe')}, ХХОАТ ${sum('pit')}</div>
+    <ul style="margin:4px 0 0 18px;padding:0">${I.map(([k, h]) => `<li style="margin:3px 0">${k === 'bad' ? '❗ ' : k === 'ok' ? '✓ ' : k === 'warn' ? '⚠ ' : ''}${h}</li>`).join('')}</ul></div>`;
+}
 // ---------- internal report (Дотоод тайлан) ----------
 const PLS = {months: {}, sel: '', cfg: {catMode: {}}, fixedCfg: {units: {}}, accStore: {}, ext: {}, draft: null, supUnit: '', open: {}};
 // active units (Nov 2026): Food City, Dragon, Online; Нийслэл opening; closed stores still show when a period has their data
