@@ -125,6 +125,7 @@ tr.dim td{opacity:.5}
 @media (max-width:640px){.rs-tiles{grid-template-columns:repeat(2,1fr)}}
 .wh-price{font-size:46px;font-weight:800;font-family:ui-monospace,monospace;margin:6px 0;letter-spacing:1px}
 @media (max-width:640px){.wh-big{font-size:30px}}
+  .kpi[data-kgo]{cursor:pointer;transition:transform .08s, box-shadow .15s} .kpi[data-kgo]:hover{box-shadow:0 2px 10px rgba(0,0,0,.08)} .kpi[data-kgo]:active{transform:scale(.98)}
 body{margin:0;background:var(--bg)}
 #gate{max-width:420px;margin:12vh auto 0;text-align:center}
 #gate .btn{margin-top:14px}
@@ -179,16 +180,16 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd139</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd141</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
 
   <section class="kpis" aria-label="Тойм">
-    <div class="kpi warn"><div class="l">Хүлээгдэж буй хүсэлт</div><div class="v" id="k-pend">–</div><div class="s" id="k-pend-s">&nbsp;</div></div>
-    <div class="kpi bad"><div class="l">Зөвшөөрөлгүй гүйлгээ</div><div class="v" id="k-unm">–</div><div class="s" id="k-unm-s">&nbsp;</div></div>
-    <div class="kpi bad"><div class="l">Тайлбаргүй бэлэн мөнгөний өдөр</div><div class="v" id="k-cash">–</div><div class="s" id="k-cash-s">&nbsp;</div></div>
-    <div class="kpi"><div class="l">Сүүлийн дансны үлдэгдэл</div><div class="v" id="k-bal">–</div><div class="s" id="k-bal-s">&nbsp;</div></div>
+    <div class="kpi warn" data-kgo="req" role="button" tabindex="0" title="Хүлээгдэж буй хүсэлтүүд рүү"><div class="l">Хүлээгдэж буй хүсэлт ›</div><div class="v" id="k-pend">–</div><div class="s" id="k-pend-s">&nbsp;</div></div>
+    <div class="kpi bad" data-kgo="bank" role="button" tabindex="0" title="Зөвшөөрөлгүй гүйлгээнүүд рүү"><div class="l">Зөвшөөрөлгүй гүйлгээ ›</div><div class="v" id="k-unm">–</div><div class="s" id="k-unm-s">&nbsp;</div></div>
+    <div class="kpi bad" data-kgo="cash" role="button" tabindex="0" title="Тайлбаргүй бэлэн мөнгө рүү"><div class="l">Тайлбаргүй бэлэн мөнгөний өдөр ›</div><div class="v" id="k-cash">–</div><div class="s" id="k-cash-s">&nbsp;</div></div>
+    <div class="kpi" data-kgo="bal" role="button" tabindex="0" title="Дансны үлдэгдэл рүү"><div class="l">Сүүлийн дансны үлдэгдэл ›</div><div class="v" id="k-bal">–</div><div class="s" id="k-bal-s">&nbsp;</div></div>
   </section>
 
   <div id="duty-banner" class="duty" hidden></div>
@@ -3308,7 +3309,32 @@ $('#rday-prev').addEventListener('click', () => setReqDay(shiftDay(reqDay || tod
 $('#rday-next').addEventListener('click', () => { const n = shiftDay(reqDay || today(), 1); if (n <= today()) setReqDay(n); });
 $('#rday-today').addEventListener('click', () => setReqDay(today()));
 $('#rday-all').addEventListener('click', () => setReqDay(''));
-bindFilter('#req-filter', f => reqFilter = f); bindFilter('#bank-filter', f => bankFilter = f); bindFilter('#cash-filter', f => cashFilter = f);
+bindFilter('#req-filter', f => reqFilter = f);
+// attachments: each pick ADDS files (a phone camera gives one photo at a time); a list with thumbnails and ✕ under the field
+function fileBag(sel){
+  const el = typeof sel === 'string' ? $(sel) : sel; if (!el || el._bag) return el && el._bag;
+  const box = document.createElement('div'); box.className = 'row'; box.style.cssText = 'gap:6px;flex-wrap:wrap;margin-top:6px;grid-column:1/-1'; box.className += ' bag-list'; (el.closest('label') || el).insertAdjacentElement('afterend', box); el._bagBox = box;
+  const B = el._bag = {list: [], files: () => B.list.slice(), clear(){ B.list = []; el.value = ''; draw(); }};
+  const draw = () => { box.innerHTML = B.list.map((f, i) => `<span class="chip c-grey" style="display:inline-flex;align-items:center;gap:6px;padding:3px 6px">${/^image\//.test(f.type) ? `<img src="${URL.createObjectURL(f)}" alt="" style="width:34px;height:34px;object-fit:cover;border-radius:4px">` : '📄'}<span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(f.name || 'зураг')}</span><button type="button" data-bag-x="${i}" style="border:0;background:none;cursor:pointer;font-size:15px;line-height:1" title="Хасах">✕</button></span>`).join('')
+      + (B.list.length ? `<span class="note">${B.list.length} файл · дахин сонговол нэмэгдэнэ</span>` : ''); };
+  el.addEventListener('change', () => { for (const f of el.files) if (!B.list.some(x => x.name === f.name && x.size === f.size && x.lastModified === f.lastModified)) B.list.push(f); el.value = ''; draw(); });
+  box.addEventListener('click', e => { const x = e.target.closest('[data-bag-x]'); if (!x) return; B.list.splice(+x.dataset.bagX, 1); draw(); });
+  const form = el.closest('form'); if (form) form.addEventListener('reset', () => B.clear());
+  return B;
+}
+const bagFiles = sel => { const el = $(sel); return el && el._bag ? el._bag.files() : [...((el && el.files) || [])]; };
+fileBag('#rq-file');
+// the KPI cards on top open the list behind the number (requests waiting, unapproved transfers, unexplained cash, balances)
+function kpiGo(k){
+  const pick = (id, f) => { const b = document.querySelector(`${id} button[data-f="${f}"]`); if (b) b.click(); };
+  const go = el => setTimeout(() => { const x = $(el); if (x) x.scrollIntoView({behavior: 'smooth', block: 'start'}); }, 80);
+  if (k === 'req'){ showTab('req'); if (typeof setRcMode === 'function') setRcMode('one'); pick('#req-filter', 'pending'); go('#req-filter'); }
+  else if (k === 'bank'){ showTab('bank'); setBankDay(null); pick('#bank-filter', 'none'); go('#bank-filter'); }
+  else if (k === 'cash'){ showTab('cash'); pick('#cash-filter', 'open'); go('#cash-filter'); }
+  else if (k === 'bal'){ showTab('bal'); }
+}
+document.addEventListener('click', e => { const c = e.target.closest('[data-kgo]'); if (c) kpiGo(c.dataset.kgo); });
+document.addEventListener('keydown', e => { const c = e.target.closest && e.target.closest('[data-kgo]'); if (c && (e.key === 'Enter' || e.key === ' ')){ e.preventDefault(); kpiGo(c.dataset.kgo); } }); bindFilter('#bank-filter', f => bankFilter = f); bindFilter('#cash-filter', f => cashFilter = f);
 $('#cash-store').addEventListener('change', e => { cashStore = e.target.value; render(); });
 $('#rq-from').innerHTML = FROM_ACCS.map(([a,l]) => `<option value="${a}">${esc(l)}</option>`).join('');
 const BAL_PRIV = new Set(['khan_md', 'khan_et', 'khan_eb', 'golomt_erka']);      // personal accounts used for the business; the rest are Вивекавикториа ХХК
@@ -3821,7 +3847,7 @@ function setReqEdit(r){
   if (!r){ $('#req-form').reset(); return; }
   $('#rq-payee').value = r.payee || ''; $('#rq-acc').value = r.payeeAcc || ''; $('#rq-bank').value = r.payeeBank || $('#rq-bank').value;
   $('#rq-amt').value = numFmt(r.amount); $('#rq-from').value = r.fromAcc || $('#rq-from').value; $('#rq-cat').value = r.category || $('#rq-cat').value;
-  const st = $('#rq-store'); if (st){ st.value = r.store || ''; if ($('#rq-alloc')) $('#rq-alloc').value = r.alloc || 'sales'; syncStoreChips(); } $('#rq-note').value = r.note || ''; $('#rq-file').value = '';
+  const st = $('#rq-store'); if (st){ st.value = r.store || ''; if ($('#rq-alloc')) $('#rq-alloc').value = r.alloc || 'sales'; syncStoreChips(); } $('#rq-note').value = r.note || ''; if ($('#rq-file')._bag) $('#rq-file')._bag.clear(); else $('#rq-file').value = '';
   $('#rq-msg').textContent = attList(r).length ? `Хавсаргасан ${attList(r).length} баримт хэвээр үлдэнэ; шинэ файл сонговол нэмэгдэнэ.` : '';
   $('#req-form-card').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
@@ -3837,7 +3863,7 @@ $('#req-form').addEventListener('submit', async e => {
   if (!payee || !acc || !(amount > 0)){ $('#rq-msg').textContent = 'Хүлээн авагч, данс, дүнг бөглөнө үү.'; return; }
   $('#rq-submit').disabled = true; $('#rq-msg').textContent = editingReq ? 'Хадгалж байна…' : 'Илгээж байна…';
   try{
-    const ups = []; const files = [...$('#rq-file').files];
+    const ups = []; const files = bagFiles('#rq-file');
     if (files.length){ if (!assets){ $('#rq-msg').textContent = 'Баримт оруулах эрх алга, хүсэлтийг баримтгүй илгээлээ.'; } else { for (const f of files){ const up = await assets.upload(f); ups.push({id: up.id, type: up.contentType}); } } }
     if (editingReq){
       const r = S.requests.find(x => x.id === editingReq); if (!r || !['pending','hold'].includes(reqStatus(r))){ $('#rq-msg').textContent = 'Энэ хүсэлтийг засах боломжгүй (аль хэдийн шийдвэрлэсэн).'; setReqEdit(null); return; }
@@ -6905,7 +6931,7 @@ $('#rs-form').addEventListener('submit', async e => {
   { const acc = $('#rs-acc').value.replace(/\s/g, ''), digits = acc.replace(/\D/g, '');
     if (!acc || digits.length < 6 || !/^(MN)?\d+$/i.test(acc)){ $('#rs-msg').textContent = 'Хүлээн авагчийн дансны дугаарыг зөв бичнэ үү (зөвхөн тоо, эсвэл MN-ээр эхэлсэн IBAN). Дансгүй хүсэлт илгээгдэхгүй.'; $('#rs-acc').focus(); return; } }
   $('#rs-submit').disabled = true; $('#rs-msg').textContent = 'Илгээж байна…';
-  try{ const ups = []; for (const f of [...$('#rs-file').files]){ const up = await assets.upload(f); ups.push({id: up.id, type: up.contentType}); }
+  try{ const ups = []; for (const f of bagFiles('#rs-file')){ const up = await assets.upload(f); ups.push({id: up.id, type: up.contentType}); }
     const v = {amount, what, payee: $('#rs-payee').value.trim(), payeeAcc: $('#rs-acc').value.trim().replace(/\s/g, ''), payeeBank: $('#rs-bank').value, store: $('#rs-store').value};
     const now = new Date().toISOString();
     if (RS.edit){ const d = RS.list.find(x => x.id === RS.edit); await db.doc('reqdraft/' + RS.edit).update({...v, attachments: ((d && d.attachments) || []).concat(ups), status: 'new', editedAt: now, comment: '', notified: false, hist: rsHist('new', 'засварласан')}); }
@@ -6954,6 +6980,8 @@ $('#rq-cancel-edit').addEventListener('click', () => { window.RQ_DRAFT = null; }
 document.addEventListener('click', e => { const t = e.target.closest('[data-rs-f]'); if (t){ RS.f = t.dataset.rsF; RS.open = undefined; renderRsMine(); return; }
   const o = e.target.closest('[data-rs-open]'); if (o){ RS.open = RS.open === o.dataset.rsOpen ? '' : o.dataset.rsOpen; renderRsMine(); } });
 function renderRs(){ renderRsMine(); renderRsInbox(); { const s = $('#rs-store'); if (s && !s.options.length){ s.innerHTML = '<option value="">—</option>' + REQ_STORES.map(u => `<option>${esc(u)}</option>`).join(''); const bk = $('#rs-bank'); bk.innerHTML = '<option value="">—</option>' + $('#rq-bank').innerHTML; } } }
+
+fileBag('#rs-file');
 // ===================== contracts (loans, leasing…): payment day, instalment, PDF; reminder 3 days before =====================
 const CT = {list: [], edit: null, open: '', f: 'act'};
 try{ const q = new URLSearchParams(location.search); if (q.get('c')) CT.open = q.get('c'); }catch(e){}
