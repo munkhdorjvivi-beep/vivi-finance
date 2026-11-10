@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd134</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd135</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -5589,10 +5589,10 @@ const BAL_MAP_DEFAULT = {tdb: ['405095875', '405096869', '405096868', '405102965
 const balMap = () => { const o = (S.cfg && S.cfg.balmap) || null; return o && Object.keys(o).length ? o : BAL_MAP_DEFAULT; };
 function stmtBalFor(date){
   const prev = shiftDay(date, -1), M = balMap(), seen = new Set(Object.values(DR.stmt || {}).map(D => D.acc)), out = {};
-  for (const [k] of BAL_ACCS){ const accs = M[k] || [], got = [], miss = []; let v = 0;
+  for (const [k] of BAL_ACCS){ const accs = M[k] || [], got = [], miss = [], nobal = []; let v = 0;
     for (const a of accs){ const D = (DR.stmt || {})[a + '_' + prev.slice(0, 7)], x = D && D.days && D.days[prev.slice(8)];
-      if (x && x.bal != null){ got.push([a, x.bal]); v += +x.bal; } else if (seen.has(a)) miss.push(a); }
-    out[k] = {value: Math.round(v * 100) / 100, got, miss, complete: got.length > 0 && !miss.length}; }
+      if (x && x.bal != null){ got.push([a, x.bal]); v += +x.bal; } else if (x){ miss.push(a); nobal.push(a); } else if (seen.has(a)) miss.push(a); }
+    out[k] = {value: Math.round(v * 100) / 100, got, miss, nobal, complete: got.length > 0 && !miss.length}; }
   return out;
 }
 function renderBalStmt(){
@@ -5601,7 +5601,7 @@ function renderBalStmt(){
   const lab = a => (VIVI.ACC_NAME || {})[a] || a;
   box.innerHTML = `<div style="border-top:1px solid var(--line);padding-top:10px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><b>📄 Банкны хуулгаас — ${esc(date)}-ны өглөөний үлдэгдэл (${esc(shiftDay(date, -1))}-ний эцэс)</b>${any ? '<button class="btn primary" type="button" id="bal-fill">📄 Хуулгаас бөглөх</button>' : ''}</div>
     ${any ? `<div class="tbl" style="margin-top:6px"><table><thead><tr><th>Данс</th><th class="n">Хуулгаар</th><th>Хуулга</th></tr></thead><tbody>${BAL_ACCS.map(([k, l]) => { const r = R[k]; if (!r.got.length && !r.miss.length) return '';
-        return `<tr><td>${esc(l)}</td><td class="n">${r.got.length ? fmt(r.value) : '—'}</td><td class="note">${r.got.map(([a, v]) => `✓ ${esc(lab(a))} ${fmt(v)}`).join('<br>')}${r.miss.length ? `${r.got.length ? '<br>' : ''}<b style="color:var(--warn)">✗ хуулга алга: ${r.miss.map(lab).map(esc).join(', ')}</b>` : ''}</td></tr>`; }).join('')}</tbody></table></div>
+        return `<tr><td>${esc(l)}</td><td class="n">${r.got.length ? fmt(r.value) : '—'}</td><td class="note">${r.got.map(([a, v]) => `✓ ${esc(lab(a))} ${fmt(v)}`).join('<br>')}${r.miss.filter(a => !r.nobal.includes(a)).length ? `${r.got.length ? '<br>' : ''}<b style="color:var(--warn)">✗ хуулга алга: ${r.miss.filter(a => !r.nobal.includes(a)).map(lab).map(esc).join(', ')}</b>` : ''}${r.nobal.length ? `<br><b style="color:var(--warn)">↻ хуулга орсон ч үлдэгдэлгүй (өмнөх хувилбараар уншсан) — дахин оруулна уу: ${r.nobal.map(lab).map(esc).join(', ')}</b>` : ''}</td></tr>`; }).join('')}</tbody></table></div>
       <p class="note">Нягтлан хуулгаа «Орлого тулгалт»-д оруулахад энд автоматаар гарна. Бүх данс ✓ байвал өглөө бүр автоматаар хадгалагдана; ✗ данс байвал «Хуулгаас бөглөх» дараад дутууг гараар нөхөж хадгална. Гараар оруулсан тоо хуучныг орлоно.</p>`
       : '<p class="note">Энэ өдрийн банкны хуулга системд алга — «Орлого тулгалт»-д хуулга оруулбал энд автоматаар үлдэгдэл гарна, эсвэл дээр гараар бөглөнө.</p>'}</div>`;
   balAutoSave();
@@ -7876,7 +7876,7 @@ async function stmtDaySave(p, acc, a, z){
 // statements already in the saved revenue controls (cashraw): read once, so nothing has to be uploaded again
 const STMT_RUNS = {done: {}, busy: false};
 async function stmtFromRuns(a, z){
-  if (STMT_RUNS.busy || !db || typeof loadRaw !== 'function') return; const todo = (S.runs || []).filter(r => r.rawN && r.id !== 'latest' && !STMT_RUNS.done[r.id] && r.d1 >= a && r.d0 <= z);
+  if (STMT_RUNS.busy || !db || typeof loadRaw !== 'function' || !DR.stmtLoaded) return; /* only after the stored statements are in, so nothing newer is overwritten */ const todo = (S.runs || []).filter(r => r.rawN && r.id !== 'latest' && !STMT_RUNS.done[r.id] && r.d1 >= a && r.d0 <= z);
   if (!todo.length) return; STMT_RUNS.busy = true;
   try{ for (const r of todo.sort((x, y) => String(x.savedAt).localeCompare(String(y.savedAt)))){ STMT_RUNS.done[r.id] = true;
       try{ const files = await loadRaw(r.rawN, r.id);
@@ -7885,7 +7885,11 @@ async function stmtFromRuns(a, z){
             // an uploaded statement (stmtday) wins for its days; a run fills the other days
             const days = {...M.days, ...((cur && cur.days) || {})}, tx = ((cur && cur.tx) || []).concat(M.tx.filter(t => !(cur && cur.days && cur.days[String(t.d).slice(8)])));
             DR.stmt = DR.stmt || {}; DR.stmt[k] = {acc, per, days, tx, fromRun: r.id};
-            if (isOwner) db.doc('stmtday/' + k).set({acc, per, days, tx: tx.slice(-3000), by: me, at: new Date().toISOString(), fromRun: r.id}).catch(() => {}); } } }
+            // fill only the days the stored document doesn't have — an uploaded statement (with the bank balance) always stays
+            if (isOwner) (async () => { const ref = db.doc('stmtday/' + k), o = await ref.get(), old = o.exists ? o.data() : null, od = (old && old.days) || {};
+              const add = Object.keys(M.days).filter(d => !od[d]); if (old && !add.length) return;
+              const nd = {...od}; for (const d of add) nd[d] = M.days[d];
+              await ref.set({acc, per, days: nd, tx: ((old && old.tx) || []).concat(M.tx.filter(t => add.includes(String(t.d).slice(8)))).slice(-3000), by: me, at: new Date().toISOString(), fromRun: r.id}); })().catch(() => {}); } } }
       catch(err){ console.warn('stmt from run', r.id, err); } }
   } finally { STMT_RUNS.busy = false; } render();
 }
@@ -8393,7 +8397,7 @@ else VIVIFB.start(async () => {
     db.collection('monthclose').onSnapshot(s => { DS.closed = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); }
   if (isOwner){ $('#aud-card').hidden = false; db.collection('audit').where('at', '>=', new Date(Date.now() - 60 * 864e5).toISOString()).onSnapshot(s => { AUD.list = s.docs.map(d => ({id: d.id, ...d.data()})); renderAudit(); }, onErr); }
   if (ALLOW.daily) db.collection('stocksnap').onSnapshot(s => { AN.snaps = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
-  if (isOwner || (ALLOW.bank && ALLOW.bal) || ALLOW.pl || ALLOW.bal){ db.collection('stmtday').where('per', '>=', new Date(Date.now() - 100 * 864e5).toISOString().slice(0, 7)).onSnapshot(s => { DR.stmt = {...Object.fromEntries(Object.entries(DR.stmt || {}).filter(([, v]) => v.fromRun)), ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; render(); }, onErr);
+  if (isOwner || (ALLOW.bank && ALLOW.bal) || ALLOW.pl || ALLOW.bal){ db.collection('stmtday').where('per', '>=', new Date(Date.now() - 100 * 864e5).toISOString().slice(0, 7)).onSnapshot(s => { DR.stmt = {...Object.fromEntries(Object.entries(DR.stmt || {}).filter(([, v]) => v.fromRun)), ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; DR.stmtLoaded = true; render(); }, onErr);
     db.collection('txmark').onSnapshot(s => { DR.marks = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); }
   if (ALLOW.daily || ALLOW.rev) db.collection('daily').where('date', '>=', DR_FROM).onSnapshot(s => { const keep = Object.fromEntries(Object.entries(DR.days).filter(([d]) => d < DR_FROM)); DR.days = {...keep, ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; DR.live = true; render(); }, onErr);
   $('#cash-upload').hidden = !(isOwner || ALLOW.rev); window.REV_DAILY = isOwner || !!ALLOW.daily || !!ALLOW.rev;
