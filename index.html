@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd126</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd127</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -4771,7 +4771,10 @@ function renderPayMonth(){
   const box = $('#pm-slots'); if (!box) return; const per = PS.pm; if (document.activeElement !== $('#pm-per')) $('#pm-per').value = per;
   const slot = kind => { const L = PS.lists.filter(l => l.per === per && l.kind === kind && payStatus(l) !== 'rejected').sort((a, b) => String(b.at).localeCompare(String(a.at))), l = L[0];
     const title = kind === 'adv' ? '1) Урьдчилгаа цалин' : '2) Сүүл цалин';
-    if (!l) return `<div style="border:1px dashed var(--line);border-radius:10px;padding:12px"><b>${title}</b><p class="note" style="margin:6px 0">Файл ороогүй.</p><button class="btn primary" type="button" data-pm-up="${kind}">⬆ Файл оруулах</button></div>`;
+    const fin = kind === 'adv' ? PS.lists.filter(x => x.per === per && x.kind === 'final' && payStatus(x) !== 'rejected').sort((x, y) => String(y.at).localeCompare(String(x.at)))[0] : null;
+    const advIn = fin ? fin.people.reduce((q, p) => q + (p.parts || []).reduce((q2, x) => q2 + (x.advPaid || 0), 0), 0) : 0;
+    const gross = fin ? fin.people.reduce((q, p) => q + (p.parts || []).reduce((q2, x) => q2 + (x.gross || 0), 0), 0) : 0;
+    if (!l) return `<div style="border:1px dashed var(--line);border-radius:10px;padding:12px"><b>${title}</b><p class="note" style="margin:6px 0">Файл ороогүй.${fin ? `<br><span style="color:var(--warn)">Сүүл цалингийн файлын «Олговол зохих» ${fmt(gross)} нь сарын <b>бүтэн</b> цалин (урьдчилгаа орсон)${advIn ? `, үүнээс урьдчилгаа ${fmt(advIn)} суутгасан` : ''} — тиймээс сарын зардал урьдчилгааны файлгүйгээр ч бүрэн гарна. Урьдчилгааны файл нь хэн хэдийг сарын дунд авсныг тулгахад хэрэгтэй.</span>` : ''}</p><button class="btn primary" type="button" data-pm-up="${kind}">⬆ Файл оруулах</button></div>`;
     const st = PAY_ST[payStatus(l)], canDel = isOwner || (l.by === me && payStatus(l) !== 'approved'), canRep = isOwner || (l.by === me && !PS.decs[l.id]);
     return `<div style="border:1px solid var(--line);border-radius:10px;padding:12px"><div class="row" style="justify-content:space-between"><b>${title}</b><span class="chip ${st[1]}">${st[0]}</span></div>
       <div style="margin:6px 0">📄 <b>${esc(l.file || '—')}</b></div>
