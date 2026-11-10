@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd128</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd129</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -4763,9 +4763,24 @@ function payCheckHTML(per){
   const C = payCostData(), cur = C.find(m => m.per === per), prev = C.filter(m => m.final && m.per < per).pop();
   if (cur && prev){ const ch = (cur.total.cost - prev.total.cost) / prev.total.cost * 100; I.push([Math.abs(ch) > 20 ? 'warn' : 'ok', `Өмнөх бүрэн сар (${esc(prev.per)}) ${fmt(prev.total.cost)} → ${fmt(cur.total.cost)} (${ch > 0 ? '+' : ''}${ch.toFixed(1)}%, ажилтан ${prev.total.n} → ${cur.total.n})`]); }
   else if (cur) I.push(['note', 'Харьцуулах өмнөх бүрэн сар алга — өмнөх сарын сүүл цалингийн файлыг «Архив»-аар оруулбал сар сараар харьцуулна']);
-  const sum = f => fmt(parts.reduce((s2, q) => s2 + (q[f] || 0), 0));
+  // from the money paid out to the company's cost: what each step adds
+  const tot = f => parts.reduce((s2, q) => s2 + (q[f] || 0), 0), G = tot('gross'), NE = tot('ndshEe'), PIT = tot('pit'), NET = tot('amt'), NER = tot('ndshEmp'), CL = tot('closed');
+  const advL = adv ? adv.people.reduce((q, p) => q + (p.amt || 0), 0) : null, advF = oldList ? null : tot('advPaid');
+  const ADV = advL != null ? advL : advF != null ? advF : null, other = ADV != null ? G - NE - PIT - NET - ADV : null;
+  const row = (l, v, o = {}) => `<tr${o.b ? ' style="font-weight:700"' : ''}><td style="padding:3px 10px 3px ${o.ind ? 22 : 6}px">${l}</td><td class="n" style="padding:3px 6px">${v == null ? '—' : fmt(v)}</td><td class="note" style="padding:3px 6px">${o.note || ''}</td></tr>`;
+  const recon = `<div class="tbl" style="margin:6px 0"><table style="width:auto"><tbody>
+      ${row('Урьдчилгаа (сарын дунд олгосон)', ADV, {ind: 1, note: advL != null ? 'урьдчилгааны жагсаалтаас' : advF != null ? 'сүүл цалингийн «урьдчилгаа» баганаас' : 'урьдчилгааны файл ороогүй'})}
+      ${row('Сүүл цалин (гарт)', NET, {ind: 1, note: 'сүүл цалингийн жагсаалтаас'})}
+      ${row('= Ажилтнуудад гарт олгосон', ADV != null ? ADV + NET : null, {b: 1, note: 'банкаар шилжүүлсэн мөнгө'})}
+      ${row('+ ХХОАТ (хувь хүний орлогын татвар)', PIT, {ind: 1, note: 'татварт төлнө'})}
+      ${row('+ НДШ — ажилтны хувь', NE, {ind: 1, note: 'НДШ-д төлнө'})}
+      ${row('+ Бусад суутгал', other, {ind: 1, note: other == null ? 'урьдчилгааны файл оруулбал тооцоно' : `авлага хаах (зээлээр авсан бараа г.м.)${CL ? ': жагсаалтад ' + fmt(CL) : ''}`})}
+      ${row('= Олговол зохих (бүтэн цалин)', G, {b: 1})}
+      ${row('+ НДШ — ажил олгогчийн хувь', NER, {ind: 1, note: 'компани НДШ-д төлнө'})}
+      ${row('= Компанийн цалингийн зардал', G + NER, {b: 1, note: 'тайлан, зардлын хүснэгтэд энэ дүн'})}
+    </tbody></table></div><p class="note" style="margin:0 0 4px">Ажилтнуудад гарт олгосон дүн ба компанийн зардал ялгаатай: зардалд татвар, НДШ (2 тал), суутгал нэмэгдэнэ.</p>`;
   return `<div class="card" style="margin:0 0 10px;padding:10px 12px"><b>✔ ${esc(per.replace('-', '.'))} цалингийн шалгалт</b>
-    <div class="note" style="margin:4px 0">Олговол зохих ${sum('gross')} + ажил олгогчийн НДШ ${sum('ndshEmp')} = <b>зардал ${fmt(parts.reduce((s2, q) => s2 + (q.gross || 0) + (q.ndshEmp || 0), 0))}</b> · үүнээс урьдчилгаа ${sum('advPaid')}, сүүл цалин (гарт) ${sum('amt')}, НДШ (ажилтан) ${sum('ndshEe')}, ХХОАТ ${sum('pit')}</div>
+    ${recon}
     <ul style="margin:4px 0 0 18px;padding:0">${I.map(([k, h]) => `<li style="margin:3px 0">${k === 'bad' ? '❗ ' : k === 'ok' ? '✓ ' : k === 'warn' ? '⚠ ' : ''}${h}</li>`).join('')}</ul></div>`;
 }
 
