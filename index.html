@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd133</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd134</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -4371,7 +4371,8 @@ const PS = {lists: [], decs: {}, cfg: {exempt: {}}, tx: [], sel: null, filter: '
 const PAY_SAL_LABEL = {'5224167073':'Хаан 7073 (цалин)', '405096868':'ХХБ 6868 (цалин)', '4002636496':'ХХБ 6496 (цалин)', '1735159300':'Голомт 9300 (цалин)', '1825100856':'Голомт 0856 (цалин)'};
 const accLabel = a => PAY_SAL_LABEL[PAY.accShort(a)] || ACC_LABEL[PAY.accShort(a)] || a || '';
 const perLabel = l => `${String(l.per || '').replace('-', '.')} · ${PAY.KIND_LABEL[l.kind] || l.kind}`;
-function payStatus(l){ if (l.archive) return 'archive'; const d = PS.decs[l.id]; if (d && d.decision === 'approved') return 'approved'; if (d && d.decision === 'rejected') return 'rejected'; if (d && d.decision === 'hold' && !(l.resentAt && l.resentAt > d.at)) return 'hold'; return 'pending'; }
+function payStatus(l){ if (l.archive) return 'archive'; const d = PS.decs[l.id]; if (d && l.replacedAt && String(l.replacedAt) > String(d.at)) return 'pending';   // a new file after the decision needs a new approval
+  if (d && d.decision === 'approved') return 'approved'; if (d && d.decision === 'rejected') return 'rejected'; if (d && d.decision === 'hold' && !(l.resentAt && l.resentAt > d.at)) return 'hold'; return 'pending'; }
 const PAY_ST = {archive:['Архив','c-grey'], pending:['Хүлээгдэж буй','c-warn'], hold:['⏸ Хүлээлгэсэн','c-hold'], approved:['Зөвшөөрсөн','c-ok'], rejected:['Татгалзсан','c-bad']};
 // every transfer we know: e-mails (owner: all accounts, last 45 days; salary accounts: all time) + statements uploaded to a list
 function payTx(){
@@ -4426,7 +4427,7 @@ $('#pay-send').addEventListener('click', async () => {
   const d = PS.draft; if (!d || !db) return;
   if (!/^\d{4}-\d{2}$/.test(d.per)){ $('#pay-msg').textContent = 'Сарыг сонгоно уу.'; return; }
   const ex = PS.lists.filter(l => l.per === d.per && l.kind === d.kind && payStatus(l) !== 'rejected').sort((a, b) => String(b.at).localeCompare(String(a.at)))[0];
-  const canRep = ex && (isOwner || (ex.by === me && !PS.decs[ex.id]));
+  const canRep = ex && (isOwner || !!(window.ALLOWX || {}).pay);
   let replace = false;
   if (ex && canRep) replace = confirm(`${d.per} · ${PAY.KIND_LABEL[d.kind] || d.kind} жагсаалт аль хэдийн байна (${ex.file || ''}, ${fmtDT(ex.at)}).\n\nOK — хуучныг энэ шинэ файлаар СОЛИХ.\nCancel — болих.`);
   else if (ex && !canRep){ $('#pay-msg').textContent = 'Энэ сарын жагсаалт аль хэдийн зөвшөөрөгдсөн — солих бол эзэмшигч солино (эсвэл эзэмшигчээр устгуулна).'; return; }
@@ -4445,7 +4446,7 @@ $('#pay-send').addEventListener('click', async () => {
         if (q.expected != null){ o.expected = q.expected; o.ruleDiff = q.ruleDiff; } return o; })}));
     await db.doc('payroll/' + id).set({per: d.per, kind: d.kind, file: d.file, by: me, at: new Date().toISOString(), people, total: d.total, count: d.count, nTotal: d.nTotal,
       warnings: d.warnings || [], flags, accs: [...new Set(people.flatMap(p => p.accs))], marks: replace ? ex.marks || {} : {}, extra: replace ? ex.extra || {} : {}, stmtTx: replace ? ex.stmtTx || [] : [], ownerNotified: arch, archive: arch,
-      fileId, ...(replace ? {replacedAt: new Date().toISOString(), replacedFile: ex.file || '', replacedBy: me} : {})});
+      fileId, ...(replace ? {ownerNotified: false, replacedAt: new Date().toISOString(), replacedFile: ex.file || '', replacedBy: me} : {})});
     PS.draft = null; PS.draftFile = null; PS.slot = null; $('#pay-file').value = ''; PS.sel = id; $('#pay-arch').checked = false; $('#pay-msg').textContent = arch ? 'Архивт хадгаллаа.' : 'Илгээгдлээ. Эзэмшигч зөвшөөрсний дараа шилжүүлнэ үү.';
   }catch(err){ console.warn(err); $('#pay-msg').textContent = 'Илгээж чадсангүй: ' + (err.code || err.message || ''); }
   finally{ $('#pay-send').disabled = false; renderPay(); }
@@ -4566,7 +4567,7 @@ function renderPayList(l, m){
   if (isOwner && (s === 'pending' || s === 'hold') && !l.archive) acts = `<input id="pay-cm" placeholder="Тайлбар (заавал биш)" style="max-width:300px"><button class="btn ok" data-pay="approve">Зөвшөөрөх</button><button class="btn hold" data-pay="hold">⏸ Хүлээлгэх</button><button class="btn bad" data-pay="reject">Татгалзах</button>`;
   if (!isOwner && s === 'hold') acts += `<button class="btn primary" data-pay="resend">↻ Дахин илгээх</button>`;
   if (isOwner || (l.by === me && s !== 'approved')) acts += `<button class="btn" data-pay="delete">🗑 Устгах</button>`;
-  if (isOwner || (l.by === me && !PS.decs[l.id])) acts += `<button class="btn" data-pay="replace" title="Шинэ файл сонгоод «Илгээх» дарвал энэ жагсаалтыг солино">↻ Файлаар солих</button>`;
+  if (isOwner || (window.ALLOWX || {}).pay) acts += `<button class="btn" data-pay="replace" title="Шинэ файл сонгоод «Илгээх» дарвал энэ жагсаалтыг солино">↻ Файлаар солих</button>`;
   acts += `<button class="btn" data-pm-ndsh="${esc(l.id)}" title="«НДШ» хуудсаар банкны цалингийн загвар">🏦 Цалин НДШ</button>`;
   if (l.fileId) acts += `<button class="btn" data-pm-dl="${esc(l.id)}" title="Нягтлангийн оруулсан эх файл">📥 Эх файл</button>`;
   acts += `<button class="btn" data-pay="xlsx">📥 Excel</button>`;
@@ -4812,7 +4813,7 @@ function renderPayMonth(){
     const advIn = fin ? fin.people.reduce((q, p) => q + (p.parts || []).reduce((q2, x) => q2 + (x.advPaid || 0), 0), 0) : 0;
     const gross = fin ? fin.people.reduce((q, p) => q + (p.parts || []).reduce((q2, x) => q2 + (x.gross || 0), 0), 0) : 0;
     if (!l) return `<div style="border:1px dashed var(--line);border-radius:10px;padding:12px"><b>${title}</b><p class="note" style="margin:6px 0">Файл ороогүй.${fin ? `<br><span style="color:var(--warn)">Сүүл цалингийн файлын «Олговол зохих» ${fmt(gross)} нь сарын <b>бүтэн</b> цалин (урьдчилгаа орсон)${advIn ? `, үүнээс урьдчилгаа ${fmt(advIn)} суутгасан` : ''} — тиймээс сарын зардал урьдчилгааны файлгүйгээр ч бүрэн гарна. Урьдчилгааны файл нь хэн хэдийг сарын дунд авсныг тулгахад хэрэгтэй.</span>` : ''}</p><button class="btn primary" type="button" data-pm-up="${kind}">⬆ Файл оруулах</button></div>`;
-    const st = PAY_ST[payStatus(l)], canDel = isOwner || (l.by === me && payStatus(l) !== 'approved'), canRep = isOwner || (l.by === me && !PS.decs[l.id]);
+    const st = PAY_ST[payStatus(l)], canDel = isOwner || (l.by === me && payStatus(l) !== 'approved'), canRep = isOwner || !!(window.ALLOWX || {}).pay;
     return `<div style="border:1px solid var(--line);border-radius:10px;padding:12px"><div class="row" style="justify-content:space-between"><b>${title}</b><span class="chip ${st[1]}">${st[0]}</span></div>
       <div style="margin:6px 0">📄 <b>${esc(l.file || '—')}</b></div>
       <div class="note">${fmt(l.total)} ₮ · ${l.count} хүн · оруулсан ${esc(fmtDT(l.at))} · ${esc(nameOf(l.by) || '')}${l.replacedAt ? `<br>↻ солигдсон (өмнөх: ${esc(l.replacedFile || '')})` : ''}${L.length > 1 ? `<br><span style="color:var(--warn)">Энэ сард ${L.length} хувилбар байна — хамгийн сүүлийнхийг тооцож байна</span>` : ''}</div>
@@ -4840,15 +4841,31 @@ function payNdshRows(l){
        amt: Math.round(q.amt * 100) / 100, emp: nm(p, q), part: `${per}-р сарын ${what} олгов.`, dept: q.dept});
   return out;
 }
-document.addEventListener('click', e => { const b = e.target.closest('[data-pm-ndsh]'); if (!b) return; const l = PS.lists.find(x => x.id === b.dataset.pmNdsh); if (!l) return;
+async function payNdshFromFile(l){
+  const url = await VIVIFB.fileURL(l.fileId); if (!url) return null;
+  const wb = XLSX.read(await (await fetch(url)).arrayBuffer(), {type: 'array'}), sn = wb.SheetNames.find(n => /НДШ/i.test(n) && !/төлдөггүй/i.test(n)); if (!sn) return null;
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header: 1, raw: true, defval: null}), h = rows.findIndex(r => (r || []).some(v => String(v || '').trim() === 'Ажилтны код')); if (h < 0) return null;
+  const H = rows[h].map(v => String(v || '').trim()), col = re => H.findIndex(x => re.test(x));
+  const cAmt = l.kind === 'final' ? [col(/Сүүл цалин картанд/i), col(/^Гарт олгох/i)].find(i => i >= 0) : [col(/Урьдчилгаа.*картанд/i), col(/^Урьдчилгаа цалин нийт/i)].find(i => i >= 0);
+  const cN = col(/^Ажилтны нэр/), cO = col(/^Овог/), cA = col(/^Банкны данс/), cC = 0; if (cAmt == null || cA < 0) return null;
+  const per = String(l.per || '').replace('-', '.'), what = l.kind === 'final' ? 'сүүл цалин' : 'урьдчилгаа цалин', out = [];
+  for (const r of rows.slice(h + 1)){ const code = String((r || [])[cC] || '').trim(); if (!code || /^Хэлтэс тасаг/.test(code) || /^(нийт|дүн)/i.test(code)) continue;
+    const amt = Math.round((+String(r[cAmt] == null ? '' : r[cAmt]).replace(/[\s,]/g, '') || 0) * 100) / 100; if (amt <= 0 || !String(r[cA] || '').trim()) continue;   // a totals row has no account
+    const n = String(r[cN] || '').replace(/^[А-ЯӨҮЁA-Z][а-яөүёa-z]?\.\s*/, '').trim(), o = String(r[cO] || '').trim();
+    out.push({acc: String(r[cA] || '').replace(/\s/g, '').toUpperCase(), amt, emp: (n + ' ' + o).trim(), part: `${per}-р сарын ${what} олгов.`}); }
+  return {rows: out, col: H[cAmt]};
+}
+document.addEventListener('click', async e => { const b = e.target.closest('[data-pm-ndsh]'); if (!b) return; const l = PS.lists.find(x => x.id === b.dataset.pmNdsh); if (!l) return;
   if (typeof XLSX === 'undefined'){ alert('Excel сан ачаалагдаагүй байна — дахин оролдоно уу.'); return; }
-  const R = payNdshRows(l); if (!R.length){ alert('Энэ жагсаалтад «НДШ» хуудсанд олгох дүнтэй ажилтан алга.'); return; }
+  let R = null, src = 'системд хадгалсан өгөгдөл («Гарт олгох»)';
+  if (l.fileId){ try{ const F = await payNdshFromFile(l); if (F && F.rows.length){ R = F.rows; src = 'эх файлын «НДШ» хуудас, «' + F.col + '» багана'; } }catch(err){ console.warn('ndsh file', err); } }
+  R = R || payNdshRows(l); if (!R.length){ alert('Энэ жагсаалтад «НДШ» хуудсанд олгох дүнтэй ажилтан алга.'); return; }
   const aoa = [['ACCOUNT_ID', 'CURRENCY', 'AMOUNT', 'EMP_ID', 'PARTICULARS']].concat(R.map(r => [r.acc, 'MNT', r.amt, r.emp, r.part]));
   const ws = XLSX.utils.aoa_to_sheet(aoa); for (let i = 1; i <= R.length; i++){ const c = ws['A' + (i + 1)]; if (c){ c.t = 's'; c.z = '@'; } }
   ws['!cols'] = [{wch: 14}, {wch: 10}, {wch: 14}, {wch: 28}, {wch: 36}];
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
   XLSX.writeFile(wb, `Tsalin_NDSh_${l.per}_${l.kind === 'final' ? 'suul' : 'urid'}.xlsx`);
-  const tot = R.reduce((q, r) => q + r.amt, 0); $('#pay-msg').textContent = `🏦 НДШ загвар: ${R.length} ажилтан · ${fmt(tot)} ₮`;
+  const tot = R.reduce((q, r) => q + r.amt, 0); $('#pay-msg').textContent = `🏦 НДШ загвар: ${R.length} ажилтан · ${fmt(tot)} ₮ · ${src}`; alert(`🏦 Банкны загвар бэлэн: ${R.length} ажилтан, ${fmt(tot)} ₮\nЭх сурвалж: ${src}`);
 });
 // ---------- internal report (Дотоод тайлан) ----------
 const PLS = {months: {}, sel: '', cfg: {catMode: {}}, fixedCfg: {units: {}}, accStore: {}, ext: {}, draft: null, supUnit: '', open: {}};
