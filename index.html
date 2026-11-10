@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd124</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd126</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -545,6 +545,12 @@ body{margin:0;background:var(--bg)}
 
   <!-- PAYROLL -->
   <section class="panel" data-panel="pay" hidden>
+    <div class="card" id="pay-month-card">
+      <div class="row" style="justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:8px"><h2 style="margin:0">📅 Сарын цалин</h2>
+        <div class="row" style="gap:6px;align-items:flex-end"><button class="btn" type="button" id="pm-prev" title="Өмнөх сар">◀</button><label class="f" style="width:auto">Сар<input id="pm-per" type="month" style="width:auto"></label><button class="btn" type="button" id="pm-next" title="Дараагийн сар">▶</button></div></div>
+      <p class="note" style="margin:6px 0 10px">Сар бүр 2 файл: <b>1) урьдчилгаа</b> (сарын дунд) ба <b>2) сүүл цалин</b> (сарын эцэс). Буруу файл оруулсан бол тухайн нүднээс <b>↻ Солих</b> эсвэл <b>🗑 Устгах</b>.</p>
+      <div id="pm-slots" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px"></div>
+    </div>
     <div class="card" id="pay-upload">
       <h2>Цалингийн жагсаалт оруулах</h2>
       <p class="note" style="margin:0 0 10px">Цалингийн программаас гаргасан Excel файлыг (НДШ, Төлдөггүй, Нэгтгэл хуудастай) шилжүүлэг хийхээс <b>өмнө</b> оруулна. Эзэмшигч зөвшөөрсний дараа шилжүүлнэ — банкны мэдэгдлээр хүн бүрийн шилжүүлэг автоматаар тулгагдаж, бүгд шилжмэгц жагсаалт хаагдана.</p>
@@ -4384,8 +4390,11 @@ $('#pay-file').addEventListener('change', async e => {
     const p = PAY.parse(sheets, f.name);
     if (p.error){ PS.draft = null; $('#pay-msg').textContent = p.error; renderPay(); return; }
     PS.draft = {...p, file: f.name};
-    $('#pay-per').value = p.per || today().slice(0, 7); $('#pay-kind').value = p.kind;
-    $('#pay-msg').textContent = '';
+    if (PS.slot){ const fk = p.kind; PS.draft.per = PS.slot.per; PS.draft.kind = PS.slot.kind;
+      $('#pay-msg').innerHTML = fk && fk !== PS.slot.kind ? `<b style="color:var(--bad)">Анхаар: файл «${esc(PAY.KIND_LABEL[fk] || fk)}» мэт байна, гэтэл «${esc(PAY.KIND_LABEL[PS.slot.kind])}» нүдэнд оруулж байна — файлаа шалгана уу.</b>` : `${esc(PS.slot.per)} · ${esc(PAY.KIND_LABEL[PS.slot.kind])} — шалгаад «Илгээх» дарна уу.`;
+      if (p.per && p.per !== PS.slot.per) $('#pay-msg').innerHTML += ` <b style="color:var(--warn)">Файлын сар ${esc(p.per)} — ${esc(PS.slot.per)} гэж хадгална.</b>`; }
+    else $('#pay-msg').textContent = '';
+    $('#pay-per').value = PS.draft.per || today().slice(0, 7); $('#pay-kind').value = PS.draft.kind;
   }catch(err){ console.warn(err); PS.draft = null; $('#pay-msg').textContent = 'Файлыг уншиж чадсангүй.'; }
   renderPay();
 });
@@ -4417,7 +4426,7 @@ $('#pay-send').addEventListener('click', async () => {
     await db.doc('payroll/' + id).set({per: d.per, kind: d.kind, file: d.file, by: me, at: new Date().toISOString(), people, total: d.total, count: d.count, nTotal: d.nTotal,
       warnings: d.warnings || [], flags, accs: [...new Set(people.flatMap(p => p.accs))], marks: replace ? ex.marks || {} : {}, extra: replace ? ex.extra || {} : {}, stmtTx: replace ? ex.stmtTx || [] : [], ownerNotified: arch, archive: arch,
       ...(replace ? {replacedAt: new Date().toISOString(), replacedFile: ex.file || '', replacedBy: me} : {})});
-    PS.draft = null; $('#pay-file').value = ''; PS.sel = id; $('#pay-arch').checked = false; $('#pay-msg').textContent = arch ? 'Архивт хадгаллаа.' : 'Илгээгдлээ. Эзэмшигч зөвшөөрсний дараа шилжүүлнэ үү.';
+    PS.draft = null; PS.slot = null; $('#pay-file').value = ''; PS.sel = id; $('#pay-arch').checked = false; $('#pay-msg').textContent = arch ? 'Архивт хадгаллаа.' : 'Илгээгдлээ. Эзэмшигч зөвшөөрсний дараа шилжүүлнэ үү.';
   }catch(err){ console.warn(err); $('#pay-msg').textContent = 'Илгээж чадсангүй: ' + (err.code || err.message || ''); }
   finally{ $('#pay-send').disabled = false; renderPay(); }
 });
@@ -4521,7 +4530,7 @@ function renderPay(){
   if (l) renderPayList(l, m);
   renderPayLoose(m);
   renderPayDebts();
-  renderPayCost();
+  renderPayCost(); renderPayMonth();
 }
 function flagList(fl){
   const g = {bad: [], warn: [], info: []}; fl.forEach(f => g[f.lvl].push(f));
@@ -4755,6 +4764,26 @@ function payCheckHTML(per){
     <div class="note" style="margin:4px 0">Олговол зохих ${sum('gross')} + ажил олгогчийн НДШ ${sum('ndshEmp')} = <b>зардал ${fmt(parts.reduce((s2, q) => s2 + (q.gross || 0) + (q.ndshEmp || 0), 0))}</b> · үүнээс урьдчилгаа ${sum('advPaid')}, сүүл цалин (гарт) ${sum('amt')}, НДШ (ажилтан) ${sum('ndshEe')}, ХХОАТ ${sum('pit')}</div>
     <ul style="margin:4px 0 0 18px;padding:0">${I.map(([k, h]) => `<li style="margin:3px 0">${k === 'bad' ? '❗ ' : k === 'ok' ? '✓ ' : k === 'warn' ? '⚠ ' : ''}${h}</li>`).join('')}</ul></div>`;
 }
+
+// ---------- 📅 one month = two files (advance, final): see what is in, replace or delete each ----------
+PS.pm = PS.pm || today().slice(0, 7);
+function renderPayMonth(){
+  const box = $('#pm-slots'); if (!box) return; const per = PS.pm; if (document.activeElement !== $('#pm-per')) $('#pm-per').value = per;
+  const slot = kind => { const L = PS.lists.filter(l => l.per === per && l.kind === kind && payStatus(l) !== 'rejected').sort((a, b) => String(b.at).localeCompare(String(a.at))), l = L[0];
+    const title = kind === 'adv' ? '1) Урьдчилгаа цалин' : '2) Сүүл цалин';
+    if (!l) return `<div style="border:1px dashed var(--line);border-radius:10px;padding:12px"><b>${title}</b><p class="note" style="margin:6px 0">Файл ороогүй.</p><button class="btn primary" type="button" data-pm-up="${kind}">⬆ Файл оруулах</button></div>`;
+    const st = PAY_ST[payStatus(l)], canDel = isOwner || (l.by === me && payStatus(l) !== 'approved'), canRep = isOwner || (l.by === me && !PS.decs[l.id]);
+    return `<div style="border:1px solid var(--line);border-radius:10px;padding:12px"><div class="row" style="justify-content:space-between"><b>${title}</b><span class="chip ${st[1]}">${st[0]}</span></div>
+      <div style="margin:6px 0">📄 <b>${esc(l.file || '—')}</b></div>
+      <div class="note">${fmt(l.total)} ₮ · ${l.count} хүн · оруулсан ${esc(fmtDT(l.at))} · ${esc(nameOf(l.by) || '')}${l.replacedAt ? `<br>↻ солигдсон (өмнөх: ${esc(l.replacedFile || '')})` : ''}${L.length > 1 ? `<br><span style="color:var(--warn)">Энэ сард ${L.length} хувилбар байна — хамгийн сүүлийнхийг тооцож байна</span>` : ''}</div>
+      <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn" type="button" data-pay="sel" data-list="${esc(l.id)}">👁 Нээх</button>${canRep ? `<button class="btn" type="button" data-pm-up="${kind}">↻ Солих</button>` : ''}${canDel ? `<button class="btn" type="button" data-pay="delete" data-list="${esc(l.id)}">🗑 Устгах</button>` : ''}</div></div>`; };
+  const a = PS.lists.find(l => l.per === per && l.kind === 'adv' && payStatus(l) === 'approved'), f = PS.lists.find(l => l.per === per && l.kind === 'final' && payStatus(l) === 'approved');
+  box.innerHTML = slot('adv') + slot('final') + `<div class="note" style="grid-column:1/-1">${a && f ? '✓ <b>' + esc(per) + ' сарын цалин бүрэн</b> — 2 жагсаалт зөвшөөрөгдсөн.' : 'Сар бүрэн хаагдахын тулд хоёр жагсаалт оруулж, эзэмшигч зөвшөөрнө.'}${PS.slot ? ` · <b>Одоо: ${esc(PS.slot.per)} ${esc(PAY.KIND_LABEL[PS.slot.kind])} оруулж байна</b> — доор шалгаад «Илгээх»` : ''}</div>`;
+}
+$('#pm-per').addEventListener('change', e => { if (e.target.value){ PS.pm = e.target.value; renderPayMonth(); } });
+$('#pm-prev').addEventListener('click', () => { const [y, m] = PS.pm.split('-').map(Number), d = new Date(Date.UTC(y, m - 2, 1)); PS.pm = d.toISOString().slice(0, 7); renderPayMonth(); });
+$('#pm-next').addEventListener('click', () => { const [y, m] = PS.pm.split('-').map(Number), d = new Date(Date.UTC(y, m, 1)); PS.pm = d.toISOString().slice(0, 7); renderPayMonth(); });
+document.addEventListener('click', e => { const b = e.target.closest('[data-pm-up]'); if (!b) return; PS.slot = {per: PS.pm, kind: b.dataset.pmUp}; $('#pay-file').value = ''; $('#pay-upload').scrollIntoView({behavior: 'smooth', block: 'start'}); $('#pay-file').click(); renderPayMonth(); });
 // ---------- internal report (Дотоод тайлан) ----------
 const PLS = {months: {}, sel: '', cfg: {catMode: {}}, fixedCfg: {units: {}}, accStore: {}, ext: {}, draft: null, supUnit: '', open: {}};
 // active units (Nov 2026): Food City, Dragon, Online; Нийслэл opening; closed stores still show when a period has their data
