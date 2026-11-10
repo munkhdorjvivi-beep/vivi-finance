@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd129</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd130</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -2083,7 +2083,9 @@ const PAY = (() => {
     // C) the rest must close the gap exactly: another source account, or another account carrying the person's name
     for (const s of st) for (const x of s.P) for (const t of s.win){ if (used.has(t.id) || need(x) <= 1) continue;
       const txt = (String(t.desc || '') + ' ' + String(t.toName || '')).toUpperCase();
-      if (x.p.key.length >= 8 && txt.includes(x.p.key) && t.amount <= need(x) + 1) { take(s, x, t, 'code'); continue; }
+      // the person's code in the description (paid to a third party for them) — only from a salary account or with «цалин» in the text,
+      // and never a payment to a lender (e.g. a loan taken in the employee's name and repaid by the company)
+      if (x.p.key.length >= 8 && txt.includes(x.p.key) && t.amount <= need(x) + 1 && !(opts.isLoan && opts.isLoan(t)) && (sal.has(t.fromS) || /ЦАЛИН|УРЬДЧИЛГАА/.test(txt))) { take(s, x, t, 'code'); continue; }
       if (Math.abs(t.amount - need(x)) > 1) continue;
       if (toMine(x, t)) { take(s, x, t, howOf(x, t)); continue; }
       if (sal.has(t.fromS) && x.core.length >= 4 && wordIn(txt, x.core)) take(s, x, t, 'name'); }
@@ -4373,7 +4375,7 @@ function payModel(){
   const key = S.requests.length + '|' + Object.keys(S.approvals).length + '|' + (S.recurring || []).map(r => r.id + (r.appr ? r.appr.amount : '')).join(',') + '|' + PS.lists.length + '|' + Object.keys(PS.decs).length + '|' + S.banktx.length + '|' + PS.tx.length + '|' + JSON.stringify(payExempt()) + '|' + PS.lists.map(l => (l.stmtTx || []).length + ':' + JSON.stringify(l.marks || {}) + JSON.stringify(l.extra || {})).join(',') + '|' + JSON.stringify(PS.decs);
   if (payCache && payCache.key === key) return payCache.m;
   const lists = PS.lists.filter(l => !['rejected', 'archive'].includes(payStatus(l))).map(l => ({...l, decidedAt: (PS.decs[l.id] || {}).decision === 'approved' ? PS.decs[l.id].at : null}));
-  const m = PAY.match(lists, payTx(), {exempt: payExempt(), own: VIVI.OWN});
+  const m = PAY.match(lists, payTx(), {exempt: payExempt(), own: VIVI.OWN, isLoan: t => ['bank', 'ploan'].includes(VIVI.outCat({desc: t.desc, cpName: t.toName, cp: t.to, dr: +t.amount}))});
   // transfers from salary accounts that an approved request or an approved recurring payment explains are not «loose»
   const explained = t => { const to = PAY.accShort(t.to || t.toAcc); return S.requests.some(r => PAY.accShort(r.payeeAcc) === to && Math.abs((+r.amount || 0) - (+t.amount || 0)) <= 1 && ['approved', 'paid'].includes(reqStatus(r)))
     || (S.recurring || []).some(r => r.appr && !r.off && r.appr.accN === to && Math.abs((+r.appr.amount || 0) - (+t.amount || 0)) <= 1); };
