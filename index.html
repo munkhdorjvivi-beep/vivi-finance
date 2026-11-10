@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd136</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd139</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -216,6 +216,7 @@ body{margin:0;background:var(--bg)}
 
   <!-- REQUESTS -->
   <section class="panel" data-panel="req" data-mode="one">
+    <div id="req-ct-due"></div>
     <div class="filter chips" id="req-mode"><button data-m="one" aria-pressed="true">Төлбөрийн хүсэлт</button><button data-m="rec" aria-pressed="false">🔁 Давтамжит гүйлгээ<span class="n badge" hidden></span></button></div>
     <div class="card" id="req-form-card">
       <h2 id="rq-title">Шинэ төлбөрийн хүсэлт</h2>
@@ -855,7 +856,7 @@ body{margin:0;background:var(--bg)}
       <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">Гэрээ (зээл, лизинг, бусад төлбөр)</h2>
         <div class="filter chips" id="ct-f"><button data-f="act" aria-pressed="true">Идэвхтэй</button><button data-f="all" aria-pressed="false">Бүгд (дууссан)</button></div></div>
       <p class="note" style="margin:0 0 8px">Гэрээ бүрийн төлөх өдөр, төлбөрийн дүнг бүртгэнэ. Гэрээ бүрт тохируулсан хоногийн өмнө (анхдагч <b>3</b>, жишээ «7, 3, 1») болон төлөх өдөр утсанд сануулга ирнэ; сануулга дээр дарахад гэрээ нээгдэнэ. Банкны гүйлгээгээр төлсөн эсэхийг автоматаар шалгана.</p>
-      <div class="tbl"><table><thead><tr><th>Гэрээ</th><th>Зээлдүүлэгч / тал</th><th class="n">Төлбөр</th><th>Дараагийн төлөх өдөр</th><th>Энэ удаагийн төлөв</th><th class="n">Үлдэгдэл төлбөр</th><th></th></tr></thead><tbody id="ct-list"><tr><td colspan="7" class="empty">–</td></tr></tbody></table></div>
+      <div class="tbl"><table><thead><tr><th>Гэрээ</th><th>Зээлдүүлэгч / тал</th><th class="n">Төлбөр</th><th>Дараагийн төлөх өдөр</th><th>Энэ удаагийн төлөв</th><th class="n">Үлдэгдэл төлбөр</th><th>Дуусах</th><th></th></tr></thead><tbody id="ct-list"><tr><td colspan="8" class="empty">–</td></tr></tbody></table></div>
       <div id="ct-detail" style="margin-top:12px"></div>
     </div>
     <div class="card" id="ct-form-card">
@@ -870,11 +871,13 @@ body{margin:0;background:var(--bg)}
         <label class="f">Хүү (жилийн %)<input id="ct-rate" inputmode="decimal" data-nofmt placeholder="18"></label>
         <label class="f">Эхлэх огноо<input id="ct-start" type="date"></label>
         <label class="f">Дуусах огноо<input id="ct-end" type="date"></label>
+        <label class="f">эсвэл хугацаа (сар)<input id="ct-months" inputmode="numeric" data-nofmt placeholder="36 — дуусах огноог бодно"></label>
         <label class="f">Сар бүрийн төлөх өдөр *<input id="ct-day" inputmode="numeric" data-nofmt required placeholder="15"></label>
         <label class="f">Сарын төлбөр (₮) *<input id="ct-pay" inputmode="decimal" required placeholder="2 500 000"></label>
-        <label class="f">Төлөх данс (зээлдүүлэгчийн)<input id="ct-to" inputmode="numeric" data-nofmt placeholder="банкны гүйлгээгээр шалгахад"></label>
+        <label class="f">Төлөх данс (зээлдүүлэгчийн) *<input id="ct-to" data-nofmt placeholder="MN12 0005 0051 7414 4175 эсвэл 5174144175"></label>
         <label class="f">Аль данснаас төлдөг<select id="ct-from"></select></label>
         <label class="f">🔔 Сануулах — төлөх өдрөөс хэд хоногийн өмнө (таслалаар)<input id="ct-rem" inputmode="numeric" data-nofmt value="3" placeholder="7, 3, 1"></label>
+        <div class="f full" id="ct-preview" style="background:var(--sunk);border-radius:8px;padding:8px 10px"></div>
         <label class="f full">Төлбөрийн хуваарь (заавал биш — сар бүр өөр дүнтэй бол; мөр бүрт «огноо = дүн»)<textarea id="ct-sched" rows="3" placeholder="2026-11-15 = 2 512 300&#10;2026-12-15 = 2 498 100"></textarea></label>
         <label class="f full">Тайлбар<textarea id="ct-note" rows="2"></textarea></label>
         <label class="f">Гэрээ (PDF, хэд хэдэн файл; 15 МБ хүртэл)<input id="ct-file" type="file" multiple accept="application/pdf,image/*"></label>
@@ -3438,6 +3441,7 @@ function hydrateFiles(){
 document.addEventListener('click', e => { const a = e.target.closest('a[data-file]'); if (!a) return; e.preventDefault();
   const w = window.open('', '_blank'); VIVIFB.fileURL(a.dataset.file).then(u => { if (u && w) w.location = u; else if (w) w.close(); }); });
 function renderInner(){
+  if (typeof renderCtDue === 'function') try{ renderCtDue(); }catch(e){ console.warn('ct due', e); }
   // requests
   const counts = {pending:0, hold:0, approved:0, paid:0, rejected:0}; let pendAmt = 0;
   for (const r of S.requests){ const s = reqStatus(r); counts[s]++; if (s === 'pending') pendAmt += +r.amount || 0; }
@@ -6967,9 +6971,20 @@ function ctDues(c, from, to){
   return out;
 }
 // was this due paid? a bank transfer to the lender's account with ≈ the amount, from 10 days before to 5 days after
+function ctTx(){   // every outflow we know: bank e-mails + uploaded statements (deduplicated by day, amount and receiver)
+  const out = [], seen = new Set(), put = (dt, to, amt, src) => { const k = String(dt).slice(0, 10) + '|' + Math.round(amt) + '|' + to; if (seen.has(k)) return; seen.add(k); out.push({dt: String(dt), to, amount: +amt, src}); };
+  for (const t of S.banktx || []) put(t.dt, ctAcc(t.toAcc), t.amount, 'mail');
+  for (const D of Object.values((typeof DR !== 'undefined' && DR.stmt) || {})) for (const t of D.tx || []) put(t.dt, ctAcc(t.cp), t.amount, 'stmt');
+  return out;
+}
 function ctPaid(c, due){
-  if (!c.toAcc || !(S.banktx || []).length) return null; const to = ctAcc(c.toAcc), tol = Math.max(1, due.amt * 0.01);
-  return S.banktx.find(t => ctAcc(t.toAcc) === to && Math.abs((+t.amount || 0) - due.amt) <= tol && ctDiff(String(t.dt).slice(0, 10), due.d) >= -10 && ctDiff(String(t.dt).slice(0, 10), due.d) <= 5) || false;
+  if (!c.toAcc) return null; const T = ctTx(); if (!T.length) return null; const to = ctAcc(c.toAcc), tol = Math.max(1, due.amt * 0.01);
+  const inW = (t, a, b) => { const d = String(t.dt).slice(0, 10); return ctDiff(d, a) >= 0 && ctDiff(d, b) <= 0; };
+  const one = T.find(t => t.to === to && Math.abs(t.amount - due.amt) <= tol && inW(t, ctAdd(due.d, -10), ctAdd(due.d, 5))); if (one) return one;
+  // instalment collected on the loan account in parts: everything sent there after the previous due date
+  const prev = ctDues(c, ctAdd(due.d, -45), ctAdd(due.d, -1)).at(-1), from = prev ? ctAdd(prev.d, 1) : ctAdd(due.d, -31);
+  const L = T.filter(t => t.to === to && inW(t, from, ctAdd(due.d, 5))), sum = L.reduce((a, t) => a + t.amount, 0);
+  return sum >= due.amt - tol ? {dt: L.map(t => t.dt).sort().at(-1), amount: sum, n: L.length} : false;
 }
 function ctState(c){
   const t = today(), past = ctDues(c, ctAdd(t, -45), ctAdd(t, -1)), next = ctDues(c, t, ctAdd(t, 400))[0] || null, prev = past.at(-1) || null;
@@ -6983,6 +6998,7 @@ function ctState(c){
   if (st !== 'late' && prev && pPrev && !next) txt = '✓ сүүлийн төлбөр төлсөн';
   return {next, prev, pPrev, pNext, st, txt, restN: rest.length, restSum: rest.reduce((a, x) => a + x.amt, 0), done: !next && (!prev || pPrev !== false)};
 }
+const ctLeft = end => { const m = Math.round(ctDiff(end, today()) / 30.44); return m <= 0 ? 'дууссан' : m < 12 ? `${m} сар үлдсэн` : `${Math.floor(m / 12)} жил ${m % 12 ? (m % 12) + ' сар' : ''} үлдсэн`; };
 // days before the payment day to remind (always also on the day itself)
 const ctRem = c => { const L = String(c.remind == null ? '3' : c.remind).split(/[,;\s]+/).map(x => parseInt(x, 10)).filter(x => x > 0 && x <= 60); return [...new Set(L)].sort((a, b) => b - a); };
 const CT_CLS = {late: 'c-bad', soon: 'c-warn', paid: 'c-ok', later: 'c-grey'};
@@ -6999,17 +7015,18 @@ function renderContr(){
       <td><b>${esc(c.name)}</b><div class="note">${esc(c.kind || '')}${c.no ? ' · №' + esc(c.no) : ''}${(c.files || []).length ? ' · 📄 ' + c.files.length : ''}</div></td><td>${esc(c.party || '')}<div class="note">${esc(c.borrower || '')}</div></td>
       <td class="n">${s.next ? fmt(s.next.amt) : fmt(c.payment)} ₮<div class="note">сар бүрийн ${esc(c.payDay || '—')} · 🔔 ${ctRem(c).length ? ctRem(c).join(', ') + ' хоног өмнө' : 'тэр өдөр'}</div></td><td class="mono">${s.next ? esc(s.next.d) : '—'}</td>
       <td><span class="chip ${CT_CLS[s.st]}">${esc(s.txt || (s.done ? 'дууссан' : ''))}</span>${!c.toAcc ? '<div class="note">данс оруулаагүй — төлсөн эсэхийг шалгахгүй</div>' : ''}</td><td class="n">${s.restN ? fmt(s.restSum) + ' ₮<div class="note">' + s.restN + ' удаа</div>' : '–'}</td>
-      <td><button class="btn" data-ct-open="${esc(c.id)}">${CT.open === c.id ? 'Хаах' : 'Дэлгэрэнгүй'}</button></td></tr>`).join('')
-    : '<tr><td colspan="7" class="empty">Гэрээ бүртгэгдээгүй. Доорх маягтаар нэмнэ үү.</td></tr>';
+      <td class="mono">${c.end ? esc(c.end) : '—'}${c.end ? `<div class="note">${ctLeft(c.end)}</div>` : ''}</td><td><button class="btn" data-ct-open="${esc(c.id)}">${CT.open === c.id ? '▾ Хаах' : '▸ Дэлгэрэнгүй'}</button></td></tr>${CT.open === c.id ? `<tr><td colspan="8" style="padding:0 0 12px"><div id="ct-detail-in"></div></td></tr>` : ''}`).join('')
+    : '<tr><td colspan="8" class="empty">Гэрээ бүртгэгдээгүй. Доорх маягтаар нэмнэ үү.</td></tr>';
   renderCtDetail();
 }
 function renderCtDetail(){
-  const el = $('#ct-detail'); const c = CT.list.find(x => x.id === CT.open); if (!c){ el.innerHTML = ''; return; }
-  const s = ctState(c), t = today(), rows = ctDues(c, ctAdd(t, -200), ctAdd(t, 370));
+  $('#ct-detail').innerHTML = ''; const el = $('#ct-detail-in'); const c = CT.list.find(x => x.id === CT.open); if (!c || !el) return;
+  const s = ctState(c), t = today(), rows = ctDues(c, c.start || ctAdd(t, -400), c.end || ctAdd(t, 3650)), paidN = rows.filter(x => x.d < t && ctPaid(c, x)).length, leftR = rows.filter(x => x.d >= t);
   el.innerHTML = `<div class="banner"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><div><b style="font-size:16px">${esc(c.name)}</b> · ${esc(c.kind || '')}${c.no ? ' · №' + esc(c.no) : ''}<div class="note">${esc(c.party || '')} → ${esc(c.borrower || '')}${c.principal ? ' · зээлийн дүн ' + fmt(c.principal) + ' ₮' : ''}${c.rate ? ' · ' + esc(c.rate) + '%' : ''}${c.start ? ' · ' + esc(c.start) : ''}${c.end ? ' – ' + esc(c.end) : ''}${c.toAcc ? ' · данс ' + esc(c.toAcc) : ''}${c.fromAcc ? ' · төлдөг ' + esc(ACC_LABEL[c.fromAcc] || c.fromAcc) : ''}</div>${c.note ? `<div class="note">${esc(c.note)}</div>` : ''}</div>
     <div class="row" style="gap:6px;flex-wrap:wrap">${(c.files || []).map((f, i) => `<button class="btn primary" data-ct-file="${esc(f.id)}">📄 ${esc(f.name || 'Гэрээ ' + (i + 1))}</button>`).join('')}${s.next && (window.ALLOWX || {}).req ? `<button class="btn" data-ct-req="${esc(c.id)}">➕ Төлбөрийн хүсэлт (${esc(s.next.d)}, ${fmt(s.next.amt)} ₮)</button>` : ''}<button class="btn" data-ct-edit="${esc(c.id)}">✎ Засах</button><button class="btn bad" data-ct-del="${esc(c.id)}">🗑</button></div></div></div>
-    <div class="tbl" style="margin-top:8px;max-height:360px;overflow:auto"><table><thead><tr><th>Төлөх өдөр</th><th class="n">Дүн</th><th>Төлөв</th></tr></thead><tbody>${rows.map(x => { const p = x.d <= ctAdd(t, 5) ? ctPaid(c, x) : null;
-      return `<tr class="${x.d < t && p === false ? 'sev-bad' : ''}"><td class="mono">${esc(x.d)}</td><td class="n">${fmt(x.amt)}</td><td>${p ? `<span class="chip c-ok">✓ ${esc(String(p.dt).slice(0, 10))} · ${fmt(p.amount)}</span>` : p === false && x.d < t ? '<span class="chip c-bad">олдсонгүй</span>' : x.d >= t ? (ctDiff(x.d, t) <= 3 ? '<span class="chip c-warn">удахгүй</span>' : '') : '<span class="note">шалгах боломжгүй</span>'}</td></tr>`; }).join('') || '<tr><td colspan="3" class="empty">Төлбөрийн өдөр алга.</td></tr>'}</tbody></table></div>`;
+    <div class="daysum" style="margin-top:8px">Хуваарь: <b>${rows.length}</b> удаа${rows.length ? ` (${esc(rows[0].d)} – ${esc(rows.at(-1).d)})` : ''} · нийт <b>${fmt(rows.reduce((a, x) => a + x.amt, 0))} ₮</b> · үлдсэн <b>${leftR.length}</b> удаа, <b>${fmt(leftR.reduce((a, x) => a + x.amt, 0))} ₮</b>${c.end ? ` · дуусах <b>${esc(c.end)}</b> (${ctLeft(c.end)})` : ''}</div>
+    <div class="tbl" style="margin-top:8px;max-height:420px;overflow:auto"><table><thead><tr><th>#</th><th>Төлөх өдөр</th><th class="n">Дүн</th><th>Төлөв</th></tr></thead><tbody>${rows.map((x, ix) => { const p = x.d <= ctAdd(t, 5) ? ctPaid(c, x) : null; const pre = x.d < String(c.createdAt || '').slice(0, 10);
+      return `<tr class="${x.d < t && p === false && !pre ? 'sev-bad' : x.d >= t && ix === rows.findIndex(y => y.d >= t) ? 'sev-warn' : ''}"><td class="note">${ix + 1}</td><td class="mono">${esc(x.d)}</td><td class="n">${fmt(x.amt)}</td><td>${p ? `<span class="chip c-ok">✓ ${esc(String(p.dt).slice(0, 10))} · ${fmt(p.amount)}${p.n > 1 ? ' (' + p.n + ' шилжүүлэг)' : ''}</span>` : p === false && x.d < t && pre ? '<span class="note">бүртгэхээс өмнө — шалгаагүй</span>' : p === false && x.d < t ? '<span class="chip c-bad">олдсонгүй</span>' : x.d >= t ? (ctDiff(x.d, t) <= 3 ? '<span class="chip c-warn">удахгүй</span>' : '') : '<span class="note">шалгах боломжгүй</span>'}</td></tr>`; }).join('') || '<tr><td colspan="4" class="empty">Төлбөрийн өдөр алга.</td></tr>'}</tbody></table></div>`;
 }
 function ctFill(c){
   CT.edit = c ? c.id : null; $('#ct-form-title').textContent = c ? 'Гэрээ засах: ' + c.name : 'Шинэ гэрээ'; $('#ct-cancel').hidden = !c;
@@ -7024,6 +7041,10 @@ $('#ct-form').addEventListener('submit', async e => {
   const c = {name: g('#ct-name'), kind: g('#ct-kind'), party: g('#ct-party'), borrower: g('#ct-borrower'), no: g('#ct-no'), principal: parseAmt(g('#ct-principal')) || 0, rate: g('#ct-rate'),
     start: g('#ct-start'), end: g('#ct-end'), payDay: Math.max(0, Math.min(31, parseInt(g('#ct-day'), 10) || 0)), payment: parseAmt(g('#ct-pay')) || 0, toAcc: g('#ct-to').replace(/\s/g, ''), fromAcc: g('#ct-from'), sched: $('#ct-sched').value, note: g('#ct-note'), remind: ctRem({remind: g('#ct-rem')}).join(', ')};
   if (!c.name || (!c.payDay && !ctSched(c).length) || (!c.payment && !ctSched(c).length)){ $('#ct-msg').textContent = 'Нэр, төлөх өдөр, сарын төлбөрийг бөглөнө үү (эсвэл хуваарь).'; return; }
+  // the lender's account is required — it is how a paid instalment is recognised; an IBAN (MN…) or the plain account number both work
+  const accN = String(c.toAcc || '').toUpperCase(), okAcc = /^MN\d{18}$/.test(accN) || /^\d{7,16}$/.test(accN);
+  if (!okAcc){ $('#ct-to').focus(); $('#ct-to').style.outline = '2px solid var(--bad)'; $('#ct-msg').innerHTML = '<b style="color:var(--bad)">«Төлөх данс»-ыг заавал оруулна уу</b> — зээлдүүлэгчийн данс (IBAN «MN…» эсвэл дансны дугаар). Үүгээр төлбөр шилжсэнийг автоматаар танина.'; return; }
+  $('#ct-to').style.outline = ''; c.toAcc = accN;
   $('#ct-save').disabled = true; $('#ct-msg').textContent = 'Хадгалж байна…';
   try{ const ups = []; for (const f of [...$('#ct-file').files]){ $('#ct-msg').textContent = `Файл хадгалж байна… ${f.name}`; const up = await assets.upload(f); ups.push({id: up.id, type: up.contentType, name: f.name}); }
     const now = new Date().toISOString();
@@ -7041,12 +7062,53 @@ document.addEventListener('click', async e => {
   if (d.ctOpen || (d.ctRow && !e.target.closest('button'))){ e.preventDefault(); const id = d.ctOpen || d.ctRow; CT.open = CT.open === id ? '' : id; renderContr(); return; }
   if (d.ctEdit){ return ctFill(CT.list.find(x => x.id === d.ctEdit)); }
   if (d.ctDel){ const c = CT.list.find(x => x.id === d.ctDel); if (!c || !confirm(`«${c.name}» гэрээг устгах уу?`)) return; try{ await db.doc('contracts/' + c.id).delete(); CT.open = ''; }catch(err){ alert('Устгаж чадсангүй.'); } return; }
-  if (d.ctReq){ const c = CT.list.find(x => x.id === d.ctReq), s = c && ctState(c); if (!s || !s.next) return;
+  if (d.ctReq){ const c = CT.list.find(x => x.id === d.ctReq), s0 = c && ctState(c); if (!s0) return; const due = d.ctDue ? (ctDues(c, d.ctDue, d.ctDue)[0] || null) : s0.next; if (!due) return; const s = {next: due};
     showTab('req'); if (typeof setRcMode === 'function') setRcMode('one'); setReqEdit(null);
     $('#rq-payee').value = c.party || ''; $('#rq-acc').value = c.toAcc || ''; $('#rq-amt').value = numFmt(s.next.amt); if (c.fromAcc) $('#rq-from').value = c.fromAcc;
     const cat = [...$('#rq-cat').options].find(o => /зээл/i.test(o.text)); if (cat) $('#rq-cat').value = cat.value;
     $('#rq-note').value = `${c.kind || 'Зээл'}ийн төлбөр: ${c.name}${c.no ? ' №' + c.no : ''} · ${s.next.d}`; $('#rq-msg').textContent = 'Гэрээнээс бөглөсөн — шалгаад илгээнэ үү.'; }
 });
+
+// the form shows the schedule it will make: payment day × every month from start to end (no typing of dates needed)
+function ctPreview(){
+  const box = $('#ct-preview'); if (!box) return; const c = {payDay: $('#ct-day').value, payment: parseAmt($('#ct-pay').value) || 0, start: $('#ct-start').value, end: $('#ct-end').value, sched: $('#ct-sched').value};
+  if (!c.payDay && !ctSched(c).length){ box.innerHTML = '<span class="note">Төлөх өдөр, эхлэх ба дуусах огноо (эсвэл хугацаа сараар) оруулахад төлбөрийн хуваарь автоматаар гарна.</span>'; return; }
+  const R = ctDues(c, c.start || today(), c.end || ctAdd(c.start || today(), 3650));
+  box.innerHTML = `📅 <b>Хуваарь автоматаар:</b> ${R.length} удаа${R.length ? ` · ${esc(R[0].d)} → ${esc(R.at(-1).d)} · нийт ${fmt(R.reduce((a, x) => a + x.amt, 0))} ₮` : ''}${!c.end && !ctSched(c).length ? ' <span class="note">(дуусах огноо оруулаагүй — 10 жилээр харуулав)</span>' : ''}
+    <div class="note" style="margin-top:4px">${R.slice(0, 4).map(x => esc(x.d) + ' · ' + fmt(x.amt)).join(' · ')}${R.length > 5 ? ' … ' + esc(R.at(-1).d) + ' · ' + fmt(R.at(-1).amt) : ''}</div>`;
+}
+document.addEventListener('input', e => { if (!e.target.closest('#ct-form')) return;
+  if (e.target.id === 'ct-months'){ const n = parseInt(e.target.value, 10), st = $('#ct-start').value; if (n > 0 && st){ const [y, m] = st.split('-').map(Number), day = +$('#ct-day').value || +st.slice(8), t = new Date(Date.UTC(y, m - 1 + n - 1, 1)), dim = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+      $('#ct-end').value = `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(Math.min(day, dim)).padStart(2, '0')}`; } }
+  ctPreview(); });
+document.addEventListener('change', e => { if (e.target.closest('#ct-form')) ctPreview(); });
+setTimeout(ctPreview, 0);
+{ const _f = ctFill; ctFill = function(c){ _f(c); ctPreview(); }; }
+
+// ---------- 🔔 instalments in «Төлбөрийн хүсэлт»: from N days before the payment day, every day, until the money has gone (overdue stays red) ----------
+function ctDueList(){
+  const t = today(), out = [];
+  for (const c of CT.list){ const lead = Math.max(0, ...ctRem(c), 0) || 3;
+    for (const x of ctDues(c, ctAdd(t, -30), ctAdd(t, lead))){
+      if (x.d < String(c.createdAt || '').slice(0, 10)) continue;   // before the contract was registered
+      const p = ctPaid(c, x); if (p) continue;
+      const left = ctDiff(x.d, t), note = `${c.name}`, rs = r => typeof reqStatus === 'function' ? reqStatus(r) : r.status, req = (S.requests || []).find(r => String(r.note || '').includes(note) && String(r.note || '').includes(x.d) && rs(r) !== 'rejected');
+      if (req && rs(req) === 'paid') continue;   // the request was paid out
+      if (p === null && left < 0) continue;     // no lender account to check against: remind only up to the payment day
+      out.push({c, x, left, req, unknown: p === null}); } }
+  return out.sort((a, b) => a.x.d.localeCompare(b.x.d));
+}
+function renderCtDue(){
+  const box = $('#req-ct-due'); if (!box) return; if (!CT.list.length){ box.innerHTML = ''; return; }
+  const L = ctDueList(); const tb = $('#t-req-ct'); if (!L.length){ box.innerHTML = ''; return; }
+  const ST = {approved: 'зөвшөөрсөн', pending: 'хүлээгдэж буй', hold: 'түр хүлээлгэсэн', paid: 'шилжүүлсэн'};
+  box.innerHTML = `<div class="card" style="border-left:4px solid ${L.some(o => o.left < 0) ? 'var(--bad)' : 'var(--warn)'};margin-bottom:10px"><b>🔔 Зээл, гэрээний төлбөр — төлөх хугацаа ойртсон (${L.length})</b>
+    <div class="tbl" style="margin-top:6px"><table><tbody>${L.map(o => `<tr class="${o.left < 0 ? 'sev-bad' : o.left === 0 ? 'sev-warn' : ''}">
+      <td><b>${esc(o.c.name)}</b><div class="note">${esc(o.c.party || '')}${o.c.toAcc ? ' · ' + esc(o.c.toAcc) : ''}</div></td><td class="mono">${esc(o.x.d)}</td><td class="n"><b>${fmt(o.x.amt)} ₮</b></td>
+      <td><span class="chip ${o.left < 0 ? 'c-bad' : o.left === 0 ? 'c-warn' : 'c-grey'}">${o.left < 0 ? `${-o.left} хоног хэтэрсэн` : o.left === 0 ? 'ӨНӨӨДӨР' : `${o.left} хоногийн дараа`}</span>${o.unknown ? '<div class="note">данс оруулаагүй — төлсөн эсэхийг шалгахгүй</div>' : ''}</td>
+      <td>${o.req ? `<span class="chip c-acc">хүсэлт ${esc((s2 => ST[s2] || s2 || 'илгээсэн')(typeof reqStatus === 'function' ? reqStatus(o.req) : o.req.status))}</span>` : (window.ALLOWX || {}).req ? `<button class="btn primary" type="button" data-ct-req="${esc(o.c.id)}" data-ct-due="${esc(o.x.d)}">➕ Хүсэлт үүсгэх</button>` : ''}</td></tr>`).join('')}</tbody></table></div>
+    <p class="note" style="margin:4px 0 0">Төлбөр шилжих хүртэл өдөр бүр харагдана (имэйл / хуулгаар шалгана). Гэрээнд «Төлөх данс» оруулаагүй бол шилжсэнийг танихгүй.</p></div>`;
+}
 // ===================== HR: employee cards, maternity leave, schedule & attendance, leave, hiring and leaving =====================
 // hremp/{id} — the employee card · hrleave/{id} — leave · hrsched/{unit}_{YYYY-MM} — schedule (plan) and attendance (att) · hrrec/{id} — a vacancy with its candidates
 const HR = {att: [], sites: {}, cfg: {}, attD: '', attM: '', emp: [], lv: [], sch: {}, rec: [], t: 'emp', q: '', unit: '', st: 'cur', open: '', edit: false, m: '', sunit: '', mode: 'plan', code: 'Б', lvF: 'pend', init: false};
@@ -8384,7 +8446,7 @@ else VIVIFB.start(async () => {
   else if (ALLOW.reqsub) db.collection('reqdraft').where('createdBy', '==', me).onSnapshot(s => { RS.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   chLoadUsers().then(render);
   (isOwner ? db.collection('chats') : db.collection('chats').where('members', 'array-contains', me)).onSnapshot(s => { CH.chats = s.docs.map(d => ({id: d.id, ...d.data()})); CH.loaded = true; render(); }, onErr);
-  if (ALLOW.contr) db.collection('contracts').onSnapshot(s => { CT.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+  if (ALLOW.contr || ALLOW.req) db.collection('contracts').onSnapshot(s => { CT.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.rev || ALLOW.cash || ALLOW.pay) db.collection('revfix').onSnapshot(s => { FIX.list = s.docs.map(d => ({id: d.id, ...d.data()})); resolveNames(FIX.list.map(x => x.by)); render(); }, onErr);
   if (ALLOW.hr){ db.collection('hremp').onSnapshot(s => { HR.emp = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); db.collection('hrleave').onSnapshot(s => { HR.lv = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); db.collection('hrrec').onSnapshot(s => { HR.rec = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
     db.collection('hratt').where('at', '>=', new Date(Date.now() - 75 * 864e5).toISOString()).onSnapshot(s => { HR.att = s.docs.map(d => d.data()); HR.att._v = Date.now(); render(); }, onErr);
