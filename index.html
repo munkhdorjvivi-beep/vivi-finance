@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd131</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd133</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -4440,7 +4440,7 @@ $('#pay-send').addEventListener('click', async () => {
   try{
     const flags = draftFlags(d);
     const people = d.people.map(p => ({key: p.key, name: p.name, ovog: p.ovog, pos: p.pos, dept: p.dept, amt: p.amt, accs: p.accs, owed: p.owed, closed: p.closed,
-      parts: p.parts.map(q => { const o = {sheet: q.sheet, dept: q.dept, code: q.code, acc: q.acc, accRaw: q.accRaw, bank: q.bank, amt: q.amt, base: q.base, fund: q.fund, worked: q.worked, ins: q.ins, owed: q.owed, closed: q.closed,
+      parts: p.parts.map(q => { const o = {sheet: q.sheet, ndsh: !!q.ndsh, dept: q.dept, code: q.code, acc: q.acc, accRaw: q.accRaw, bank: q.bank, amt: q.amt, base: q.base, fund: q.fund, worked: q.worked, ins: q.ins, owed: q.owed, closed: q.closed,
         gross: q.gross || 0, ndshEmp: q.ndshEmp || 0, ndshEe: q.ndshEe || 0, pit: q.pit || 0, calc: q.calc || 0, extra: q.extra || 0, advPaid: q.advPaid || 0};
         if (q.expected != null){ o.expected = q.expected; o.ruleDiff = q.ruleDiff; } return o; })}));
     await db.doc('payroll/' + id).set({per: d.per, kind: d.kind, file: d.file, by: me, at: new Date().toISOString(), people, total: d.total, count: d.count, nTotal: d.nTotal,
@@ -4567,6 +4567,7 @@ function renderPayList(l, m){
   if (!isOwner && s === 'hold') acts += `<button class="btn primary" data-pay="resend">↻ Дахин илгээх</button>`;
   if (isOwner || (l.by === me && s !== 'approved')) acts += `<button class="btn" data-pay="delete">🗑 Устгах</button>`;
   if (isOwner || (l.by === me && !PS.decs[l.id])) acts += `<button class="btn" data-pay="replace" title="Шинэ файл сонгоод «Илгээх» дарвал энэ жагсаалтыг солино">↻ Файлаар солих</button>`;
+  acts += `<button class="btn" data-pm-ndsh="${esc(l.id)}" title="«НДШ» хуудсаар банкны цалингийн загвар">🏦 Цалин НДШ</button>`;
   if (l.fileId) acts += `<button class="btn" data-pm-dl="${esc(l.id)}" title="Нягтлангийн оруулсан эх файл">📥 Эх файл</button>`;
   acts += `<button class="btn" data-pay="xlsx">📥 Excel</button>`;
   const pct = l.total ? Math.round(r.paidSum / l.total * 100) : 0;
@@ -4815,7 +4816,7 @@ function renderPayMonth(){
     return `<div style="border:1px solid var(--line);border-radius:10px;padding:12px"><div class="row" style="justify-content:space-between"><b>${title}</b><span class="chip ${st[1]}">${st[0]}</span></div>
       <div style="margin:6px 0">📄 <b>${esc(l.file || '—')}</b></div>
       <div class="note">${fmt(l.total)} ₮ · ${l.count} хүн · оруулсан ${esc(fmtDT(l.at))} · ${esc(nameOf(l.by) || '')}${l.replacedAt ? `<br>↻ солигдсон (өмнөх: ${esc(l.replacedFile || '')})` : ''}${L.length > 1 ? `<br><span style="color:var(--warn)">Энэ сард ${L.length} хувилбар байна — хамгийн сүүлийнхийг тооцож байна</span>` : ''}</div>
-      <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn" type="button" data-pay="sel" data-list="${esc(l.id)}">👁 Нээх</button>${l.fileId ? `<button class="btn" type="button" data-pm-dl="${esc(l.id)}" title="Нягтлангийн оруулсан эх файл">📥 Файл татах</button>` : `<button class="btn" type="button" data-pay="xlsx" data-list="${esc(l.id)}" title="Эх файл хадгалагдаагүй (хуучин) — системд орсон өгөгдлөөр Excel гаргана">📥 Excel</button>`}${canRep ? `<button class="btn" type="button" data-pm-up="${kind}">↻ Солих</button>` : ''}${canDel ? `<button class="btn" type="button" data-pay="delete" data-list="${esc(l.id)}">🗑 Устгах</button>` : ''}</div></div>`; };
+      <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn" type="button" data-pay="sel" data-list="${esc(l.id)}">👁 Нээх</button><button class="btn" type="button" data-pm-ndsh="${esc(l.id)}" title="«НДШ» хуудсаар банкны цалингийн загвар (ACCOUNT_ID, CURRENCY, AMOUNT, EMP_ID, PARTICULARS)">🏦 Цалин НДШ</button>${l.fileId ? `<button class="btn" type="button" data-pm-dl="${esc(l.id)}" title="Нягтлангийн оруулсан эх файл">📥 Файл татах</button>` : `<button class="btn" type="button" data-pay="xlsx" data-list="${esc(l.id)}" title="Эх файл хадгалагдаагүй (хуучин) — системд орсон өгөгдлөөр Excel гаргана">📥 Excel</button>`}${canRep ? `<button class="btn" type="button" data-pm-up="${kind}">↻ Солих</button>` : ''}${canDel ? `<button class="btn" type="button" data-pay="delete" data-list="${esc(l.id)}">🗑 Устгах</button>` : ''}</div></div>`; };
   const a = PS.lists.find(l => l.per === per && l.kind === 'adv' && payStatus(l) === 'approved'), f = PS.lists.find(l => l.per === per && l.kind === 'final' && payStatus(l) === 'approved');
   box.innerHTML = slot('adv') + slot('final') + `<div class="note" style="grid-column:1/-1">${a && f ? '✓ <b>' + esc(per) + ' сарын цалин бүрэн</b> — 2 жагсаалт зөвшөөрөгдсөн.' : 'Сар бүрэн хаагдахын тулд хоёр жагсаалт оруулж, эзэмшигч зөвшөөрнө.'}${PS.slot ? ` · <b>Одоо: ${esc(PS.slot.per)} ${esc(PAY.KIND_LABEL[PS.slot.kind])} оруулж байна</b> — доор шалгаад «Илгээх»` : ''}</div>`;
 }
@@ -4828,6 +4829,27 @@ document.addEventListener('click', async e => { const b = e.target.closest('[dat
   b.disabled = true; const t = b.textContent; b.textContent = 'Татаж байна…';
   try{ const url = await VIVIFB.fileURL(l.fileId); if (!url) throw new Error('файл олдсонгүй'); const a = document.createElement('a'); a.href = url; a.download = l.file || ('tsalin_' + l.per + '_' + l.kind + '.xlsx'); document.body.appendChild(a); a.click(); a.remove(); }
   catch(err){ alert('Татаж чадсангүй: ' + (err.message || err.code)); } b.disabled = false; b.textContent = t; });
+
+// ---------- 🏦 the bank's salary upload template from the «НДШ» sheet: ACCOUNT_ID | CURRENCY | AMOUNT | EMP_ID | PARTICULARS ----------
+function payNdshRows(l){
+  const per = String(l.per || '').replace('-', '.'), what = l.kind === 'final' ? 'сүүл цалин' : 'урьдчилгаа цалин';
+  const nm = (p, q) => { const n = String(q.name || p.name || '').replace(/^[А-ЯӨҮЁA-Z][а-яөүёa-z]?\.\s*/, '').trim(), o = String(q.ovog || p.ovog || '').trim(); return (n + ' ' + o).trim(); };
+  const out = [];
+  for (const p of l.people || []) for (const q of p.parts || []) if ((q.ndsh != null ? q.ndsh : /НДШ/i.test(q.sheet || '') && !/төлдөггүй/i.test(q.sheet || '')) && (+q.amt || 0) > 0)
+    out.push({acc: String(q.accRaw || q.acc || '').replace(/\s/g, '').toUpperCase(),   // the full IBAN, as the bank takes it
+       amt: Math.round(q.amt * 100) / 100, emp: nm(p, q), part: `${per}-р сарын ${what} олгов.`, dept: q.dept});
+  return out;
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-pm-ndsh]'); if (!b) return; const l = PS.lists.find(x => x.id === b.dataset.pmNdsh); if (!l) return;
+  if (typeof XLSX === 'undefined'){ alert('Excel сан ачаалагдаагүй байна — дахин оролдоно уу.'); return; }
+  const R = payNdshRows(l); if (!R.length){ alert('Энэ жагсаалтад «НДШ» хуудсанд олгох дүнтэй ажилтан алга.'); return; }
+  const aoa = [['ACCOUNT_ID', 'CURRENCY', 'AMOUNT', 'EMP_ID', 'PARTICULARS']].concat(R.map(r => [r.acc, 'MNT', r.amt, r.emp, r.part]));
+  const ws = XLSX.utils.aoa_to_sheet(aoa); for (let i = 1; i <= R.length; i++){ const c = ws['A' + (i + 1)]; if (c){ c.t = 's'; c.z = '@'; } }
+  ws['!cols'] = [{wch: 14}, {wch: 10}, {wch: 14}, {wch: 28}, {wch: 36}];
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  XLSX.writeFile(wb, `Tsalin_NDSh_${l.per}_${l.kind === 'final' ? 'suul' : 'urid'}.xlsx`);
+  const tot = R.reduce((q, r) => q + r.amt, 0); $('#pay-msg').textContent = `🏦 НДШ загвар: ${R.length} ажилтан · ${fmt(tot)} ₮`;
+});
 // ---------- internal report (Дотоод тайлан) ----------
 const PLS = {months: {}, sel: '', cfg: {catMode: {}}, fixedCfg: {units: {}}, accStore: {}, ext: {}, draft: null, supUnit: '', open: {}};
 // active units (Nov 2026): Food City, Dragon, Online; Нийслэл opening; closed stores still show when a period has their data
