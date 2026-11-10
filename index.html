@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd130</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd131</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -992,6 +992,7 @@ body{margin:0;background:var(--bg)}
         <div class="bal" id="bal-fields"></div>
         <div class="row" style="margin-top:10px"><label class="f" style="width:auto">Огноо<input id="bal-date" type="date"></label><button class="btn primary" type="submit" style="align-self:flex-end">Хадгалах</button><span class="note" id="bal-msg" style="align-self:flex-end"></span></div>
       </form>
+      <div id="bal-stmt" style="margin-top:14px"></div>
     </div>
     <div class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Түүх</h2>
@@ -1244,32 +1245,32 @@ const VIVI = (() => {
       const out = [];
       for (const r of rows.slice(h+1)){
         const dt = toDT(r[ix('Гүйлгээний огноо')]); if (!dt) continue;
-        out.push({acc, dt, cr: Math.abs(num(r[ix('Кредит гүйлгээ')])), dr: Math.abs(num(r[ix('Дебит гүйлгээ')])), desc: str(r[ix('Гүйлгээний утга')]), cp: str(r[ix('Харьцсан данс')])});
+        out.push({acc, dt, cr: Math.abs(num(r[ix('Кредит гүйлгээ')])), dr: Math.abs(num(r[ix('Дебит гүйлгээ')])), desc: str(r[ix('Гүйлгээний утга')]), cp: str(r[ix('Харьцсан данс')]), bal: ix('Эцсийн үлдэгдэл') >= 0 ? num(r[ix('Эцсийн үлдэгдэл')]) : null, bal0: ix('Эхний үлдэгдэл') >= 0 ? num(r[ix('Эхний үлдэгдэл')]) : null});
       }
       return {type:'bank', bank:'Khan', acc, label:`Khan ${acc}`, rows: out};
     }
     // Golomt
     h = findRow(rows, r => r.includes('Харьцсан дансны нэр') && r.includes('Орлого'));
     if (h >= 0){
-      let acc=''; for (const r of rows.slice(0,h)) for (const v of r||[]) { const m = str(v).match(/^(\d{10})\s*\[/); if (m) acc = m[1]; }
+      let acc='', open = null; for (const r of rows.slice(0,h)){ for (const v of r||[]) { const m = str(v).match(/^(\d{10})\s*\[/); if (m) acc = m[1]; } const rr = (r||[]).map(str), i = rr.indexOf('Эхний үлдэгдэл'); if (i >= 0){ const nx = rr.slice(i + 1).find(v => v !== ''); if (nx != null) open = num(nx); } }
       const c = rows[h].map(str), ix = k => c.indexOf(k);
       const out = [];
       for (const r of rows.slice(h+1)){
         const dt = toDT(r[ix('Гүйлгээний огноо')]); if (!dt) continue;
         out.push({acc, dt, cr: Math.abs(num(r[ix('Орлого')])), dr: Math.abs(num(r[ix('Зарлага')])), desc: str(r[ix('Гүйлгээний утга')]), cp: str(r[ix('Харьцсан данс')]), cpName: str(r[ix('Харьцсан дансны нэр')])});
       }
-      return {type:'bank', bank:'Golomt', acc, label:`Golomt ${acc}`, rows: out};
+      return {type:'bank', bank:'Golomt', acc, label:`Golomt ${acc}`, rows: out, open};
     }
     // TDB
     h = findRow(rows, r => r.includes('Теллер'));
     if (h >= 0){
-      let acc=''; for (const r of rows.slice(0,h)) { const rr=(r||[]).map(str); const i = rr.indexOf('Хуучин дансны дугаар'); if (i>=0) acc = rr[i+1]; }
+      let acc='', open = null; for (const r of rows.slice(0,h)) { const rr=(r||[]).map(str); const i = rr.indexOf('Хуучин дансны дугаар'); if (i>=0) acc = rr[i+1]; const j = rr.findIndex(v => /^Эхний үлдэгдэл/.test(v)); if (j >= 0){ const nx = rr.slice(j + 1).find(v => v !== ''); if (nx != null) open = num(nx); } }
       const out = [];
       for (const r of rows.slice(h+1)){
         const dt = toDT(r[0]); if (!dt) continue;
-        out.push({acc, dt, cr: Math.abs(num(r[2])), dr: Math.abs(num(r[3])), desc: str(r[8]), cp: str(r[5])});
+        out.push({acc, dt, cr: Math.abs(num(r[2])), dr: Math.abs(num(r[3])), desc: str(r[8]), cp: str(r[5]), bal: r[7] != null && str(r[7]) !== '' ? num(r[7]) : null});
       }
-      return {type:'bank', bank:'TDB', acc, label:`TDB ${acc}`, rows: out};
+      return {type:'bank', bank:'TDB', acc, label:`TDB ${acc}`, rows: out, open};
     }
     // TDB, newer export: no header row; row 1 = "Дансны дугаар: 4002594661 MNT", "Хамрах хугацаа: …";
     // rows = date | teller | credit | debit (negative) | rate | "counter-account name" | balance | description
@@ -1285,23 +1286,24 @@ const VIVI = (() => {
         const dt = toDT(r[0]); if (!dt) continue;
         const k = cur === 'MNT' ? 1 : (num(r[4]) || 1);
         const cp = str(r[5]).split(/\s+/)[0] || '';
-        out.push({acc, dt, cr: Math.abs(num(r[2])) * k, dr: Math.abs(num(r[3])) * k, desc: str(r[7]), cp, cpName: str(r[5]).slice(cp.length).trim(), cur});
+        out.push({acc, dt, cr: Math.abs(num(r[2])) * k, dr: Math.abs(num(r[3])) * k, desc: str(r[7]), cp, cpName: str(r[5]).slice(cp.length).trim(), cur, bal: cur === 'MNT' && r[6] != null && str(r[6]) !== '' ? num(r[6]) : null});
       }
-      return {type:'bank', bank:'TDB', acc, label:`TDB ${acc}${cur !== 'MNT' ? ' ('+cur+')' : ''}`, rows: out};
+      const oc = meta.find(v => /^Эхний үлдэгдэл/.test(v)) || '', open = cur === 'MNT' && oc ? num(oc.replace(/^Эхний үлдэгдэл:?\s*/, '')) : null;
+      return {type:'bank', bank:'TDB', acc, label:`TDB ${acc}${cur !== 'MNT' ? ' ('+cur+')' : ''}`, rows: out, open, cur};
     }
     // Arig: "№ | Огноо | Гүйлгээний утга | Орлого | Зарлага | Үлдэгдэл", account in the "Данс" row
     h = findRow(rows, r => r.includes('№') && r.includes('Гүйлгээний утга') && r.includes('Орлого') && r.includes('Зарлага'));
     if (h >= 0){
-      let acc = ''; for (const r of rows.slice(0,h)) { const rr = (r||[]).map(str); const i = rr.indexOf('Данс'); if (i >= 0){ const m = (rr[i+1]||'').replace(/\s/g,'').match(/MN(\d{16,20})/); if (m) acc = m[1].slice(-10).replace(/^0+/,''); } }
+      let acc = '', open = null; for (const r of rows.slice(0,h)) { const rr = (r||[]).map(str); const io = rr.indexOf('Эхний үлдэгдэл'); if (io >= 0){ const nx = rr.slice(io + 1).find(v => v !== ''); if (nx != null) open = num(nx); } const i = rr.indexOf('Данс'); if (i >= 0){ const m = (rr[i+1]||'').replace(/\s/g,'').match(/MN(\d{16,20})/); if (m) acc = m[1].slice(-10).replace(/^0+/,''); } }
       if (!acc){ const m = name.match(/MN\d{2}\d{4}(\d+)/); if (m) acc = m[1].replace(/^0+/,''); }
       const c = rows[h].map(str), ix = k => c.indexOf(k);
       const out = [];
       for (const r of rows.slice(h+1)){
         const dt = toDT(r[ix('Огноо')]); if (!dt) continue;
         const desc = str(r[ix('Гүйлгээний утга')]), iban = desc.replace(/\s/g,'').match(/MN\d{18}/g);
-        out.push({acc, dt, cr: Math.abs(num(r[ix('Орлого')])), dr: Math.abs(num(r[ix('Зарлага')])), desc, cp: iban ? iban[iban.length-1] : ''});
+        out.push({acc, dt, cr: Math.abs(num(r[ix('Орлого')])), dr: Math.abs(num(r[ix('Зарлага')])), desc, cp: iban ? iban[iban.length-1] : '', bal: ix('Үлдэгдэл') >= 0 ? num(r[ix('Үлдэгдэл')]) : null});
       }
-      return {type:'bank', bank:'Arig', acc, label:`Arig ${acc}`, rows: out};
+      return {type:'bank', bank:'Arig', acc, label:`Arig ${acc}`, rows: out, open};
     }
     // any other bank export: a header row with a date column, income/expense columns and a description
     h = findRow(rows, r => r.some(v => /огноо|date/i.test(v)) && r.some(v => /^(орлого|кредит|credit|crédit)/i.test(v)) && r.some(v => /^(зарлага|дебит|debit)/i.test(v)), 60);
@@ -1678,6 +1680,18 @@ const VIVI = (() => {
     bank:'Зээл, ББСБ / Kredyty', f1:'F1 (Энхбаатар)', fx:'Арилжаа / Wymiana walut', cargo:'Тээвэр, карго / Transport', fuel:'Шатахуун / Paliwo', goods:'Бараа, нийлүүлэгч / Towar',
     other:'Тодруулах / Do wyjaśnienia', ops:'Үйл ажиллагааны бусад / Pozostałe operacyjne'};
   let BASE = null; const setBase = fn => { BASE = fn; };
+  // end-of-day balance of a statement: {open, end: {YYYY-MM-DD: balance}, check} — opening from the header, or from the first row's running balance
+  function stmtBal(p){
+    if (!p || p.type !== 'bank' || (p.cur && p.cur !== 'MNT')) return null;
+    const dayOf = t => typeof t === 'string' ? t.slice(0, 10) : iso(t instanceof Date ? t : new Date(+t));
+    const R = (p.rows || []).map(r => ({...r, d: dayOf(r.dt), k: typeof r.dt === 'string' ? r.dt : new Date(r.dt instanceof Date ? r.dt.getTime() : +r.dt).toISOString()})).filter(r => r.d).sort((a, b) => a.k.localeCompare(b.k));
+    let open = p.open != null && !isNaN(p.open) ? +p.open : null;
+    if (open == null && R.length){ const f = R[0]; if (f.bal0 != null && !isNaN(f.bal0)) open = f.bal0; else if (f.bal != null && !isNaN(f.bal)) open = f.bal - (f.cr || 0) + (f.dr || 0); }
+    if (open == null) return null;
+    const end = {}; let run = open; for (const r of R){ run += (r.cr || 0) - (r.dr || 0); end[r.d] = Math.round(run * 100) / 100; }
+    const withBal = R.filter(r => r.bal != null && !isNaN(r.bal)), last = withBal.length ? withBal[withBal.length - 1].bal : null;
+    return {open, end, final: Math.round(run * 100) / 100, check: last != null ? Math.round((last - run) * 100) / 100 : null};
+  }
   function outCat(t){
     const s = String(t.desc||'').toLowerCase(), nm = String(t.cpName||'').toLowerCase(), cp = norm(t.cp);
     let recv = cp && OWN.has(cp) ? cp : '';
@@ -1919,7 +1933,7 @@ const VIVI = (() => {
     return wb;
   }
 
-  return {kasCheck, parseRows, build, parseDates, matchCash, classifyCredit, iso, OWN, norm, parseMail, mailLocal, diffDetail, report, outCat, setBase, toWorkbook, ACC_NAME, accAlias, ACC_ALIAS};
+  return {stmtBal, kasCheck, parseRows, build, parseDates, matchCash, classifyCredit, iso, OWN, norm, parseMail, mailLocal, diffDetail, report, outCat, setBase, toWorkbook, ACC_NAME, accAlias, ACC_ALIAS};
 })();
 
 
@@ -3671,15 +3685,16 @@ function renderBal(){ try{ renderCP(); }catch(e){ console.warn('cashplan', e); }
   const list = S.balances.slice().sort((a,b) => String(b.date).localeCompare(String(a.date))).slice(0,30);
   const last = list[0], sumG = (it, g) => BAL_GROUPS.find(x => x[0] === g)[2].reduce((s,[k]) => s + (+(it||{})[k] || 0), 0);
   if (last){ const co = sumG(last.items, 'co'), pr = sumG(last.items, 'pr'); $('#k-bal').textContent = fmt(co + pr); const tm = last.at ? new Date(last.at) : null, hm = tm && !isNaN(tm) ? String(tm.getHours()).padStart(2, '0') + ':' + String(tm.getMinutes()).padStart(2, '0') : '';   // when the accountant entered it
-    $('#k-bal-s').innerHTML = `${esc(last.date)}${hm ? ' <b>' + hm + '</b>' : ''}${last.by ? ' · ' + esc(nameOf(last.by)) : ''}<br>компани ${fmt(co)} · хувийн ${fmt(pr)}`; } else { $('#k-bal').textContent = '–'; $('#k-bal-s').textContent = 'Бүртгэл алга'; }
+    $('#k-bal-s').innerHTML = `${esc(last.date)}${last.src === 'stmt' ? ' 📄 хуулгаас (өмнөх өдрийн эцэс)' : `${hm ? ' <b>' + hm + '</b>' : ''}${last.by ? ' · ' + esc(nameOf(last.by)) : ''}`}<br>компани ${fmt(co)} · хувийн ${fmt(pr)}`; } else { $('#k-bal').textContent = '–'; $('#k-bal-s').textContent = 'Бүртгэл алга'; }
   const cols = BAL_GROUPS.filter(([g]) => balView === 'all' || balView === g);
   const accTh = cols.map(([g, t, L]) => L.map(([,l]) => `<th class="n">${esc(l)}</th>`).join('') + `<th class="n" style="background:var(--surface-2,#eef0ea)">${g === 'co' ? 'Компани нийт' : 'Хувийн нийт'}</th>`).join('');
   $('#bal-head').innerHTML = `<tr><th>Огноо</th>${accTh}${balView === 'all' ? '<th class="n">Нийт</th>' : ''}<th>Оруулсан</th></tr>`;
   const ncol = 2 + cols.reduce((n, [, , L]) => n + L.length + 1, 0) + (balView === 'all' ? 1 : 0);
   $('#bal-body').innerHTML = list.length ? list.map(b => { const it = b.items||{};
     const cells = cols.map(([g, t, L]) => L.map(([k]) => `<td class="n">${it[k] == null || it[k] === '' ? '–' : fmt(it[k])}</td>`).join('') + `<td class="n" style="background:var(--surface-2,#eef0ea)"><b>${fmt(sumG(it, g))}</b></td>`).join('');
-    return `<tr><td class="mono">${esc(b.date)}<div class="note">${b.at ? esc(fmtDT(b.at).slice(11)) : ''}${(b.hist || []).length ? ` · засварласан ${b.hist.length}` : ''}</div></td>${cells}${balView === 'all' ? `<td class="n"><b>${fmt(sumG(it, 'co') + sumG(it, 'pr'))}</b></td>` : ''}<td class="note" style="white-space:nowrap">${esc(nameOf(b.by))} <button class="btn" type="button" data-bal-edit="${esc(b.date)}" title="Засах" style="padding:2px 8px">✏️</button>${isOwner ? ` <button class="btn bad" type="button" data-bal-del="${esc(b.date)}" title="Устгах" style="padding:2px 8px">🗑</button>` : ''}</td></tr>`; }).join('')
+    return `<tr><td class="mono">${esc(b.date)}<div class="note">${b.src === 'stmt' ? '📄 хуулгаас · ' : ''}${b.at ? esc(fmtDT(b.at).slice(11)) : ''}${(b.hist || []).length ? ` · засварласан ${b.hist.length}` : ''}</div></td>${cells}${balView === 'all' ? `<td class="n"><b>${fmt(sumG(it, 'co') + sumG(it, 'pr'))}</b></td>` : ''}<td class="note" style="white-space:nowrap">${esc(nameOf(b.by))} <button class="btn" type="button" data-bal-edit="${esc(b.date)}" title="Засах" style="padding:2px 8px">✏️</button>${isOwner ? ` <button class="btn bad" type="button" data-bal-del="${esc(b.date)}" title="Устгах" style="padding:2px 8px">🗑</button>` : ''}</td></tr>`; }).join('')
     : `<tr><td colspan="${ncol}" class="empty">Бүртгэл алга. Дээрх маягтыг бөглөнө үү.</td></tr>`;
+  if (typeof renderBalStmt === 'function') try{ renderBalStmt(); }catch(e){ console.warn('bal stmt', e); }
 }
 
 // ---------- actions ----------
@@ -3839,7 +3854,7 @@ $('#bal-form').addEventListener('submit', async e => {
   const date = $('#bal-date').value || today(), items = {};
   for (const [k] of BAL_ACCS){ const v = $('#bal-'+k).value.trim(); if (v !== '') items[k] = parseAmt(v) || 0; }
   const old = S.balances.find(b => b.date === date); const hist = old ? (old.hist || []).concat([{items: old.items || {}, by: old.by || null, at: old.at || null}]).slice(-10) : [];
-  try{ await db.doc('balances/'+date).set({date, items, by: me, at: new Date().toISOString(), hist}); $('#bal-msg').textContent = old ? 'Засварлаж хадгаллаа (хуучин тоо түүхэнд үлдсэн).' : 'Хадгаллаа.'; BAL_ACCS.forEach(([k]) => $('#bal-'+k).value = ''); }
+  try{ await db.doc('balances/'+date).set({date, items, by: me, at: new Date().toISOString(), hist, src: 'manual'}); $('#bal-msg').textContent = old ? 'Засварлаж хадгаллаа (хуучин тоо түүхэнд үлдсэн).' : 'Хадгаллаа.'; BAL_ACCS.forEach(([k]) => $('#bal-'+k).value = ''); }
   catch(err){ $('#bal-msg').textContent = err && err.code === 'invalid_argument' ? 'Хадгалах эрх алга.' : 'Хадгалж чадсангүй.'; }
 });
 
@@ -5526,6 +5541,48 @@ function renderFlow(a, z){
 document.addEventListener('click', async e => { const b = e.target.closest('[data-tx-mine]'); if (!b || !isOwner || !db) return; const id = b.dataset.txMine, on = !((DR.marks || {})[id] || {}).own;
   DR.marks = DR.marks || {}; DR.marks[id] = {own: on}; render();
   try{ await db.doc('txmark/' + id.replace(/\//g, '_')).set({own: on, by: me, at: new Date().toISOString()}); }catch(err){ alert('Хадгалж чадсангүй: ' + (err.code || err.message)); } });
+
+// ===================== «Дансны үлдэгдэл» from the bank statements =====================
+// the morning balance of day D = the bank's end-of-day balance of D−1, summed per field; each field = its own accounts
+const BAL_MAP_DEFAULT = {tdb: ['405095875', '405096869', '405096868', '405102965'], khan: ['5175306931', '5175306920', '5175278095', '5174134484'], arig: ['2106025813'],
+  khan_md: ['5174139482'], khan_et: ['5403962396', '5403962410', '5403962454'], khan_eb: ['5311365725', '5224167095', '5224167073', '5310744690'],
+  golomt_erka: ['1735156519'], golomt: ['1825100856', '1735159334', '1735159299'], golomt_sal: ['1735159300']};
+const balMap = () => { const o = (S.cfg && S.cfg.balmap) || null; return o && Object.keys(o).length ? o : BAL_MAP_DEFAULT; };
+function stmtBalFor(date){
+  const prev = shiftDay(date, -1), M = balMap(), seen = new Set(Object.values(DR.stmt || {}).map(D => D.acc)), out = {};
+  for (const [k] of BAL_ACCS){ const accs = M[k] || [], got = [], miss = []; let v = 0;
+    for (const a of accs){ const D = (DR.stmt || {})[a + '_' + prev.slice(0, 7)], x = D && D.days && D.days[prev.slice(8)];
+      if (x && x.bal != null){ got.push([a, x.bal]); v += +x.bal; } else if (seen.has(a)) miss.push(a); }
+    out[k] = {value: Math.round(v * 100) / 100, got, miss, complete: got.length > 0 && !miss.length}; }
+  return out;
+}
+function renderBalStmt(){
+  const box = $('#bal-stmt'); if (!box) return; if (typeof stmtFromRuns === 'function') stmtFromRuns(shiftDay(today(), -10), today());
+  const date = $('#bal-date').value || today(), R = stmtBalFor(date), any = Object.values(R).some(r => r.got.length);
+  const lab = a => (VIVI.ACC_NAME || {})[a] || a;
+  box.innerHTML = `<div style="border-top:1px solid var(--line);padding-top:10px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><b>📄 Банкны хуулгаас — ${esc(date)}-ны өглөөний үлдэгдэл (${esc(shiftDay(date, -1))}-ний эцэс)</b>${any ? '<button class="btn primary" type="button" id="bal-fill">📄 Хуулгаас бөглөх</button>' : ''}</div>
+    ${any ? `<div class="tbl" style="margin-top:6px"><table><thead><tr><th>Данс</th><th class="n">Хуулгаар</th><th>Хуулга</th></tr></thead><tbody>${BAL_ACCS.map(([k, l]) => { const r = R[k]; if (!r.got.length && !r.miss.length) return '';
+        return `<tr><td>${esc(l)}</td><td class="n">${r.got.length ? fmt(r.value) : '—'}</td><td class="note">${r.got.map(([a, v]) => `✓ ${esc(lab(a))} ${fmt(v)}`).join('<br>')}${r.miss.length ? `${r.got.length ? '<br>' : ''}<b style="color:var(--warn)">✗ хуулга алга: ${r.miss.map(lab).map(esc).join(', ')}</b>` : ''}</td></tr>`; }).join('')}</tbody></table></div>
+      <p class="note">Нягтлан хуулгаа «Орлого тулгалт»-д оруулахад энд автоматаар гарна. Бүх данс ✓ байвал өглөө бүр автоматаар хадгалагдана; ✗ данс байвал «Хуулгаас бөглөх» дараад дутууг гараар нөхөж хадгална. Гараар оруулсан тоо хуучныг орлоно.</p>`
+      : '<p class="note">Энэ өдрийн банкны хуулга системд алга — «Орлого тулгалт»-д хуулга оруулбал энд автоматаар үлдэгдэл гарна, эсвэл дээр гараар бөглөнө.</p>'}</div>`;
+  balAutoSave();
+}
+document.addEventListener('click', e => { if (!e.target.closest('#bal-fill')) return; const R = stmtBalFor($('#bal-date').value || today());
+  for (const [k] of BAL_ACCS) if (R[k].got.length) $('#bal-' + k).value = fmt(R[k].value); $('#bal-msg').textContent = 'Хуулгаас бөглөлөө — шалгаад «Хадгалах».'; });
+document.addEventListener('change', e => { if (e.target.id === 'bal-date') renderBalStmt(); });
+// every morning: a day without a manual record gets one from the statements (complete fields only); a later statement updates it, a manual entry always wins
+const BAL_AUTO = {};
+async function balAutoSave(){
+  if (!db || !(window.ALLOWX || {}).bal) return;
+  for (let i = 0; i < 7; i++){ const date = shiftDay(today(), -i), R = stmtBalFor(date), items = {};
+    for (const [k] of BAL_ACCS) if (R[k].complete) items[k] = R[k].value;
+    // only when every account that ever came with a statement is there for that day — a half-filled record would look like missing money
+    if (!Object.keys(items).length || BAL_ACCS.some(([k]) => (R[k].got.length || R[k].miss.length) && !R[k].complete)) continue; const old = S.balances.find(b => b.date === date);
+    if (old && old.src !== 'stmt') continue;   // somebody typed it: leave it
+    if (old && JSON.stringify(old.items || {}) === JSON.stringify(items)) continue;
+    const key = date + JSON.stringify(items); if (BAL_AUTO[key]) continue; BAL_AUTO[key] = 1;
+    try{ await db.doc('balances/' + date).set({date, items, src: 'stmt', by: me, at: new Date().toISOString(), hist: old ? (old.hist || []).concat([{items: old.items || {}, by: old.by || null, at: old.at || null}]).slice(-10) : []}); }catch(err){ console.warn('bal auto', err); } }
+}
 // ---------- recurring transfers (Давтамжит гүйлгээ) ----------
 // accountant adds / changes / removes; a new item or a change waits for the owner's approval;
 // only the approved version (appr) explains bank transfers and silences the «Хүсэлтгүй» alarm
@@ -7756,7 +7813,7 @@ async function regStmt(p, file, hash){
 // every uploaded statement keeps its real money per day: in / out (and transfers between our own counted accounts apart) + each debit,
 // so «Хүлээгдэж буй үлдэгдэл» uses ALL outflows of the account (card purchases, fees, cash withdrawals, unapproved transfers), not only the e-mailed ones
 // one statement → {YYYY-MM: {days: {DD: {in, out, iin, iout, n}}, tx: [debits]}} for the days it covers
-function stmtDaysOf(p, acc, a, z){
+function stmtDaysOf(p, acc, a, z, asOf){   // asOf: the day the statement was taken — that day is not over yet, so no end-of-day balance for it
   const al = x => { const n = VIVI.norm(x); return VIVI.accAlias ? VIVI.accAlias(n) : n; }, OUTS = typeof DR_OUTSIDE !== 'undefined' ? DR_OUTSIDE : new Set();
   const isInt = cp => { const c = al(cp); return !!c && c !== acc && VIVI.OWN.has(c) && !OUTS.has(c); };
   const dayOf = t => typeof t === 'string' ? t.slice(0, 10) : t instanceof Date ? isoU(t.getTime()) : isoU(+t), byM = {};
@@ -7766,11 +7823,14 @@ function stmtDaysOf(p, acc, a, z){
     if (r.cr > 0){ if (isInt(r.cp)) D.iin += r.cr; else { D.in += r.cr; if (VIVI.norm(r.cp) === '4002281424' || /стор\s*пэй|store\s*pay/i.test(String(r.cpName || '') + ' ' + String(r.desc || ''))) D.sp = (D.sp || 0) + r.cr; else if (/покет|pocket/i.test(String(r.cpName || '') + ' ' + String(r.desc || ''))) D.pk = (D.pk || 0) + r.cr; } }
     if (r.dr > 0){ if (isInt(r.cp)) D.iout += r.dr; else { D.out += r.dr; M.tx.push({dt, d, amount: Math.round(r.dr * 100) / 100, cp: VIVI.norm(r.cp), name: String(r.cpName || '').slice(0, 60), desc: String(r.desc || '').slice(0, 100), cat: VIVI.outCat(r)}); } } }
   for (const M of Object.values(byM)) for (const D of Object.values(M.days)) for (const k of ['in', 'out', 'iin', 'iout', 'sp', 'pk']) D[k] = Math.round((D[k] || 0) * 100) / 100;
+  // the bank's own end-of-day balance of the account (header opening + every movement), for «Дансны үлдэгдэл»
+  const B = VIVI.stmtBal ? VIVI.stmtBal(p) : null;
+  if (B){ let run = B.open; for (let d = a, k = 0; d && d <= z && k < 400; d = shiftDay(d, 1), k++){ if (B.end[d] != null) run = B.end[d]; if (asOf && d >= asOf) break; const M = byM[d.slice(0, 7)]; if (M && M.days[d.slice(8)]) M.days[d.slice(8)].bal = run; } }
   return byM;
 }
 const stmtSpan = p => { const ds = (p.rows || []).map(t => typeof t.dt === 'string' ? t.dt.slice(0, 10) : isoU(t.dt instanceof Date ? t.dt.getTime() : +t.dt)).filter(Boolean).sort(); return p.per ? [p.per[0], p.per[1]] : [ds[0], ds[ds.length - 1]]; };
 async function stmtDaySave(p, acc, a, z){
-  for (const [per, M] of Object.entries(stmtDaysOf(p, acc, a, z))){ const ref = db.doc('stmtday/' + acc + '_' + per), o = await ref.get(), old = o.exists ? o.data() : {days: {}, tx: []};
+  for (const [per, M] of Object.entries(stmtDaysOf(p, acc, a, z, today()))){ const ref = db.doc('stmtday/' + acc + '_' + per), o = await ref.get(), old = o.exists ? o.data() : {days: {}, tx: []};
     const doc = {acc, per, days: {...(old.days || {}), ...M.days}, tx: (old.tx || []).filter(t => !M.days[String(t.d).slice(8)]).concat(M.tx).slice(-3000), by: me, at: new Date().toISOString()};
     await ref.set(doc); DR.stmt = DR.stmt || {}; DR.stmt[acc + '_' + per] = doc; }
 }
@@ -7782,7 +7842,7 @@ async function stmtFromRuns(a, z){
   try{ for (const r of todo.sort((x, y) => String(x.savedAt).localeCompare(String(y.savedAt)))){ STMT_RUNS.done[r.id] = true;
       try{ const files = await loadRaw(r.rawN, r.id);
         for (const f of files) if (f.type === 'bank' && (f.rows || []).length){ const acc = String(f.acc || f.rows[0].acc || ''); if (!acc) continue; const [fa, fz] = stmtSpan(f); if (!fa) continue;
-          for (const [per, M] of Object.entries(stmtDaysOf(f, acc, fa, fz))){ const k = acc + '_' + per, cur = DR.stmt && DR.stmt[k];
+          for (const [per, M] of Object.entries(stmtDaysOf(f, acc, fa, fz, r.savedAt ? fmtDT(r.savedAt).slice(0, 10) : today()))){ const k = acc + '_' + per, cur = DR.stmt && DR.stmt[k];
             // an uploaded statement (stmtday) wins for its days; a run fills the other days
             const days = {...M.days, ...((cur && cur.days) || {})}, tx = ((cur && cur.tx) || []).concat(M.tx.filter(t => !(cur && cur.days && cur.days[String(t.d).slice(8)])));
             DR.stmt = DR.stmt || {}; DR.stmt[k] = {acc, per, days, tx, fromRun: r.id};
@@ -8294,7 +8354,7 @@ else VIVIFB.start(async () => {
     db.collection('monthclose').onSnapshot(s => { DS.closed = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); }
   if (isOwner){ $('#aud-card').hidden = false; db.collection('audit').where('at', '>=', new Date(Date.now() - 60 * 864e5).toISOString()).onSnapshot(s => { AUD.list = s.docs.map(d => ({id: d.id, ...d.data()})); renderAudit(); }, onErr); }
   if (ALLOW.daily) db.collection('stocksnap').onSnapshot(s => { AN.snaps = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
-  if (isOwner || (ALLOW.bank && ALLOW.bal) || ALLOW.pl){ db.collection('stmtday').where('per', '>=', new Date(Date.now() - 100 * 864e5).toISOString().slice(0, 7)).onSnapshot(s => { DR.stmt = {...Object.fromEntries(Object.entries(DR.stmt || {}).filter(([, v]) => v.fromRun)), ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; render(); }, onErr);
+  if (isOwner || (ALLOW.bank && ALLOW.bal) || ALLOW.pl || ALLOW.bal){ db.collection('stmtday').where('per', '>=', new Date(Date.now() - 100 * 864e5).toISOString().slice(0, 7)).onSnapshot(s => { DR.stmt = {...Object.fromEntries(Object.entries(DR.stmt || {}).filter(([, v]) => v.fromRun)), ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; render(); }, onErr);
     db.collection('txmark').onSnapshot(s => { DR.marks = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); }
   if (ALLOW.daily || ALLOW.rev) db.collection('daily').where('date', '>=', DR_FROM).onSnapshot(s => { const keep = Object.fromEntries(Object.entries(DR.days).filter(([d]) => d < DR_FROM)); DR.days = {...keep, ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; DR.live = true; render(); }, onErr);
   $('#cash-upload').hidden = !(isOwner || ALLOW.rev); window.REV_DAILY = isOwner || !!ALLOW.daily || !!ALLOW.rev;
