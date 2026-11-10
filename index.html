@@ -179,7 +179,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd127</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd128</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -1086,9 +1086,10 @@ window.VIVIFB = (() => {
       if (/^image\//.test(file.type)){ data = await shrink(file); type = 'image/jpeg'; }
       else if (file.type === 'application/pdf'){ if (file.size > 15000000) throw { code: 'too_big' }; data = await readAsDataURL(file); type = 'application/pdf'; }
       else if (/^audio\//.test(file.type)){ if (file.size > 8000000) throw { code: 'too_big' }; data = await readAsDataURL(file); type = file.type.split(';')[0]; }
+      else if (/\.(xlsx?|xlsm|csv)$/i.test(file.name || '') || /spreadsheet|excel|csv/i.test(file.type)){ if (file.size > 15000000) throw { code: 'too_big' }; type = file.type || (/\.xls$/i.test(file.name) ? 'application/vnd.ms-excel' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); data = (await readAsDataURL(file)).replace(/^data:[^;]*;/, 'data:' + type + ';'); }   // an original Excel file (payroll list) kept as uploaded
       else throw { code: 'type' };
       const ref = db.collection('files').doc(), CH = 900000;
-      if (data.length <= CH) await ref.set({ data, type, by: current.uid, at: new Date().toISOString() });
+      if (data.length <= CH) await ref.set({ data, type, name: file.name || '', by: current.uid, at: new Date().toISOString() });
       else {   // a big PDF (a contract): parts of < 1 MB in files/{id}_p{i}, the head says how many
         const n = Math.ceil(data.length / CH);
         for (let i = 0; i < n; i++) await db.doc('files/' + ref.id + '_p' + i).set({ part: data.slice(i * CH, (i + 1) * CH), i, by: current.uid });
@@ -4389,7 +4390,7 @@ $('#pay-file').addEventListener('change', async e => {
     const sheets = wb.SheetNames.map(n => ({name: n, rows: XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null})}));
     const p = PAY.parse(sheets, f.name);
     if (p.error){ PS.draft = null; $('#pay-msg').textContent = p.error; renderPay(); return; }
-    PS.draft = {...p, file: f.name};
+    PS.draft = {...p, file: f.name}; PS.draftFile = f;
     if (PS.slot){ const fk = p.kind; PS.draft.per = PS.slot.per; PS.draft.kind = PS.slot.kind;
       $('#pay-msg').innerHTML = fk && fk !== PS.slot.kind ? `<b style="color:var(--bad)">Анхаар: файл «${esc(PAY.KIND_LABEL[fk] || fk)}» мэт байна, гэтэл «${esc(PAY.KIND_LABEL[PS.slot.kind])}» нүдэнд оруулж байна — файлаа шалгана уу.</b>` : `${esc(PS.slot.per)} · ${esc(PAY.KIND_LABEL[PS.slot.kind])} — шалгаад «Илгээх» дарна уу.`;
       if (p.per && p.per !== PS.slot.per) $('#pay-msg').innerHTML += ` <b style="color:var(--warn)">Файлын сар ${esc(p.per)} — ${esc(PS.slot.per)} гэж хадгална.</b>`; }
@@ -4415,6 +4416,8 @@ $('#pay-send').addEventListener('click', async () => {
   if (ex && !replace) return;
   const id = replace ? ex.id : d.per + '-' + d.kind;
   $('#pay-send').disabled = true; $('#pay-msg').textContent = 'Илгээж байна…';
+  let fileId = '';   // the original Excel, so it can be downloaded later exactly as the accountant uploaded it
+  if (PS.draftFile){ try{ fileId = (await assets.upload(PS.draftFile)).id; }catch(err){ console.warn('payroll file', err); } }
   if (typeof upLog === 'function') upLog({kind: 'payroll', file: d.file || '', a: d.per, z: d.per, n: (d.people || []).length, note: d.per + ' · ' + (d.kind || '')});
   const arch = isOwner && $('#pay-arch').checked;
   try{
@@ -4425,8 +4428,8 @@ $('#pay-send').addEventListener('click', async () => {
         if (q.expected != null){ o.expected = q.expected; o.ruleDiff = q.ruleDiff; } return o; })}));
     await db.doc('payroll/' + id).set({per: d.per, kind: d.kind, file: d.file, by: me, at: new Date().toISOString(), people, total: d.total, count: d.count, nTotal: d.nTotal,
       warnings: d.warnings || [], flags, accs: [...new Set(people.flatMap(p => p.accs))], marks: replace ? ex.marks || {} : {}, extra: replace ? ex.extra || {} : {}, stmtTx: replace ? ex.stmtTx || [] : [], ownerNotified: arch, archive: arch,
-      ...(replace ? {replacedAt: new Date().toISOString(), replacedFile: ex.file || '', replacedBy: me} : {})});
-    PS.draft = null; PS.slot = null; $('#pay-file').value = ''; PS.sel = id; $('#pay-arch').checked = false; $('#pay-msg').textContent = arch ? 'Архивт хадгаллаа.' : 'Илгээгдлээ. Эзэмшигч зөвшөөрсний дараа шилжүүлнэ үү.';
+      fileId, ...(replace ? {replacedAt: new Date().toISOString(), replacedFile: ex.file || '', replacedBy: me} : {})});
+    PS.draft = null; PS.draftFile = null; PS.slot = null; $('#pay-file').value = ''; PS.sel = id; $('#pay-arch').checked = false; $('#pay-msg').textContent = arch ? 'Архивт хадгаллаа.' : 'Илгээгдлээ. Эзэмшигч зөвшөөрсний дараа шилжүүлнэ үү.';
   }catch(err){ console.warn(err); $('#pay-msg').textContent = 'Илгээж чадсангүй: ' + (err.code || err.message || ''); }
   finally{ $('#pay-send').disabled = false; renderPay(); }
 });
@@ -4547,6 +4550,7 @@ function renderPayList(l, m){
   if (!isOwner && s === 'hold') acts += `<button class="btn primary" data-pay="resend">↻ Дахин илгээх</button>`;
   if (isOwner || (l.by === me && s !== 'approved')) acts += `<button class="btn" data-pay="delete">🗑 Устгах</button>`;
   if (isOwner || (l.by === me && !PS.decs[l.id])) acts += `<button class="btn" data-pay="replace" title="Шинэ файл сонгоод «Илгээх» дарвал энэ жагсаалтыг солино">↻ Файлаар солих</button>`;
+  if (l.fileId) acts += `<button class="btn" data-pm-dl="${esc(l.id)}" title="Нягтлангийн оруулсан эх файл">📥 Эх файл</button>`;
   acts += `<button class="btn" data-pay="xlsx">📥 Excel</button>`;
   const pct = l.total ? Math.round(r.paidSum / l.total * 100) : 0;
   $('#pay-head').innerHTML = `<div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(perLabel(l))}</h2><span class="chip ${st[1]}">${st[0]}</span></div>
@@ -4779,7 +4783,7 @@ function renderPayMonth(){
     return `<div style="border:1px solid var(--line);border-radius:10px;padding:12px"><div class="row" style="justify-content:space-between"><b>${title}</b><span class="chip ${st[1]}">${st[0]}</span></div>
       <div style="margin:6px 0">📄 <b>${esc(l.file || '—')}</b></div>
       <div class="note">${fmt(l.total)} ₮ · ${l.count} хүн · оруулсан ${esc(fmtDT(l.at))} · ${esc(nameOf(l.by) || '')}${l.replacedAt ? `<br>↻ солигдсон (өмнөх: ${esc(l.replacedFile || '')})` : ''}${L.length > 1 ? `<br><span style="color:var(--warn)">Энэ сард ${L.length} хувилбар байна — хамгийн сүүлийнхийг тооцож байна</span>` : ''}</div>
-      <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn" type="button" data-pay="sel" data-list="${esc(l.id)}">👁 Нээх</button>${canRep ? `<button class="btn" type="button" data-pm-up="${kind}">↻ Солих</button>` : ''}${canDel ? `<button class="btn" type="button" data-pay="delete" data-list="${esc(l.id)}">🗑 Устгах</button>` : ''}</div></div>`; };
+      <div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><button class="btn" type="button" data-pay="sel" data-list="${esc(l.id)}">👁 Нээх</button>${l.fileId ? `<button class="btn" type="button" data-pm-dl="${esc(l.id)}" title="Нягтлангийн оруулсан эх файл">📥 Файл татах</button>` : `<button class="btn" type="button" data-pay="xlsx" data-list="${esc(l.id)}" title="Эх файл хадгалагдаагүй (хуучин) — системд орсон өгөгдлөөр Excel гаргана">📥 Excel</button>`}${canRep ? `<button class="btn" type="button" data-pm-up="${kind}">↻ Солих</button>` : ''}${canDel ? `<button class="btn" type="button" data-pay="delete" data-list="${esc(l.id)}">🗑 Устгах</button>` : ''}</div></div>`; };
   const a = PS.lists.find(l => l.per === per && l.kind === 'adv' && payStatus(l) === 'approved'), f = PS.lists.find(l => l.per === per && l.kind === 'final' && payStatus(l) === 'approved');
   box.innerHTML = slot('adv') + slot('final') + `<div class="note" style="grid-column:1/-1">${a && f ? '✓ <b>' + esc(per) + ' сарын цалин бүрэн</b> — 2 жагсаалт зөвшөөрөгдсөн.' : 'Сар бүрэн хаагдахын тулд хоёр жагсаалт оруулж, эзэмшигч зөвшөөрнө.'}${PS.slot ? ` · <b>Одоо: ${esc(PS.slot.per)} ${esc(PAY.KIND_LABEL[PS.slot.kind])} оруулж байна</b> — доор шалгаад «Илгээх»` : ''}</div>`;
 }
@@ -4787,6 +4791,11 @@ $('#pm-per').addEventListener('change', e => { if (e.target.value){ PS.pm = e.ta
 $('#pm-prev').addEventListener('click', () => { const [y, m] = PS.pm.split('-').map(Number), d = new Date(Date.UTC(y, m - 2, 1)); PS.pm = d.toISOString().slice(0, 7); renderPayMonth(); });
 $('#pm-next').addEventListener('click', () => { const [y, m] = PS.pm.split('-').map(Number), d = new Date(Date.UTC(y, m, 1)); PS.pm = d.toISOString().slice(0, 7); renderPayMonth(); });
 document.addEventListener('click', e => { const b = e.target.closest('[data-pm-up]'); if (!b) return; PS.slot = {per: PS.pm, kind: b.dataset.pmUp}; $('#pay-file').value = ''; $('#pay-upload').scrollIntoView({behavior: 'smooth', block: 'start'}); $('#pay-file').click(); renderPayMonth(); });
+
+document.addEventListener('click', async e => { const b = e.target.closest('[data-pm-dl]'); if (!b) return; const l = PS.lists.find(x => x.id === b.dataset.pmDl); if (!l || !l.fileId) return;
+  b.disabled = true; const t = b.textContent; b.textContent = 'Татаж байна…';
+  try{ const url = await VIVIFB.fileURL(l.fileId); if (!url) throw new Error('файл олдсонгүй'); const a = document.createElement('a'); a.href = url; a.download = l.file || ('tsalin_' + l.per + '_' + l.kind + '.xlsx'); document.body.appendChild(a); a.click(); a.remove(); }
+  catch(err){ alert('Татаж чадсангүй: ' + (err.message || err.code)); } b.disabled = false; b.textContent = t; });
 // ---------- internal report (Дотоод тайлан) ----------
 const PLS = {months: {}, sel: '', cfg: {catMode: {}}, fixedCfg: {units: {}}, accStore: {}, ext: {}, draft: null, supUnit: '', open: {}};
 // active units (Nov 2026): Food City, Dragon, Online; Нийслэл opening; closed stores still show when a period has their data
