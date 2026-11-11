@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd142</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd143</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -5666,20 +5666,23 @@ const BAL_MAP_DEFAULT = {tdb: ['405095875', '405096869', '405096868', '405102965
   golomt_erka: ['1735156519'], golomt: ['1825100856', '1735159334', '1735159299'], golomt_sal: ['1735159300']};
 const balMap = () => { const o = (S.cfg && S.cfg.balmap) || null; return o && Object.keys(o).length ? o : BAL_MAP_DEFAULT; };
 function stmtBalFor(date){
+  // per account: the balance at the moment that day's statement was taken («cur», when the statement was pulled on that day), else the end of the day before (= that morning)
   const prev = shiftDay(date, -1), M = balMap(), seen = new Set(Object.values(DR.stmt || {}).map(D => D.acc)), out = {};
-  for (const [k] of BAL_ACCS){ const accs = M[k] || [], got = [], miss = [], nobal = []; let v = 0;
-    for (const a of accs){ const D = (DR.stmt || {})[a + '_' + prev.slice(0, 7)], x = D && D.days && D.days[prev.slice(8)];
-      if (x && x.bal != null){ got.push([a, x.bal]); v += +x.bal; } else if (x){ miss.push(a); nobal.push(a); } else if (seen.has(a)) miss.push(a); }
-    out[k] = {value: Math.round(v * 100) / 100, got, miss, nobal, complete: got.length > 0 && !miss.length}; }
+  const dayOf = (a, d) => { const D = (DR.stmt || {})[a + '_' + d.slice(0, 7)]; return D && D.days && D.days[d.slice(8)]; };
+  for (const [k] of BAL_ACCS){ const accs = M[k] || [], got = [], miss = [], nobal = []; let v = 0, at = '';
+    for (const a of accs){ const c = dayOf(a, date), x = dayOf(a, prev);
+      if (c && c.cur != null){ got.push([a, c.cur, c.curAt || '']); v += +c.cur; if (c.curAt && c.curAt > at) at = c.curAt; }
+      else if (x && x.bal != null){ got.push([a, x.bal, '']); v += +x.bal; } else if (x){ miss.push(a); nobal.push(a); } else if (seen.has(a)) miss.push(a); }
+    out[k] = {value: Math.round(v * 100) / 100, got, miss, nobal, at, complete: got.length > 0 && !miss.length}; }
   return out;
 }
 function renderBalStmt(){
   const box = $('#bal-stmt'); if (!box) return; if (typeof stmtFromRuns === 'function') stmtFromRuns(shiftDay(today(), -10), today());
   const date = $('#bal-date').value || today(), R = stmtBalFor(date), any = Object.values(R).some(r => r.got.length);
   const lab = a => (VIVI.ACC_NAME || {})[a] || a;
-  box.innerHTML = `<div style="border-top:1px solid var(--line);padding-top:10px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><b>📄 Банкны хуулгаас — ${esc(date)}-ны өглөөний үлдэгдэл (${esc(shiftDay(date, -1))}-ний эцэс)</b>${any ? '<button class="btn primary" type="button" id="bal-fill">📄 Хуулгаас бөглөх</button>' : ''}</div>
+  box.innerHTML = `<div style="border-top:1px solid var(--line);padding-top:10px"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><b>📄 Банкны хуулгаас — ${esc(date)}: хуулга татсан үеийн үлдэгдэл${Object.values(R).some(r => r.at) ? ' (' + esc(fmtDT(Object.values(R).map(r => r.at).sort().pop())) + ')' : ''}; тэр өдрийн хуулгагүй данс — өглөөний (${esc(shiftDay(date, -1))}-ний эцэс)</b>${any ? '<button class="btn primary" type="button" id="bal-fill">📄 Хуулгаас бөглөх</button>' : ''}</div>
     ${any ? `<div class="tbl" style="margin-top:6px"><table><thead><tr><th>Данс</th><th class="n">Хуулгаар</th><th>Хуулга</th></tr></thead><tbody>${BAL_ACCS.map(([k, l]) => { const r = R[k]; if (!r.got.length && !r.miss.length) return '';
-        return `<tr><td>${esc(l)}</td><td class="n">${r.got.length ? fmt(r.value) : '—'}</td><td class="note">${r.got.map(([a, v]) => `✓ ${esc(lab(a))} ${fmt(v)}`).join('<br>')}${r.miss.filter(a => !r.nobal.includes(a)).length ? `${r.got.length ? '<br>' : ''}<b style="color:var(--warn)">✗ хуулга алга: ${r.miss.filter(a => !r.nobal.includes(a)).map(lab).map(esc).join(', ')}</b>` : ''}${r.nobal.length ? `<br><b style="color:var(--warn)">↻ хуулга орсон ч үлдэгдэлгүй (өмнөх хувилбараар уншсан) — дахин оруулна уу: ${r.nobal.map(lab).map(esc).join(', ')}</b>` : ''}</td></tr>`; }).join('')}</tbody></table></div>
+        return `<tr><td>${esc(l)}</td><td class="n">${r.got.length ? fmt(r.value) : '—'}</td><td class="note">${r.got.map(([a, v, t]) => `✓ ${esc(lab(a))} ${fmt(v)} <span class="note">${t ? '· ' + esc(fmtDT(t).slice(11, 16)) + ' үеийн' : '· өглөө'}</span>`).join('<br>')}${r.miss.filter(a => !r.nobal.includes(a)).length ? `${r.got.length ? '<br>' : ''}<b style="color:var(--warn)">✗ хуулга алга: ${r.miss.filter(a => !r.nobal.includes(a)).map(lab).map(esc).join(', ')}</b>` : ''}${r.nobal.length ? `<br><b style="color:var(--warn)">↻ хуулга орсон ч үлдэгдэлгүй (өмнөх хувилбараар уншсан) — дахин оруулна уу: ${r.nobal.map(lab).map(esc).join(', ')}</b>` : ''}</td></tr>`; }).join('')}</tbody></table></div>
       <p class="note">Нягтлан хуулгаа «Орлого тулгалт»-д оруулахад энд автоматаар гарна. Бүх данс ✓ байвал өглөө бүр автоматаар хадгалагдана; ✗ данс байвал «Хуулгаас бөглөх» дараад дутууг гараар нөхөж хадгална. Гараар оруулсан тоо хуучныг орлоно.</p>`
       : '<p class="note">Энэ өдрийн банкны хуулга системд алга — «Орлого тулгалт»-д хуулга оруулбал энд автоматаар үлдэгдэл гарна, эсвэл дээр гараар бөглөнө.</p>'}</div>`;
   balAutoSave();
@@ -5696,9 +5699,12 @@ async function balAutoSave(){
     // only when every account that ever came with a statement is there for that day — a half-filled record would look like missing money
     if (!Object.keys(items).length || BAL_ACCS.some(([k]) => (R[k].got.length || R[k].miss.length) && !R[k].complete)) continue; const old = S.balances.find(b => b.date === date);
     if (old && old.src !== 'stmt') continue;   // somebody typed it: leave it
+    const at = BAL_ACCS.map(([k]) => R[k].at).filter(Boolean).sort().pop() || '';
+    if (old && old.cur && !at) continue;   // a balance taken during that day is not replaced by that day's morning one
+    if (old && old.cur && at && String(old.at || '') > at) continue;
     if (old && JSON.stringify(old.items || {}) === JSON.stringify(items)) continue;
     const key = date + JSON.stringify(items); if (BAL_AUTO[key]) continue; BAL_AUTO[key] = 1;
-    try{ await db.doc('balances/' + date).set({date, items, src: 'stmt', by: me, at: new Date().toISOString(), hist: old ? (old.hist || []).concat([{items: old.items || {}, by: old.by || null, at: old.at || null}]).slice(-10) : []}); }catch(err){ console.warn('bal auto', err); } }
+    try{ await db.doc('balances/' + date).set({date, items, src: 'stmt', by: me, at: at || new Date().toISOString(), cur: !!at, hist: old ? (old.hist || []).concat([{items: old.items || {}, by: old.by || null, at: old.at || null}]).slice(-10) : []}); }catch(err){ console.warn('bal auto', err); } }
 }
 // ---------- recurring transfers (Давтамжит гүйлгээ) ----------
 // accountant adds / changes / removes; a new item or a change waits for the owner's approval;
@@ -7990,7 +7996,7 @@ async function regStmt(p, file, hash){
 // every uploaded statement keeps its real money per day: in / out (and transfers between our own counted accounts apart) + each debit,
 // so «Хүлээгдэж буй үлдэгдэл» uses ALL outflows of the account (card purchases, fees, cash withdrawals, unapproved transfers), not only the e-mailed ones
 // one statement → {YYYY-MM: {days: {DD: {in, out, iin, iout, n}}, tx: [debits]}} for the days it covers
-function stmtDaysOf(p, acc, a, z, asOf){   // asOf: the day the statement was taken — that day is not over yet, so no end-of-day balance for it
+function stmtDaysOf(p, acc, a, z, asOf, asOfAt){   // asOf: the day the statement was taken — that day is not over yet, so no end-of-day balance for it; its balance at that moment is kept as «cur» (asOfAt = when)
   const al = x => { const n = VIVI.norm(x); return VIVI.accAlias ? VIVI.accAlias(n) : n; }, OUTS = typeof DR_OUTSIDE !== 'undefined' ? DR_OUTSIDE : new Set();
   const isInt = cp => { const c = al(cp); return !!c && c !== acc && VIVI.OWN.has(c) && !OUTS.has(c); };
   const dayOf = t => typeof t === 'string' ? t.slice(0, 10) : t instanceof Date ? isoU(t.getTime()) : isoU(+t), byM = {};
@@ -8002,12 +8008,12 @@ function stmtDaysOf(p, acc, a, z, asOf){   // asOf: the day the statement was ta
   for (const M of Object.values(byM)) for (const D of Object.values(M.days)) for (const k of ['in', 'out', 'iin', 'iout', 'sp', 'pk']) D[k] = Math.round((D[k] || 0) * 100) / 100;
   // the bank's own end-of-day balance of the account (header opening + every movement), for «Дансны үлдэгдэл»
   const B = VIVI.stmtBal ? VIVI.stmtBal(p) : null;
-  if (B){ let run = B.open; for (let d = a, k = 0; d && d <= z && k < 400; d = shiftDay(d, 1), k++){ if (B.end[d] != null) run = B.end[d]; if (asOf && d >= asOf) break; const M = byM[d.slice(0, 7)]; if (M && M.days[d.slice(8)]) M.days[d.slice(8)].bal = run; } }
+  if (B){ let run = B.open; for (let d = a, k = 0; d && d <= z && k < 400; d = shiftDay(d, 1), k++){ if (B.end[d] != null) run = B.end[d]; if (asOf && d >= asOf){ const M = d === asOf && byM[d.slice(0, 7)]; if (M && M.days[d.slice(8)]){ M.days[d.slice(8)].cur = run; M.days[d.slice(8)].curAt = asOfAt || null; } break; } const M = byM[d.slice(0, 7)]; if (M && M.days[d.slice(8)]) M.days[d.slice(8)].bal = run; } }
   return byM;
 }
 const stmtSpan = p => { const ds = (p.rows || []).map(t => typeof t.dt === 'string' ? t.dt.slice(0, 10) : isoU(t.dt instanceof Date ? t.dt.getTime() : +t.dt)).filter(Boolean).sort(); return p.per ? [p.per[0], p.per[1]] : [ds[0], ds[ds.length - 1]]; };
 async function stmtDaySave(p, acc, a, z){
-  for (const [per, M] of Object.entries(stmtDaysOf(p, acc, a, z, today()))){ const ref = db.doc('stmtday/' + acc + '_' + per), o = await ref.get(), old = o.exists ? o.data() : {days: {}, tx: []};
+  for (const [per, M] of Object.entries(stmtDaysOf(p, acc, a, z, today(), new Date().toISOString()))){ const ref = db.doc('stmtday/' + acc + '_' + per), o = await ref.get(), old = o.exists ? o.data() : {days: {}, tx: []};
     const doc = {acc, per, days: {...(old.days || {}), ...M.days}, tx: (old.tx || []).filter(t => !M.days[String(t.d).slice(8)]).concat(M.tx).slice(-3000), by: me, at: new Date().toISOString()};
     await ref.set(doc); DR.stmt = DR.stmt || {}; DR.stmt[acc + '_' + per] = doc; }
 }
@@ -8019,7 +8025,7 @@ async function stmtFromRuns(a, z){
   try{ for (const r of todo.sort((x, y) => String(x.savedAt).localeCompare(String(y.savedAt)))){ STMT_RUNS.done[r.id] = true;
       try{ const files = await loadRaw(r.rawN, r.id);
         for (const f of files) if (f.type === 'bank' && (f.rows || []).length){ const acc = String(f.acc || f.rows[0].acc || ''); if (!acc) continue; const [fa, fz] = stmtSpan(f); if (!fa) continue;
-          for (const [per, M] of Object.entries(stmtDaysOf(f, acc, fa, fz, r.savedAt ? fmtDT(r.savedAt).slice(0, 10) : today()))){ const k = acc + '_' + per, cur = DR.stmt && DR.stmt[k];
+          for (const [per, M] of Object.entries(stmtDaysOf(f, acc, fa, fz, r.savedAt ? fmtDT(r.savedAt).slice(0, 10) : today(), r.savedAt || null))){ const k = acc + '_' + per, cur = DR.stmt && DR.stmt[k];
             // an uploaded statement (stmtday) wins for its days; a run fills the other days
             const days = {...M.days, ...((cur && cur.days) || {})}, tx = ((cur && cur.tx) || []).concat(M.tx.filter(t => !(cur && cur.days && cur.days[String(t.d).slice(8)])));
             DR.stmt = DR.stmt || {}; DR.stmt[k] = {acc, per, days, tx, fromRun: r.id};
