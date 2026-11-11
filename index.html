@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd141</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd142</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -3897,6 +3897,11 @@ $('#bal-form').addEventListener('submit', async e => {
 const parsedFiles = [];
 async function handleFiles(fl){
   if (typeof XLSX === 'undefined'){ $('#cash-msg').textContent = 'Excel уншигч ачаалагдаагүй байна.'; return; }
+  try{ await handleFiles0(fl); }
+  catch(err){ console.error('rev', err); $('#cash-save').disabled = true; $('#cash-msg').innerHTML = '<span style="color:var(--bad)">⚠️ Тооцоолоход алдаа гарлаа: ' + esc(String(err && (err.message || err)).slice(0, 200)) + '</span> — энэ мөрийн зургийг эзэмшигчид илгээнэ үү.'; }
+}
+async function handleFiles0(fl){
+  $('#cash-save').disabled = true; $('#cash-msg').textContent = 'Хуулга уншиж байна…';
   for (const f of fl){
     try{ const buf = await f.arrayBuffer(); const wb = XLSX.read(buf, {type:'array', cellDates:false}); let best = {type:'unknown', label:'Танигдаагүй файл', rows:[]};
       for (const sn of wb.SheetNames){ const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, raw:true, defval:null}); const p = VIVI.parseRows(rows, f.name); if (p.type !== 'unknown'){ best = p; break; } }
@@ -3906,7 +3911,7 @@ async function handleFiles(fl){
     }catch(err){ parsedFiles.push({type:'unknown', label:'Уншиж чадсангүй', rows:[], file:f.name}); }
   }
   $('#cash-filelist').innerHTML = parsedFiles.map(p => `<div>${p.type==='unknown'?'<span class="chip c-bad">?</span>':'<span class="chip c-ok">✓</span>'} ${esc(p.label)} · ${p.rows.length} мөр · ${esc(p.file)}${p.dupNote ? ' <span class="chip c-warn">' + esc(p.dupNote) + '</span>' : ''}</div>`).join('');
-  revDefaults(); runRev();
+  $('#cash-msg').textContent = 'Тооцоолж байна…'; revDefaults(); await runRev();
 }
 // control period: by default the statements' first day … one day before their last day
 // (card, QPay and cash of the last day reach the bank the next day, so October needs statements up to 1 November)
@@ -3922,7 +3927,7 @@ function revDefaults(){
   if (a.slice(8) === '01' && +z.slice(8) <= 3 && z.slice(0, 7) > a.slice(0, 7)) z = addD(z.slice(0, 8) + '01', -1);
   $('#rev-d0').value = a; $('#rev-d1').value = z < a ? a : z;
 }
-['#rev-d0', '#rev-d1'].forEach(s => $(s).addEventListener('change', () => { revPerTouched = true; runRev(); }));
+['#rev-d0', '#rev-d1'].forEach(s => $(s).addEventListener('change', () => { revPerTouched = true; runRev().catch(err => { console.error('rev', err); $('#cash-save').disabled = true; $('#cash-msg').textContent = '⚠️ Тооцоолоход алдаа гарлаа: ' + String(err && (err.message || err)).slice(0, 200); }); }));
 async function runRev(){
   if (!parsedFiles.length) return;
   const d0 = $('#rev-d0').value, d1 = $('#rev-d1').value, r = stmtRange();
@@ -4129,6 +4134,7 @@ const drop = $('#drop');
 drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
 drop.addEventListener('dragleave', () => drop.classList.remove('over'));
 drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); handleFiles([...e.dataTransfer.files]); });
+window.addEventListener('beforeunload', e => { if (pendingRun){ e.preventDefault(); e.returnValue = ''; } });   // a computed but unsaved control is not lost by an accidental reload
 $('#cash-save').addEventListener('click', async () => {
   if (!db || !pendingRun) return;
   const C = pendingRun.check; if (C && (C.miss || C.part) && !confirm(`${C.need}-аас ${C.need - C.ok} дансны хуулга дутуу (${C.rows.filter(r => r.req && r.st !== 'ok').map(r => r.name || r.acc).join(', ')}).\n\nДутуу дансны мөнгө «банкинд ороогүй» гэж харагдана. Тэгсэн ч хадгалах уу?`)) return;
