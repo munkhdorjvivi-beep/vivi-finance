@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd143</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd144</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -458,6 +458,8 @@ body{margin:0;background:var(--bg)}
     <div class="card" id="dr-upload">
       <h2>Өдрийн тайлан оруулах</h2>
       <p class="note" style="margin:0 0 10px">Smart-аас өмнөх өдрийн 2 тайланг оруулна: <b>«Борлуулалтын жагсаалт /бараагаар/»</b> (Өртөг баганатай) ба <b>«Борлуулалтын жагсаалт /төлбөрийн хэлбэрээр/»</b>. Хоёуланг нь зэрэг сонгож болно. Олон өдрийн (сарын) тайлан оруулбал өдөр бүрээр нь хадгална.</p>
+      <div class="banner" style="margin:0 0 10px"><b>🔗 POS-оос татах</b> — 2026-11-13-наас хойш борлуулалт манай POS-оор явж байгаа тул Smart файл хэрэггүй: өдрүүдээ сонгоод «POS-оос татах» дарна. Бараагаар (нийлүүлэгч, бүлэг, өртөг) ба төлбөрийн хэлбэрээр (кассчин, баримт бүрээр) өгөгдөл автоматаар бүрдэнэ. Шалгаад «Хадгалах» дарна.
+        <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap;align-items:center"><input type="date" id="dr-pos-a" style="width:auto;max-width:170px"> – <input type="date" id="dr-pos-z" style="width:auto;max-width:170px"><button class="btn primary" id="dr-pos-go">🔗 POS-оос татах</button><span class="note" id="dr-pos-who"></span></div></div>
       <div class="row"><input id="dr-files" type="file" multiple accept=".xls,.xlsx" style="max-width:340px"><button class="btn primary" id="dr-save" disabled>Хадгалах</button></div>
       <div class="files" id="dr-filelist" style="margin-top:8px"></div>
       <div class="note" id="dr-msg" style="margin-top:6px"></div>
@@ -5367,6 +5369,9 @@ $('#dr-files').addEventListener('change', async e => {
       P.info.push(`<div><span class="chip c-bad">?</span> Танигдсангүй · ${esc(f.name)}</div>`);
     }catch(err){ console.warn(err); P.info.push(`<div><span class="chip c-bad">?</span> Уншиж чадсангүй · ${esc(f.name)}</div>`); }
   }
+  await drFinish(P);
+});
+async function drFinish(P){
   // check: sales = payments per day; long uploads get a summary + per-store difference instead of one line per day
   const dates = [...new Set([...Object.keys((P.sales || {}).days || {}), ...Object.keys(P.pay || {})])].sort();
   if (dates.length && typeof drEnsure === 'function'){ $('#dr-msg').textContent = 'Өмнө хадгалсантай тулгаж байна…'; await drEnsure(dates[0], dates[dates.length - 1]); }
@@ -5394,7 +5399,103 @@ $('#dr-files').addEventListener('change', async e => {
   for (const m of missD) P.info.push(`<div><span class="chip c-warn">Дутуу</span> ${esc(m)}</div>`);
   DR.parsed = dates.length ? {...P, dates} : null;
   $('#dr-filelist').innerHTML = P.info.join(''); $('#dr-save').disabled = !DR.parsed; $('#dr-msg').textContent = '';
+}
+// ===== 🔗 POS → «Өдрийн тайлан»: борлуулалтыг vivi-pos (манай POS) төслөөс шууд уншина =====
+// POS-ын баримт (pos_sales) → Smart-ын 2 тайлантай ижил бүтэц: бараагаар (stores, sup, items, codes) ба төлбөрийн хэлбэрээр (pay, dailykas).
+// Нэвтрэлт: POS төсөлд Google-ээр тусад нь нэвтэрнэ (POS самбар → «👤 Хэрэглэгч»-д энэ Gmail бүртгэлтэй байх ёстой).
+const POSFB = (() => {
+  const CFG = {apiKey: 'AIzaSyCk8Y3Orec0FPOlB0Nco95Z9DqJFUivElg', authDomain: 'vivi-pos-test.firebaseapp.com', projectId: 'vivi-pos-test', storageBucket: 'vivi-pos-test.firebasestorage.app', messagingSenderId: '578097542957', appId: '1:578097542957:web:c11efc01987985df9e45a4'};
+  let app = null, cost = null;
+  const get = () => app || (app = firebase.initializeApp(CFG, 'vivi-pos'));
+  const authReady = () => new Promise(r => { const u = get().auth().onAuthStateChanged(() => { u(); r(); }); });
+  async function login(){
+    const a = get().auth(); await authReady();
+    if (!a.currentUser){ const p = new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({prompt: 'select_account'}); await a.signInWithPopup(p); }
+    return {db: get().firestore(), email: (a.currentUser.email || '').toLowerCase()};
+  }
+  async function costs(pdb){   // нэгж өртөг: pos_cost (самбарын файл) → pos_itemcost (шинэ бараа); эрхгүй бол хоосон
+    if (cost) return cost; const m = new Map(); let ok = true;
+    try{ const meta = await pdb.collection('pos_cost').doc('meta').get();
+      if (meta.exists) for (const c of meta.data().chunks || []){ const d = await pdb.collection('pos_cost').doc(c.id).get(); if (d.exists) JSON.parse(d.data().d).forEach(x => m.set(String(x[0]), +x[1] || 0)); }
+      const s = await pdb.collection('pos_itemcost').get(); s.docs.forEach(d => { const x = d.data(); if (x && x.code && x.cost > 0 && !m.get(String(x.code))) m.set(String(x.code), +x.cost); });
+    }catch(e){ console.warn('pos cost', e); ok = false; }
+    const r = {m, ok}; if (ok) cost = r; return r;
+  }
+  const out = () => { cost = null; return app ? app.auth().signOut() : Promise.resolve(); };
+  const who = async () => { if (!app) return ''; await authReady(); return (app.auth().currentUser || {}).email || ''; };
+  return {login, costs, out, who};
+})();
+const POS_UNIT = {FC: 'Фүүд сити', DR: 'Драгон', NS: 'Нийслэл', ON: 'Онлайн дэлгүүр', YV: 'Поп-ап (түр цэг)'};
+// POS баримтуудыг (нэг буюу олон өдөр) Smart-ын хоёр тайлангийн бүтэц рүү хөрвүүлнэ. Цэвэр функц — Firestore-оос хамааралгүй.
+function posDaily(list, costMap, unitOf){
+  const r2 = x => Math.round(x * 100) / 100, ORION_COST = 6500, days = {}, items = {}, codes = {}, rows = [];
+  let n = 0, adjN = 0;
+  for (const s of list){
+    const day = String(s.date || '').replace(/\//g, '-'); if (!/^\d{4}-\d\d-\d\d$/.test(day)) continue;
+    const unit = POS_UNIT[s.store] || unitOf(s.storeName || s.store || '');
+    const D = days[day] = days[day] || {date: day, stores: {}, sup: {}, lines: 0, adjN: 0};
+    for (const l of s.lines || []){
+      const qty = +l.qty || 0, net = +l.sum || 0, sup = String(l.sup || '').trim() || '(нийлүүлэгчгүй)', grp = String(l.grp || '').trim().replace(/\.$/, '') || '–';
+      const h = (+l.base || 0) * qty - net, uc = costMap.get(String(l.code));
+      let cost = uc > 0 ? uc * qty : 0;
+      if (!cost && /ORION/i.test(sup) && qty){ cost = ORION_COST * qty; adjN++; D.adjN++; }
+      D.lines++; n++;
+      const S = D.stores[unit] = D.stores[unit] || {s: 0, c: 0, q: 0, r: 0, h: 0};
+      S.s += net; S.c += cost; S.q += qty; S.h += h; if (net < 0) S.r += -net;
+      const X = (D.sup[unit] = D.sup[unit] || {})[sup] = (D.sup[unit] || {})[sup] || {s: 0, c: 0, q: 0, h: 0, g: {}};
+      X.s += net; X.c += cost; X.q += qty; X.h += h;
+      const G = X.g[grp] = X.g[grp] || {s: 0, c: 0, q: 0, h: 0}; G.s += net; G.c += cost; G.q += qty; G.h += h;
+      const ck = String(l.code == null ? '' : l.code).trim().replace(/[.\/#$\[\]~*`]/g, '_');
+      if (ck){ if (!codes[ck] || (qty > 0 && uc > 0)) codes[ck] = grp.replace(/\d+$/, '').trim() + '|' + sup + '|' + String(l.name || '').trim().replace(/\|/g, '/').slice(0, 70) + '|' + (uc > 0 ? Math.round(uc) : '') + '|' + (+l.base > 0 ? Math.round(+l.base) : qty > 0 ? Math.round(net / qty) : '');
+        const IU = (items[day] = items[day] || {})[unit] = (items[day] || {})[unit] || {}; const it = IU[ck] = IU[ck] || [0, 0, 0]; it[0] += qty; it[1] = r2(it[1] + net); it[2] = r2(it[2] + cost); }
+    }
+    // төлбөр: Smart-ын «төлбөрийн хэлбэрээр» мөр шиг. Ваучер, солилт банкинд орохгүй тул зээлийн «хүн» шиг (Зээл: Ваучер / Зээл: Солилт)
+    for (const p of s.payments || []){ const amt = +p.amount || 0; if (!amt) continue;
+      const f = p.form === 'Бэлнээр' ? {form: 'Бэлнээр'} : p.form === 'Банкаар' ? {form: 'Банкаар', bank: p.bank || 'Банкаар'} : p.form === 'Зээлээр' ? {form: 'Зээлээр', who: p.partner || ''} : {form: 'Зээлээр', who: p.form || 'Бусад'};
+      rows.push({d: day, store: unit, ...f, amt, kas: s.cashier || '', t: String(s.time || '').slice(0, 5), no: String(s.id || ''), pos: s.reg ? 'Касс ' + s.reg : ''}); }
+  }
+  for (const D of Object.values(days)){
+    for (const S of Object.values(D.stores)){ S.s = r2(S.s); S.c = r2(S.c); S.r = r2(S.r); S.h = r2(S.h); }
+    for (const U of Object.values(D.sup)) for (const X of Object.values(U)){ X.s = r2(X.s); X.c = r2(X.c); X.h = r2(X.h); for (const G of Object.values(X.g)){ G.s = r2(G.s); G.c = r2(G.c); G.h = r2(G.h); } } }
+  return {sales: {days, lines: n, adjN, skipped: [], codes, items}, rows};
+}
+async function drPosWho(){ const e = await POSFB.who().catch(() => ''); $('#dr-pos-who').innerHTML = e ? `POS: <b>${esc(e)}</b> · <a href="#" id="dr-pos-out">гарах</a>` : 'POS-д анх удаа Google-ээр нэвтэрнэ'; const o = $('#dr-pos-out'); if (o) o.onclick = async ev => { ev.preventDefault(); await POSFB.out(); drPosWho(); }; }
+{ const y = shiftDay(today(), -1); $('#dr-pos-a').value = y; $('#dr-pos-z').value = y; $('#dr-pos-who').textContent = 'POS-д анх удаа Google-ээр нэвтэрнэ'; }
+$('#dr-pos-go').addEventListener('click', async () => {
+  let a = $('#dr-pos-a').value, z = $('#dr-pos-z').value; if (!a || !z) return $('#dr-msg').textContent = 'Өдрөө сонгоно уу.';
+  if (a > z) [a, z] = [z, a]; if (z > today()) z = today();
+  const ds = []; for (let d = a; d <= z && ds.length < 92; d = shiftDay(d, 1)) ds.push(d);
+  if (ds.length >= 92) return $('#dr-msg').textContent = 'Нэг удаад 3 сараас ихгүй.';
+  const btn = $('#dr-pos-go'); btn.disabled = true; $('#dr-filelist').innerHTML = ''; $('#dr-save').disabled = true; DR.parsed = null;
+  try{
+    $('#dr-msg').textContent = 'POS-д нэвтэрч байна…'; const {db: pdb, email} = await POSFB.login(); drPosWho();
+    $('#dr-msg').textContent = 'Өртөг уншиж байна…'; const C = await POSFB.costs(pdb);
+    const list = [], empty = [];
+    for (let i = 0; i < ds.length; i++){ $('#dr-msg').textContent = `POS баримт уншиж байна… ${ds[i]} (${i + 1}/${ds.length})`;
+      const q = await pdb.collection('pos_sales').where('date', '==', ds[i].replace(/-/g, '/')).get();
+      const L = q.docs.map(x => x.data()).filter(s => s.date === ds[i].replace(/-/g, '/')); if (!L.length) empty.push(ds[i]); list.push(...L); }
+    const B = posDaily(list, C.m, PAY.unitOf), got = Object.keys(B.sales.days).sort();
+    if (!got.length){ $('#dr-msg').textContent = `${a} – ${z}: POS-д борлуулалт алга.`; return; }
+    const P = {sales: B.sales, pay: DAILY.payDays(B.rows, u => u), kas: DAILY.payList(B.rows, u => u), info: [], files: []};
+    const rec = list.length, F = {file: 'POS (' + email + ')', hash: '', a: got[0], z: got[got.length - 1]};
+    P.files.push({...F, kind: 'sales', n: B.sales.lines}, {...F, kind: 'pay', n: B.rows.length});
+    const st = {}; for (const D of Object.values(B.sales.days)) for (const [u, S] of Object.entries(D.stores)) st[u] = (st[u] || 0) + S.s;
+    P.info.push(`<div><span class="chip c-ok">✓ POS</span> ${drDaysLabel(got)} · ${fmt(rec)} баримт · ${fmt(B.sales.lines)} мөр · ${Object.entries(st).map(([u, v]) => esc(u) + ' ' + fmt(Math.round(v)) + ' ₮').join(' · ')}</div>`);
+    if (!C.ok || !C.m.size) P.info.push(`<div><span class="chip c-warn">Өртөггүй</span> POS-ын өртгийг уншиж чадсангүй (POS самбарын «👤 Хэрэглэгч»-д ${esc(email)}-д «Өртөг» эрх өгнө үү). Ашиг, маржин гарахгүй — ORION л 6 500 ₮/ш.</div>`);
+    else { let nc = 0; for (const s of list) for (const l of s.lines || []) if (!(C.m.get(String(l.code)) > 0) && !/ORION/i.test(l.sup || '') && +l.sum) nc++; if (nc) P.info.push(`<div><span class="chip c-warn">Өртөггүй мөр</span> ${fmt(nc)} мөрт POS-д өртөг алга — ашиг тэр хэсэгт бага/буруу гарна.</div>`); }
+    if (B.sales.adjN) P.info.push(`<div><span class="chip c-acc">ORION</span> өртөггүй ${fmt(B.sales.adjN)} мөр → 6 500 ₮/ш</div>`);
+    if (z === today()) P.info.push(`<div><span class="chip c-warn">Өнөөдөр</span> ${z} дуусаагүй — өдөр дууссаны дараа дахин татаж хадгална уу.</div>`);
+    if (empty.length) P.info.push(`<div><span class="chip c-grey">Хоосон</span> ${drDaysLabel(empty)} — POS-д баримт алга</div>`);
+    if (list.some(s => (s.payments || []).some(p => p.form === 'Ваучер' || p.form === 'Солилт'))) P.info.push(`<div><span class="chip c-grey">Тэмдэглэл</span> Ваучер, солилтоор төлсөн хэсэг банкинд орохгүй тул «Зээл: Ваучер», «Зээл: Солилт» гэж харагдана.</div>`);
+    await drFinish(P);
+    $('#dr-msg').textContent = 'Шалгаад «Хадгалах» дарна уу.';
+  }catch(e){ console.warn('pos pull', e);
+    const c = e && e.code || '';
+    $('#dr-msg').innerHTML = /permission/.test(c) ? `<span style="color:var(--bad)">POS эрхгүй: ${esc(await POSFB.who().catch(() => '') || 'энэ Gmail')} POS самбарын «👤 Хэрэглэгч»-д бүртгэлгүй эсвэл «Борлуулалтын тайлан» эрхгүй байна. POS самбарт эзэмшигчээр орж нэмнэ үү.</span>`
+      : /popup/.test(c) ? 'Google цонх нээгдсэнгүй (popup хаагдсан) — дахин «POS-оос татах» дарна уу.' : `<span style="color:var(--bad)">Алдаа: ${esc(c || e.message || e)}</span>`;
+  }finally{ btn.disabled = false; }
 });
+
 $('#dr-save').addEventListener('click', async () => {
   const P = DR.parsed; if (!P || !db) return;
   const closed = [...new Set(P.dates.map(d => d.slice(0, 7)))].filter(m => typeof DS !== 'undefined' && DS.closed[m]);
