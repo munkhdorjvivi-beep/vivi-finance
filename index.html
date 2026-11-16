@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd153</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd154</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -6430,15 +6430,14 @@ function renderWhDelivs(){
   tb.innerHTML = L.length ? L.map(d => { const t = totOf(d.id), sc = Object.values(t).reduce((a, b) => a + b, 0);
     return `<tr><td><b>${esc(d.name)}</b></td><td class="note">${esc(fmtDT(d.createdAt))}</td><td class="n">${fmt(d.total)}</td><td class="note">${Object.entries(d.pct || {}).filter(([, p]) => p).map(([k, p]) => `${esc(storeName(k))} ${p}%`).join(' · ')}</td>
       <td class="n">${WS.cnt[d.id] ? (WS.cnt[d.id]._err ? '<span title="Скан тоо уншиж чадсангүй — Firestore rules шалгана уу" style="color:var(--bad)">!</span>' : fmt(sc)) : '…'}</td><td>${d.status === 'closed' ? '<span class="chip c-grey">Хаасан</span>' : '<span class="chip c-ok">Идэвхтэй</span>'}</td>
-      <td style="white-space:nowrap"><button class="btn primary" data-wd-rep="${esc(d.id)}">📊 Тайлан / Purchase</button>${isOwner || (window.ALLOWX || {}).wh ? `<button class="btn" data-wd-ren="${esc(d.id)}" title="Барааны нэрийг Excel файлаас (баркодоор) шинэчлэх — хүргэлт, илгээмж, хэвлэх жагсаалт бүгдэд">🔄 Нэр Excel-ээс</button>` : ''}${d.extraQ ? `<div class="note">+${fmt(d.extraQ)} ш жагсаалтгүй нэмэгдсэн</div>` : ''}${d.status === 'closed' ? `<button class="btn" data-wd-open="${esc(d.id)}">Нээх</button>` : `<button class="btn" data-wd-close="${esc(d.id)}">Хаах</button>`}${WS.ships.some(s => s.deliv === d.id && s.status !== 'open') ? '' : `<button class="btn" data-wd-del="${esc(d.id)}" title="Буруу жагсаалт оруулсан бол" style="color:var(--bad)">🗑 Устгах</button>`}</td></tr>`; }).join('')
+      <td style="white-space:nowrap"><button class="btn primary" data-wd-rep="${esc(d.id)}">📊 Тайлан / Purchase</button>${isOwner || (window.ALLOWX || {}).wh ? `<button class="btn" data-wd-ren="${esc(d.id)}" title="Барааны нэрийг Excel файлаас (баркодоор) шинэчлэх — хүргэлт, илгээмж, хэвлэх жагсаалт бүгдэд">🔄 Нэр Excel-ээс</button>` : ''}${d.extraQ ? `<div class="note">+${fmt(d.extraQ)} ш жагсаалтгүй нэмэгдсэн</div>` : ''}${d.status === 'closed' ? `<button class="btn" data-wd-open="${esc(d.id)}">Нээх</button>` : `<button class="btn" data-wd-close="${esc(d.id)}">Хаах</button>`}${isOwner || (window.ALLOWX || {}).wh ? `<button class="btn" data-wd-del="${esc(d.id)}" title="Буруу жагсаалт оруулсан бол" style="color:var(--bad)">🗑 Устгах</button>` : ''}</td></tr>`; }).join('')
     : '<tr><td colspan="7" class="empty">Хүргэлт алга.</td></tr>';
 }
 // delete a delivery loaded by mistake (only while nothing has been sent to the stores)
 async function deleteDeliv(id){
   const D = WS.delivs.find(d => d.id === id); if (!D) return; await flush();
   const S2 = WS.ships.filter(s => s.deliv === id), sent = S2.filter(s => s.status !== 'open'), sc = Object.values(totOf(id)).reduce((a, b) => a + b, 0);
-  if (sent.length){ alert(`«${D.name}» устгах боломжгүй: ${sent.length} илгээмж дэлгүүр рүү илгээгдсэн. Хүргэлтийг «Хаах» боломжтой.`); return; }
-  if (sc){ const t = prompt(`«${D.name}» хүргэлтэд ${sc} ш скан хийгдсэн байна. Устгавал скан, нээлттэй илгээмж бүгд устана, сэргээх боломжгүй.\n\nБаталгаажуулахын тулд УСТГАХ гэж бичнэ үү:`); if (t == null) return; if (!delWordOk(t)){ alert('Баталгаажуулах үг буруу — «УСТГАХ» гэж бичнэ үү (эсвэл DELETE). Устгаагүй.'); return; } }
+  if (sent.length || sc){ const t = prompt(`«${D.name}» хүргэлтийг устгах уу?\n\n${sc ? sc + ' ш скан хийгдсэн. ' : ''}${sent.length ? `${sent.length} илгээсэн илгээмж (${sent.map(s => s.no + ' · ' + storeName(s.store) + (s.status === 'sent' ? '' : ' — дэлгүүр хүлээн авсан')).join(', ')}) бас устана — дэлгүүрт явсан бараа байвал буцааж авна уу.\n` : ''}Сэргээх боломжгүй.\n\nБаталгаажуулахын тулд УСТГАХ гэж бичнэ үү:`); if (t == null) return; if (!delWordOk(t)){ alert('Устгасангүй — УСТГАХ гэж бичээгүй.'); return; } }
   else if (!confirm(`«${D.name}» хүргэлтийг (${fmt(D.total)} ш жагсаалт) устгах уу?`)) return;
   // one document at a time: a list part is big (hundreds of indexed fields) and a single batch is refused as «Transaction too big»
   const msg = t => { const el = $('#wd-msg'); if (el) el.textContent = t; };
