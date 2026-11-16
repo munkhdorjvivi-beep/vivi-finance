@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd147</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd148</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -6117,7 +6117,7 @@ function renderSession(){
 function shipRows(s){
   const L = decMap(s.l), I = decMap(s.i), cfg = whCfg(), st = WH.storeOf(s.store, cfg) || {base: ''}; const P = WS.parts[s.deliv];
   return Object.entries(L).filter(([, n]) => n > 0).map(([e, n]) => { const i = I[e] || {}, it = P && P.eans[e] ? P.items[P.eans[e]] : null; const [m, sz] = String(i.k || '').split('|');
-    return [e, i.n || '', m || '', sz || '', s.store === cfg.over.key ? st.base : st.base + (i.l || ''), i.p || (it && it.p) || '', n, i.x ? 'жагсаалтгүй' : '']; })
+    return [e, (it && it.n) || i.n || '', m || '', sz || '', s.store === cfg.over.key ? st.base : st.base + (i.l || ''), i.p || (it && it.p) || '', n, i.x ? 'жагсаалтгүй' : '']; })
     .sort((a, b) => String(a[4]).localeCompare(String(b[4])) || String(a[2]).localeCompare(String(b[2])) || String(a[3]).localeCompare(String(b[3])));
 }
 const SHIP_HEAD = ['Баркод', 'Барааны нэр', 'Загвар', 'Хэмжээ', 'Байршил', 'Үнэ (₮)', 'Тоо', 'Тэмдэглэл'];
@@ -6509,7 +6509,7 @@ $('#rc-close').addEventListener('click', async () => { await rcFlush(); WS.rc = 
 $('#wd-file').addEventListener('change', async e => {
   const f = e.target.files[0]; if (!f) return; $('#wd-info').textContent = 'Уншиж байна…';
   try{ const M = await loadMaster(); const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let best = null;
-    for (const n of wb.SheetNames){ const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null}); const r = WH.parseList(rows, {master: M}); if (!r.error && (!best || r.pcs > best.pcs)) best = {...r, sheet: n}; }
+    for (const n of wb.SheetNames){ const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null}); const r = WH.parseList(rows, {master: M, nameSrc: 'file'}); if (!r.error && (!best || r.pcs > best.pcs)) best = {...r, sheet: n}; }
     if (!best){ $('#wd-info').textContent = 'Жагсаалт олдсонгүй — баркод (EAN) болон тоо ширхэгийн багана байх ёстой.'; WD = null; return; }
     WD = {...best, file: f.name, hasMaster: !!M}; WD.fp = listFp(WD.items); if (!$('#wd-name').value) $('#wd-name').value = f.name.replace(/\.[^.]+$/, ''); wdPreview();
   }catch(err){ console.warn(err); $('#wd-info').textContent = 'Уншиж чадсангүй.'; }
