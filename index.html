@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd152</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd153</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -3266,7 +3266,7 @@ const FROM_ACCS = [
   ['5403962396','Хаан – Энхтөр (Фүүд сити) 5403962396'],['5403962410','Хаан – Энхтөр (Драгон) 5403962410'],['5403962454','Хаан – Энхтөр (Дархан) 5403962454'],
   ['5224167095','Хаан – Энхбаатар 5224167095'],['5224167073','Хаан – Энхбаатар (цалин) 5224167073'],['1735156519','Голомт – Энхбаатар (Эрка) 1735156519'],
   ['405095875','ХХБ – Вивекавикториа 405095875'],['405096869','ХХБ – Вивекавикториа 405096869'],['1825100856','Голомт – Вивекавикториа 1825100856'],
-  ['1735159300','Голомт – Вивекавикториа (цалин) 1735159300'],['5174139482','Хаан – Мөнхдорж 5174139482'],['2106025813','Ариг – Вивекавикториа 2106025813']];
+  ['1735159300','Голомт – Вивекавикториа (цалин) 1735159300'],['5174139482','Хаан – Мөнхдорж 5174139482'],['5175278095','Хаан – Вивекавикториа (POS Драгон) 5175278095'],['2106025813','Ариг – Вивекавикториа 2106025813']];
 const ACC_LABEL = Object.fromEntries(FROM_ACCS.map(([a,l]) => [a,l]));
 const ALLOC_LABEL = {sales: 'борлуулалтын хувиар', area: 'талбайн м²-аар', equal: 'тэнцүү'};
 const attList = r => (r.attachments && r.attachments.length) ? r.attachments : (r.attachId ? [{id: r.attachId, type: r.attachType}] : []);
