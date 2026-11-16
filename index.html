@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd162</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd163</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -741,6 +741,7 @@ body{margin:0;background:var(--bg)}
       <p class="note" style="margin:0 0 8px">Нээлттэй → «Илгээх» → дэлгүүр скан хийж тулгана → зөрүүгүй бол «Хүлээн авсан», зөрүүтэй бол агуулах мөр бүрийг шийдвэрлэнэ. Smart-ын файл дэлгүүр хүлээн авсны дараа, бодит хүлээн авсан тоогоор гарна.</p>
       <div class="tbl"><table><thead><tr><th>№</th><th>Дэлгүүр</th><th>Хүргэлт</th><th class="n">Илгээсэн</th><th class="n">Хүлээн авсан</th><th>Төлөв</th><th>Огноо</th><th></th></tr></thead><tbody id="wh-ships"></tbody></table></div>
       <div id="wh-ship-detail" style="margin-top:12px"></div>
+      <div id="wh-hist" style="margin-top:14px"></div>
       <h2 style="margin-top:18px">🗂 Илгээлтийн архив — хэвлэх</h2>
       <p class="note" style="margin:0 0 8px">«Скан дуусгах» эсвэл «Илгээх» бүр энд хадгалагдана. Дэлгүүр бүрийн хуваарилалтын жагсаалтыг хэвлэж бараатай хамт явуулна (дэлгүүр бүр тусдаа хуудас).</p>
       <div class="row" style="gap:8px;margin-bottom:6px"><label class="note row" style="gap:6px;width:auto">Огноо <input type="date" id="wh-arch-d" style="width:auto"></label><button class="btn" id="wh-arch-all">Бүгдийг харуулах</button></div>
@@ -6103,7 +6104,7 @@ async function onScan(raw){
   beep(kind); pushLast({e, n: it.n, s: it.m + ' ' + it.s, st, kind, k, sid});
   renderWhStores();
 }
-function pushLast(x){ WS.last.unshift({...x, t: new Date().toTimeString().slice(0, 8)}); WS.last = WS.last.slice(0, 25); try{ localStorage.setItem('vivi-wh-last-' + WS.active, JSON.stringify(WS.last)); }catch(e){} renderWhLast(); }
+function pushLast(x){ WS.last.unshift({...x, t: new Date().toTimeString().slice(0, 8), ts: Date.now()}); WS.last = WS.last.slice(0, 25); try{ localStorage.setItem('vivi-wh-last-' + WS.active, JSON.stringify(WS.last)); }catch(e){} renderWhLast(); }
 function restoreLast(){ if (WS.lastFor === WS.active) return; WS.lastFor = WS.active; try{ WS.last = JSON.parse(localStorage.getItem('vivi-wh-last-' + WS.active) || '[]'); }catch(e){ WS.last = []; } }
 // ---------- price check (does not touch counts) ----------
 async function priceCheck(raw){
@@ -6125,6 +6126,9 @@ function showResult(kind, big, small, st, html){
 }
 async function undoScan(i){
   const x = WS.last[i]; if (!x || x.undone || x.kind === 'bad') return; const id = WS.active;
+  const sh = WS.ships.find(y => y.id === x.sid), fresh = x.ts && Date.now() - x.ts < 5 * 60e3 && (!sh || sh.status === 'open');
+  if (!fresh && !whCanEdit()){ alert('Буцаах хугацаа (5 мин) өнгөрсөн эсвэл илгээмж илгээгдсэн — засах эрхтэй хүнд хандана уу.'); return; }
+  whLog('undoScan', {ship: x.sid || '', store: x.st, deliv: id, e: x.e, n: 1, name: x.n || ''});
   addPend(id, (x.kind === 'extra' ? 'x|' : 'c|') + x.k, x.st, -1); addShipPend(x.sid, null, x.e, -1); x.undone = true; renderWhLast(); renderWhStores();
 }
 async function sendShip(sid){
@@ -6253,7 +6257,7 @@ function renderWhShips(){
     return `<tr class="${s.status === 'diff' ? 'sev-bad' : ''}"><td class="mono">${esc(s.no || s.id)}</td><td><b style="color:${STORE_COLOR[s.store] || '#555'}">${esc(storeName(s.store))}</b></td><td>${esc(s.dname || '')}</td>
       <td class="n">${fmt(s.tq || 0)}</td><td class="n">${s.status === 'open' || s.status === 'sent' ? '–' : fmt(s.rq || 0)}</td><td><span class="chip ${st[1]}">${st[0]}</span>${s.cmp && !s.cmp.ok ? `<div class="note">дутуу ${fmt(s.cmp.miss)} · илүү ${fmt(s.cmp.extra)}</div>` : ''}</td>
       <td class="note">${esc(fmtDT(s.sentAt || s.createdAt))}${s.recvAt ? '<br>хүлээн авсан ' + esc(fmtDT(s.recvAt)) : ''}</td>
-      <td style="white-space:nowrap"><button class="btn" data-wh-det="${esc(s.id)}">Дэлгэрэнгүй</button>${(window.ALLOWX || {}).wh ? `<button class="btn" data-wh-edit="${esc(s.id)}" title="Засах: мөр хасах, буцааж нээх">✏️</button><button class="btn" data-wh-cancel="${esc(s.id)}" title="Илгээмжийг цуцлах (устгах)" style="color:var(--bad)">🗑</button>` : ''}<button class="btn" data-wh-list="${esc(s.id)}" title="Хуваарилалтын жагсаалт (Excel)">📄</button>${s.status !== 'open' ? `<button class="btn" data-wh-print="${esc(s.id)}" title="Хэвлэх">🖨</button>` : ''}${['recv', 'diff', 'closed'].includes(s.status) ? `<button class="btn" data-wh-rcvx="${esc(s.id)}" title="Тулгалтын тайлан">📋</button>` : ''}${s.status === 'open' && s.store !== whCfg().over.key ? `<button class="btn" data-wh-send="${esc(s.id)}">🚚 Илгээх</button>` : ''}${can ? `<button class="btn primary" data-wh-smart="${esc(s.id)}">📥 Smart</button>` : ''}</td></tr>`; }).join('')
+      <td style="white-space:nowrap"><button class="btn" data-wh-det="${esc(s.id)}">Дэлгэрэнгүй</button>${whCanEdit() ? `<button class="btn" data-wh-edit="${esc(s.id)}" title="Засах: мөр хасах, буцааж нээх">✏️</button><button class="btn" data-wh-cancel="${esc(s.id)}" title="Илгээмжийг цуцлах (устгах)" style="color:var(--bad)">🗑</button>` : ''}<button class="btn" data-wh-list="${esc(s.id)}" title="Хуваарилалтын жагсаалт (Excel)">📄</button>${s.status !== 'open' ? `<button class="btn" data-wh-print="${esc(s.id)}" title="Хэвлэх">🖨</button>` : ''}${['recv', 'diff', 'closed'].includes(s.status) ? `<button class="btn" data-wh-rcvx="${esc(s.id)}" title="Тулгалтын тайлан">📋</button>` : ''}${s.status === 'open' && s.store !== whCfg().over.key ? `<button class="btn" data-wh-send="${esc(s.id)}">🚚 Илгээх</button>` : ''}${can ? `<button class="btn primary" data-wh-smart="${esc(s.id)}">📥 Smart</button>` : ''}</td></tr>`; }).join('')
     : '<tr><td colspan="8" class="empty">Илгээмж алга.</td></tr>';
   renderShipDetail(); renderArch();
 }
@@ -6277,52 +6281,64 @@ function renderShipDetail(){
       return `<tr><td class="mono">${esc(e)}</td><td>${esc(i.n || '')}${i.x ? ' <span class="chip c-warn">жагсаалтгүй</span>' : ''}</td><td class="mono">${esc(i.k || '')}</td><td>${esc((WH.storeOf(s.store, whCfg()) || {}).base + (s.store === whCfg().over.key ? '' : (i.l || '')))}</td><td class="n">${fmt(n)}</td>${ed ? `<td style="white-space:nowrap"><button class="btn" data-wh-rm="${esc(s.id)}|${esc(e)}|1" title="1 ширхэг хасах">−1</button>${n > 1 ? `<button class="btn" data-wh-rm="${esc(s.id)}|${esc(e)}|${n}" title="Энэ мөрийг бүхэлд нь хасах">✕</button>` : ''}</td>` : ''}</tr>`; }).join('')}</tbody></table></div>`;
 }
 // ---------- editing a shipment already sent (mistakes, tests): remove pieces, re-open, cancel — the delivery's counts follow ----------
-function shipCanEdit(s){ const A = window.ALLOWX || {}; return !!(A.wh) && s.status !== 'closed' && WS.editShip === s.id; }
+// changing what was already scanned / sent: only the owner and people given «whedit»; every change goes to whlog
+const whCanEdit = () => !!(isOwner || (window.ALLOWX || {}).whedit);
+function whLog(act, o){ try{ db.collection('whlog').add({at: new Date().toISOString(), by: me, act, ...o}); }catch(e){ console.warn('whlog', e); } }
+function shipCanEdit(s){ return whCanEdit() && s.status !== 'closed' && WS.editShip === s.id; }
 function shipEditBar(s){
-  const A = window.ALLOWX || {}; if (!A.wh) return ''; const got = Object.values(decMap(s.r)).some(q => q > 0);
+  const got = Object.values(decMap(s.r)).some(q => q > 0);
   const RM = Array.isArray(s.rm) ? s.rm : [];
   const log = RM.length ? `<div class="banner" style="margin-bottom:8px"><b>Хассан мөрүүд (${RM.reduce((q, x) => q + (+x.n || 0), 0)} ш):</b> ${RM.map((x, ix) => `<span style="white-space:nowrap">${esc(x.e)} ${esc(String(x.name || '').slice(0, 30))} −${x.n} <span class="note">${esc(fmtDT(x.at).slice(5, 16))}${x.undone ? ' · буцаасан' : ''}</span>${x.undone ? '' : ` <button class="btn" data-wh-rm-undo="${esc(s.id)}|${ix}" title="Буцааж нэмэх">↩</button>`}</span>`).join(' · ')}</div>` : '';
-  if (WS.editShip !== s.id) return log;
-  return log + `<div class="banner warn" style="margin-bottom:8px">✏️ <b>Засах горим</b> — «−1 / ✕» дарахад асууж баталгаажуулна. Буруу хассан бол дээрх «↩»-ээр буцаана. <button class="btn" data-wh-editx="1">Засварыг дуусгах</button></div><div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><b>＋ Баркод нэмэх:</b><input data-wh-addean="${esc(s.id)}" autocomplete="off" placeholder="Баркод уншуулах / бичих → Enter (1 ширхэг)" style="width:300px"><span class="note" id="wh-addmsg"></span></div><div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">
+  const hist = whHistHTML(x => x.ship === s.id);
+  if (WS.editShip !== s.id || !whCanEdit()) return log + hist;
+  return log + `<div class="banner warn" style="margin-bottom:8px">✏️ <b>Засах горим</b> — «−1 / ✕» дарахад асууж баталгаажуулна. Буруу хассан бол дээрх «↩»-ээр буцаана. <button class="btn" data-wh-editx="1">Засварыг дуусгах</button></div>${hist}<div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><b>＋ Баркод нэмэх:</b><input data-wh-addean="${esc(s.id)}" autocomplete="off" placeholder="Баркод уншуулах / бичих → Enter (1 ширхэг)" style="width:300px"><span class="note" id="wh-addmsg"></span></div><div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">
     ${s.status === 'sent' && !got ? `<button class="btn" data-wh-reopen="${esc(s.id)}" title="Илгээмжийг буцааж нээгээд нэмж скан хийх / засах">↩ Буцааж нээх</button>` : ''}
     <button class="btn" data-wh-cancel="${esc(s.id)}" style="color:var(--bad)" title="Илгээмжийг бүхэлд нь устгаж, барааг хүргэлтийн тооллогоос буцаана">🗑 Илгээмжийг цуцлах</button>
     <span class="note">${s.status === 'closed' ? 'Хаагдсан илгээмж — зөвхөн цуцлах боломжтой.' : 'Мөр бүрийн «−1 / ✕»-ээр буруу скан хийсэн барааг хасна; хүргэлтийн тоо хамт засагдана.'}${got ? ' Дэлгүүр хүлээн авсан тоо бий — цуцалбал тэр нь ч устна.' : ''}</span></div>`;
 }
+// edit history (whlog): who changed what in shipments / deliveries
+const WH_ACT = {rm: 'хассан', rmundo: 'хасалтыг буцаасан', add: 'нэмсэн', cancel: 'илгээмж цуцалсан', reopen: 'буцааж нээсэн', delDeliv: 'хүргэлт устгасан', undoScan: 'скан буцаасан'};
+function whHistLoad(){ if (WS.histSub || !db) return; WS.histSub = true; db.collection('whlog').where('at', '>=', new Date(Date.now() - 90 * 864e5).toISOString()).onSnapshot(q => { WS.hist = q.docs.map(d => ({id: d.id, ...d.data()})).sort((x, y) => String(y.at).localeCompare(String(x.at))); renderWh(); }, err => console.warn('whlog', err)); }
+function whHistHTML(f, max){ whHistLoad(); const L = (WS.hist || []).filter(f).slice(0, max || 50); if (!L.length) return '';
+  return `<details style="margin-bottom:8px"${max ? ' open' : ''}><summary class="note">📜 Засварын түүх (${L.length})</summary><div class="tbl" style="max-height:260px;overflow:auto"><table><thead><tr><th>Хэзээ</th><th>Хэн</th><th>Үйлдэл</th><th>Илгээмж / хүргэлт</th><th>Бараа</th><th class="n">Тоо</th></tr></thead><tbody>${L.map(x => `<tr><td class="mono">${esc(fmtDT(x.at))}</td><td>${esc(whWho(x.by))}</td><td>${esc(WH_ACT[x.act] || x.act)}</td><td>${esc(x.no || x.name && x.act === 'delDeliv' ? (x.no || x.name) : (x.no || ''))}${x.store ? ' · ' + esc(storeName(x.store)) : ''}</td><td>${esc(x.e || '')} ${esc(x.act === 'delDeliv' ? '' : String(x.name || '').slice(0, 40))}</td><td class="n">${x.n != null ? fmt(x.n) : ''}</td></tr>`).join('')}</tbody></table></div></details>`; }
 async function shipRemove(sid, e, n){
-  const s = WS.ships.find(x => x.id === sid); if (!s) return; const i = decMap(s.i)[e] || {}, have = decMap(s.l)[e] || 0; n = Math.min(+n || 0, have); if (!(n > 0) || !i.k) return;
+  if (!whCanEdit()) return; const s = WS.ships.find(x => x.id === sid); if (!s) return; const i = decMap(s.i)[e] || {}, have = decMap(s.l)[e] || 0; n = Math.min(+n || 0, have); if (!(n > 0) || !i.k) return;
   if (!confirm(`${s.no}: ${e} ${i.n || ''} — ${n} ширхэг хасах уу?`)) return;
   addPend(s.deliv, (i.x ? 'x|' : 'c|') + i.k, s.store, -n); addShipPend(sid, null, e, -n); await flush();
   try{ await db.doc('ship/' + sid).update({rm: fv().arrayUnion({e, n, k: i.k, x: i.x ? 1 : 0, name: i.n || '', at: new Date().toISOString(), by: me})}); }catch(err){ console.warn('rm log', err); }
+  whLog('rm', {ship: sid, no: s.no, store: s.store, deliv: s.deliv, e, n, name: i.n || ''});
 }
 // add one piece to a shipment by hand (forgotten / wrongly removed pieces): counts of the delivery follow, the line is logged
 async function shipAddEan(sid, raw){
-  const s = WS.ships.find(x => x.id === sid), e = WH.eanOf(raw), out = t => { const m = $('#wh-addmsg'); if (m) m.textContent = t; }; if (!s || !e) return;
+  if (!whCanEdit()) return; const s = WS.ships.find(x => x.id === sid), e = WH.eanOf(raw), out = t => { const m = $('#wh-addmsg'); if (m) m.textContent = t; }; if (!s || !e) return;
   const P = await loadParts(s.deliv); let k = P && P.eans[e], it = k ? P.items[k] : null, x = 0;
   if (!it || it.x){ const M = await loadMaster(), m = M && M[e]; if (!it && !m){ out(`✗ ${e} — хүргэлт, мастер файлд алга.`); beep('bad'); return; }
     if (!it){ k = WH.keyOf(m[0], m[1]); it = {k, m: m[0], s: m[1], e, n: m[2], c: m[5], b: m[3], p: +m[6] || 0}; } x = 1; }
   const loc = WH.locs(it, s.store, whCfg());
   addPend(s.deliv, (x ? 'x|' : 'c|') + k, s.store, 1); addShipPend(sid, null, e, 1, {n: it.n || '', k, l: loc.suf, x, p: it.p || 0}); await flush();
   try{ await db.doc('ship/' + sid).update({add: fv().arrayUnion({e, n: 1, name: it.n || '', at: new Date().toISOString(), by: me, r: Math.random().toString(36).slice(2, 7)})}); }catch(err){ console.warn('add log', err); }
+  whLog('add', {ship: sid, no: s.no, store: s.store, deliv: s.deliv, e, n: 1, name: it.n || ''});
   out(`✓ +1 ${e} ${it.n || ''}`); beep('ok');
 }
 async function shipRemoveUndo(sid, ix){
-  const s = WS.ships.find(x => x.id === sid); if (!s) return; const RM = (Array.isArray(s.rm) ? s.rm : []).slice(), x = RM[ix]; if (!x || x.undone) return;
+  if (!whCanEdit()) return; const s = WS.ships.find(x => x.id === sid); if (!s) return; const RM = (Array.isArray(s.rm) ? s.rm : []).slice(), x = RM[ix]; if (!x || x.undone) return;
   if (!confirm(`${x.e} ${x.name || ''} — ${x.n} ширхэгийг илгээмжид буцааж нэмэх үү?`)) return;
   addPend(s.deliv, (x.x ? 'x|' : 'c|') + x.k, s.store, +x.n); addShipPend(sid, null, x.e, +x.n); await flush();
   RM[ix] = {...x, undone: new Date().toISOString()}; try{ await db.doc('ship/' + sid).update({rm: RM}); }catch(err){ whErr(err); }
+  whLog('rmundo', {ship: sid, no: s.no, store: s.store, deliv: s.deliv, e: x.e, n: x.n, name: x.name || ''});
 }
 async function shipCancel(sid){
-  const s = WS.ships.find(x => x.id === sid); if (!s) return; const L = decMap(s.l), I = decMap(s.i), tot = Object.values(L).reduce((a, q) => a + Math.max(0, q), 0);
+  if (!whCanEdit()) return; const s = WS.ships.find(x => x.id === sid); if (!s) return; const L = decMap(s.l), I = decMap(s.i), tot = Object.values(L).reduce((a, q) => a + Math.max(0, q), 0);
   const got = Object.values(decMap(s.r)).reduce((a, q) => a + Math.max(0, q), 0);
   if (!confirm(`${s.no} · ${storeName(s.store)} — ${tot} ширхэгтэй илгээмжийг цуцлах уу?\n\nБараа хүргэлтийн тооллогоос хасагдаж, дахин скан хийх боломжтой болно.${got ? `\nДэлгүүр ${got} ширхэг хүлээн авсан бүртгэл ч устна.` : ''}`)) return;
   try{ for (const [e, q] of Object.entries(L)){ const i = I[e] || {}; if (q > 0 && i.k) addPend(s.deliv, (i.x ? 'x|' : 'c|') + i.k, s.store, -q); }
-    await flush(); await db.doc('ship/' + sid).delete(); delete WS.open[s.deliv + '|' + s.store]; WS.ships = WS.ships.filter(x => x.id !== sid); if (WS.detail === sid) WS.detail = ''; renderWh(); }
+    await flush(); await db.doc('ship/' + sid).delete(); whLog('cancel', {ship: sid, no: s.no, store: s.store, deliv: s.deliv, n: tot, recv: got}); delete WS.open[s.deliv + '|' + s.store]; WS.ships = WS.ships.filter(x => x.id !== sid); if (WS.detail === sid) WS.detail = ''; renderWh(); }
   catch(err){ whErr(err); }
 }
 async function shipReopen(sid){
-  const s = WS.ships.find(x => x.id === sid); if (!s) return;
+  if (!whCanEdit()) return; const s = WS.ships.find(x => x.id === sid); if (!s) return;
   if (openShip(s.deliv, s.store)){ alert(`${storeName(s.store)}-д нээлттэй өөр илгээмж байна — эхлээд түүнийгээ илгээнэ үү.`); return; }
-  try{ await db.doc('ship/' + sid).update({status: 'open', sentAt: fv().delete(), sentBy: fv().delete(), reopenedAt: new Date().toISOString(), reopenedBy: me}); WS.open[s.deliv + '|' + s.store] = sid; }
+  try{ await db.doc('ship/' + sid).update({status: 'open', sentAt: fv().delete(), sentBy: fv().delete(), reopenedAt: new Date().toISOString(), reopenedBy: me}); WS.open[s.deliv + '|' + s.store] = sid; whLog('reopen', {ship: sid, no: s.no, store: s.store, deliv: s.deliv}); }
   catch(err){ whErr(err); }
 }
 async function resolveShip(sid){
@@ -6489,13 +6505,14 @@ function renderWhDelivs(){
   tb.innerHTML = L.length ? L.map(d => { const t = totOf(d.id), sc = Object.values(t).reduce((a, b) => a + b, 0);
     return `<tr><td><b>${esc(d.name)}</b></td><td class="note">${esc(fmtDT(d.createdAt))}</td><td class="n">${fmt(d.total)}</td><td class="note">${Object.entries(d.pct || {}).filter(([, p]) => p).map(([k, p]) => `${esc(storeName(k))} ${p}%`).join(' · ')}</td>
       <td class="n">${WS.cnt[d.id] ? (WS.cnt[d.id]._err ? '<span title="Скан тоо уншиж чадсангүй — Firestore rules шалгана уу" style="color:var(--bad)">!</span>' : fmt(sc)) : '…'}</td><td>${d.status === 'closed' ? '<span class="chip c-grey">Хаасан</span>' : '<span class="chip c-ok">Идэвхтэй</span>'}</td>
-      <td style="white-space:nowrap"><button class="btn primary" data-wd-rep="${esc(d.id)}">📊 Тайлан / Purchase</button>${isOwner || (window.ALLOWX || {}).wh ? `<button class="btn" data-wd-ren="${esc(d.id)}" title="Барааны нэрийг Excel файлаас (баркодоор) шинэчлэх — хүргэлт, илгээмж, хэвлэх жагсаалт бүгдэд">🔄 Нэр Excel-ээс</button>` : ''}${d.extraQ ? `<div class="note">+${fmt(d.extraQ)} ш жагсаалтгүй нэмэгдсэн</div>` : ''}${d.status === 'closed' ? `<button class="btn" data-wd-open="${esc(d.id)}">Нээх</button>` : `<button class="btn" data-wd-close="${esc(d.id)}">Хаах</button>`}${isOwner || (window.ALLOWX || {}).wh ? `<button class="btn" data-wd-del="${esc(d.id)}" title="Буруу жагсаалт оруулсан бол" style="color:var(--bad)">🗑 Устгах</button>` : ''}</td></tr>`; }).join('')
+      <td style="white-space:nowrap"><button class="btn primary" data-wd-rep="${esc(d.id)}">📊 Тайлан / Purchase</button>${isOwner || (window.ALLOWX || {}).wh ? `<button class="btn" data-wd-ren="${esc(d.id)}" title="Барааны нэрийг Excel файлаас (баркодоор) шинэчлэх — хүргэлт, илгээмж, хэвлэх жагсаалт бүгдэд">🔄 Нэр Excel-ээс</button>` : ''}${d.extraQ ? `<div class="note">+${fmt(d.extraQ)} ш жагсаалтгүй нэмэгдсэн</div>` : ''}${d.status === 'closed' ? `<button class="btn" data-wd-open="${esc(d.id)}">Нээх</button>` : `<button class="btn" data-wd-close="${esc(d.id)}">Хаах</button>`}${whCanEdit() ? `<button class="btn" data-wd-del="${esc(d.id)}" title="Буруу жагсаалт оруулсан бол" style="color:var(--bad)">🗑 Устгах</button>` : ''}</td></tr>`; }).join('')
     : '<tr><td colspan="7" class="empty">Хүргэлт алга.</td></tr>';
 }
 // delete a delivery loaded by mistake (only while nothing has been sent to the stores)
 async function deleteDeliv(id){
-  const D = WS.delivs.find(d => d.id === id); if (!D) return; await flush();
+  if (!whCanEdit()) return; const D = WS.delivs.find(d => d.id === id); if (!D) return; await flush();
   const S2 = WS.ships.filter(s => s.deliv === id), sent = S2.filter(s => s.status !== 'open'), sc = Object.values(totOf(id)).reduce((a, b) => a + b, 0);
+  whLog('delDeliv', {deliv: id, name: D.name, n: sc, ships: sent.map(x => x.no)});
   if (sent.length || sc){ const t = prompt(`«${D.name}» хүргэлтийг устгах уу?\n\n${sc ? sc + ' ш скан хийгдсэн. ' : ''}${sent.length ? `${sent.length} илгээсэн илгээмж (${sent.map(s => s.no + ' · ' + storeName(s.store) + (s.status === 'sent' ? '' : ' — дэлгүүр хүлээн авсан')).join(', ')}) бас устана — дэлгүүрт явсан бараа байвал буцааж авна уу.\n` : ''}Сэргээх боломжгүй.\n\nБаталгаажуулахын тулд УСТГАХ гэж бичнэ үү:`); if (t == null) return; if (!delWordOk(t)){ alert('Устгасангүй — УСТГАХ гэж бичээгүй.'); return; } }
   else if (!confirm(`«${D.name}» хүргэлтийг (${fmt(D.total)} ш жагсаалт) устгах уу?`)) return;
   // one document at a time: a list part is big (hundreds of indexed fields) and a single batch is refused as «Transaction too big»
@@ -6634,7 +6651,7 @@ window.addEventListener('online', syncChip); window.addEventListener('offline', 
 function renderWh(){
   if (!$('section[data-panel="wh"]')) return;
   $('#wh-scan-card').hidden = WS.mode !== 'scan'; $('#wh-price-card').hidden = WS.mode !== 'price'; { const lc = $('#wh-label-card'); if (lc){ lc.hidden = WS.mode !== 'label'; if (WS.mode === 'label' && typeof lbRender === 'function') lbRender(); } } restoreLast(); renderSession(); $('#wh-ship-card').hidden = WS.mode !== 'ship'; $('#wh-deliv-card').hidden = WS.mode !== 'deliv';
-  renderWhActive(); renderWhStores(); renderWhLast(); renderWhShips(); renderWhDelivs(); syncChip();
+  renderWhActive(); renderWhStores(); renderWhLast(); renderWhShips(); renderWhDelivs(); syncChip(); { const h = $('#wh-hist'); if (h) h.innerHTML = WS.mode === 'ship' && whCanEdit() ? whHistHTML(() => true, 200) : ''; }
   { const sig = JSON.stringify(whCfg().stores); if (!WD && WS.pctSig !== sig){ WS.pctSig = sig; wdPctInputs(); } }
   try{ renderRcv(); }catch(err){ console.warn('rcv', err); }
 }
@@ -8924,9 +8941,9 @@ $('#rq-acc').addEventListener('change', () => { const b = PAYEES.get($('#rq-acc'
   if (n) n.textContent = `Сангаас: ${b.name}${b.group ? ' · ' + b.group : ''}${b.holder ? ' · эзэмшигч ' + b.holder : ''}`; });
 // ---------- settings (owner) ----------
 let ACCESS = {emails: [], perms: {}};
-const SECTIONS_WH = [['wh','Агуулах (LPP скан)'],['rcv_fc','Хүлээн авалт – Food City'],['rcv_dr','Хүлээн авалт – Драгон'],['rcv_ns','Хүлээн авалт – Нийслэл'],['rcv_ht','Хүлээн авалт – Бөөн'],['inv','Тооллого – тоолох'],['invadm','Тооллого – удирдах (үүсгэх, тайлан, Smart файл)'],['reqsub','Хүсэлт гаргах — зөвхөн ажилтанд (нягтланд хэрэггүй)'],['contr','Гэрээ (зээл, лизинг)'],['hr','HR — ажилтан, хуваарь, чөлөө']];
+const SECTIONS_WH = [['wh','Агуулах (LPP скан)'],['whedit','Агуулах — сканнердсан тоо, илгээмж засах / устгах (итгэмжлэгдсэн хүн)'],['rcv_fc','Хүлээн авалт – Food City'],['rcv_dr','Хүлээн авалт – Драгон'],['rcv_ns','Хүлээн авалт – Нийслэл'],['rcv_ht','Хүлээн авалт – Бөөн'],['inv','Тооллого – тоолох'],['invadm','Тооллого – удирдах (үүсгэх, тайлан, Smart файл)'],['reqsub','Хүсэлт гаргах — зөвхөн ажилтанд (нягтланд хэрэггүй)'],['contr','Гэрээ (зээл, лизинг)'],['hr','HR — ажилтан, хуваарь, чөлөө']];
 const SECTIONS = [['req','Төлбөрийн хүсэлт'],['daily','Өдрийн тайлан'],['bank','Банкны гүйлгээ'],['rev','Орлого тулгалт'],['cash','Бэлэн мөнгө'],['bal','Дансны үлдэгдэл'],['pay','Цалин'],['pl','Дотоод тайлан']];
-const DEFAULT_PERMS = {daily:false, req:true, bank:true, rev:false, cash:true, bal:true, pay:false, pl:false, wh:false, rcv_fc:false, rcv_dr:false, rcv_ns:false, rcv_ht:false, inv:false, invadm:false, reqsub:false, contr:false, hr:false};
+const DEFAULT_PERMS = {daily:false, req:true, bank:true, rev:false, cash:true, bal:true, pay:false, pl:false, wh:false, whedit:false, rcv_fc:false, rcv_dr:false, rcv_ns:false, rcv_ht:false, inv:false, invadm:false, reqsub:false, contr:false, hr:false};
 const permsOf = e => ({...DEFAULT_PERMS, ...((ACCESS.perms || {})[e] || {})});
 function renderAccess(){
   const ownRow = `<div class="acc-row" style="background:var(--ok-bg,#eef8f1)"><div class="row" style="justify-content:space-between"><b>${esc(user.email())}</b><span class="chip c-ok">Эзэмшигч — бүх эрх автоматаар</span></div>
@@ -8990,7 +9007,7 @@ else VIVIFB.start(async () => {
   $('#req-form-card').hidden = !canWrite;
   $('#tab-set').hidden = !isOwner;
   const onErr = e => console.warn('db', e);
-  let ALLOW = {daily:true, req:true, bank:true, rev:true, cash:true, bal:true, pay:true, pl:true, wh:true, rcv_fc:true, rcv_dr:true, rcv_ns:true, rcv_ht:true, inv:true, invadm:true, reqsub:false, contr:true, hr:true};
+  let ALLOW = {daily:true, req:true, bank:true, rev:true, cash:true, bal:true, pay:true, pl:true, wh:true, whedit:true, rcv_fc:true, rcv_dr:true, rcv_ns:true, rcv_ht:true, inv:true, invadm:true, reqsub:false, contr:true, hr:true};
   if (!isOwner){
     try{ const a = await db.doc('config/access').get(); const x = a.exists ? a.data() : {}; ALLOW = {...DEFAULT_PERMS, ...((x.perms || {})[String(user.email()).toLowerCase()] || {})}; }catch(e){ console.warn(e); }
   }
