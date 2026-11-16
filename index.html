@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd154</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd155</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -428,7 +428,7 @@ body{margin:0;background:var(--bg)}
       <div id="whs-body"></div>
       <h3 style="margin:14px 0 6px;font-size:14px">LPP мастер файл (Казахстаны нөөц)</h3>
       <p class="note" style="margin:0 0 6px">Бараа бүрийг <b>баркодоор</b> таньдаг — нэр ямар ч орчуулгаар ирсэн нэг баркод = нэг нэр, нэг ангилал. Шинэ файл оруулахад өмнө байсан баркодууд нэрээ хадгална, шинэ баркод нэмэгдэнэ. vivi-master-kz.json эсвэл Excel (англи/монгол толгойтой).</p>
-      <div class="row"><input id="whm-file" type="file" accept=".json,.xlsx,.xls" style="max-width:320px"><label class="row note" style="gap:6px;width:auto"><input type="checkbox" id="whm-replace" style="width:auto"> Бүгдийг солих</label><span class="note" id="whm-msg"></span></div>
+      <div class="row"><input id="whm-file" type="file" accept=".json,.xlsx,.xls" style="max-width:320px"><select id="whm-mode" style="width:auto"><option value="add">Шинэ баркодыг нэмэх (хуучны нэр хэвээр)</option><option value="names">Нэрийг шинэчлэх + шинэ баркод нэмэх</option><option value="all">Файлд байгаа баркодын бүх мэдээллийг шинэчлэх (бусад нь хэвээр)</option><option value="replace">Бүгдийг солих</option></select><span class="note" id="whm-msg"></span></div>
     </div>
     <div class="card">
       <h2>Харилцагчийн сан</h2>
@@ -2929,6 +2929,7 @@ const WH = (() => {
     eng: ['eng', 'english', 'description'],
     cat: ['category'], catmn: ['ангилал', 'барааны дэд ангилал'], gender: ['gender', 'хүйс', 'барааны хүйс'], brand: ['brand', 'брэнд', 'бренд', 'marka'],
     price: ['rrp mn2027', 'мн үнэ 2027', 'борлуулах үнэ 2027 (₮)', 'үнэ (₮)', 'кассын үнэ'], carton: ['carton', 'картон №', 'хайрцаг', 'короб'],
+    code: ['барааны ангилал'], color: ['барааны өнгө', 'өнгө', 'color', 'colour', 'kolor'],   // Smart export: model code without colour + colour column
   };
   const norm = v => String(v == null ? '' : v).trim().toLowerCase().replace(/\s+/g, ' ');
   const isEan = v => /^\d{8,14}$/.test(eanOf(v));
@@ -2962,6 +2963,8 @@ const WH = (() => {
       const m = M && M[e];
       let model = String(c.model >= 0 && r[c.model] != null ? r[c.model] : '').trim(), size = String(c.size >= 0 && r[c.size] != null ? r[c.size] : '').trim();
       if (!model && c.item >= 0 && r[c.item]){ const it2 = String(r[c.item]).trim(); const p2 = it2.split('-'); if (p2.length >= 3){ model = p2.slice(0, -1).join('-'); if (!size) size = p2.at(-1); } }
+      if (!model && c.code >= 0 && r[c.code] != null && String(r[c.code]).trim()){ const col = c.color >= 0 && r[c.color] != null ? String(r[c.color]).trim() : ''; model = String(r[c.code]).trim() + (col ? '-' + col : ''); }
+      size = size.replace(/\s*size$/i, '').trim();
       if (m){ if (model && (m[0] !== model || (size && String(m[1]) !== size)) && mism.length < 50) mism.push({e, file: model + ' ' + size, master: m[0] + ' ' + m[1]}); model = m[0]; size = String(m[1]); }   // the master decides model/size
       else unknown++;
       if (!model) model = e;
@@ -6612,17 +6615,25 @@ async function saveMaster(M, file){
 }
 async function uploadMaster(f){
   const msg = t => $('#whm-msg').textContent = t; msg('Уншиж байна…');
-  try{ let M = null; const old = await loadMaster(), replace = $('#whm-replace') && $('#whm-replace').checked;
+  try{ let M = null; const old = await loadMaster(), mode = ($('#whm-mode') || {}).value || 'add', replace = mode === 'replace';
     if (/\.json$/i.test(f.name)){ const j = JSON.parse(await f.text()); M = j.rows || j; }
     else { const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let best = null;
       for (const n of wb.SheetNames){ const r = WH.parseList(XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null}), {nameSrc: 'file'}); if (!r.error && (!best || r.pcs > best.pcs)) best = r; }
       if (!best) throw new Error('баркод (EAN) багана олдсонгүй');
       M = {}; for (const [e, k] of Object.entries(best.eans)){ const it = best.items[k]; M[e] = [it.m, it.s, it.n, it.b, it.g, it.c, it.p, 0, it.q]; } }
     // merge: barcodes already in the master keep their name/category (one item = one name forever); new barcodes are added
-    let added = Object.keys(M).length, kept = 0;
-    if (old && !replace){ added = 0; for (const e of Object.keys(M)){ if (old[e]) kept++; else added++; } M = {...M, ...old}; }
+    // «names»: barcodes already in the master get the new name (and brand, gender, price when given) — model, size, category stay, so deliveries keep matching
+    let added = Object.keys(M).length, kept = 0, renamed = 0;
+    if (old && mode === 'names'){ added = 0; const out = {...old};
+      for (const [e, x] of Object.entries(M)){ const o = old[e]; if (!o){ out[e] = x; added++; continue; }
+        const nw = [...o]; if (x[2] && x[2] !== e && x[2] !== o[2]){ nw[2] = x[2]; renamed++; } else kept++; if (x[3]) nw[3] = x[3]; if (x[4]) nw[4] = x[4]; if (+x[6]) nw[6] = x[6]; out[e] = nw; }
+      M = out; }
+    else if (old && mode === 'all'){ added = 0; for (const e of Object.keys(M)){ if (old[e]){ renamed++; M[e][7] = M[e][7] || old[e][7] || 0; } else added++; } kept = Object.keys(old).length - renamed; M = {...old, ...M};
+      if (!confirm(`Файлд байгаа ${fmt(renamed)} баркодын бүх мэдээлэл (загвар, хэмжээ, нэр, ангилал, үнэ…) шинэчлэгдэж, ${fmt(added)} шинэ баркод нэмэгдэнэ. Файлд байхгүй ${fmt(kept)} баркод хуучнаараа үлдэнэ. Хадгалах уу?`)){ msg('Цуцалсан.'); return; } }
+    else if (old && !replace){ added = 0; for (const e of Object.keys(M)){ if (old[e]) kept++; else added++; } M = {...M, ...old}; }
+    if (mode === 'names' && !confirm(`${fmt(renamed)} баркодын нэр шинэчлэгдэж, ${fmt(added)} шинэ баркод нэмэгдэнэ. Хадгалах уу?`)){ msg('Цуцалсан.'); return; }
     await saveMaster(M, f.name);
-    msg(`✓ Нийт ${fmt(Object.keys(M).length)} баркод · ${fmt(added)} шинэ нэмэгдсэн${kept ? ` · ${fmt(kept)} өмнөх нэрээрээ үлдсэн` : ''}.`);
+    msg(`✓ Нийт ${fmt(Object.keys(M).length)} баркод · ${fmt(added)} шинэ нэмэгдсэн${renamed ? ` · ${fmt(renamed)} ${mode === 'all' ? 'бүрэн шинэчлэгдсэн' : 'нэр шинэчлэгдсэн'}` : ''}${kept ? ` · ${fmt(kept)} ${mode === 'names' ? 'нэр өөрчлөгдөөгүй' : mode === 'all' ? 'файлд байхгүй — хуучнаараа' : 'өмнөх нэрээрээ үлдсэн'}` : ''}.`);
   }catch(err){ console.warn(err); msg('Алдаа: ' + (err.message || err)); }
 }
 // ===================== Inventory count (Тооллого) =====================
