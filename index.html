@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd151</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd152</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -6330,6 +6330,24 @@ function wdPreview(){
   $('#wd-info').innerHTML = (dup.length ? `<div class="banner bad" style="margin-bottom:6px"><b>⚠ Энэ жагсаалт аль хэдийн оруулсан байна:</b> ${dup.map(d => `«${esc(d.name)}» (${esc(fmtDT(d.createdAt))})`).join(', ')}. Дахин оруулах шаардлагагүй — тэр хүргэлтээ сонгоод скан хийнэ үү.</div>` : '') + `${fmt(WD.pcs)} ш · ${fmt(models)} загвар · ${fmt(WD.lines)} хэмжээ${WD.bad ? ` · ${WD.bad} мөр алгассан` : ''}<br>${wdMatchInfo()}<br>Төлөвлөгөө: ${c.stores.filter(s => s.pct).map(s => `<b style="color:${STORE_COLOR[s.key]}">${esc(s.name)}</b> ${fmt(r.got[s.key] || 0)} ш (${WD.pcs ? (r.got[s.key] / WD.pcs * 100).toFixed(1) : 0}%)`).join(' · ')}`;
   $('#wd-save').disabled = sum !== 100;
 }
+// names of an existing delivery (and of its shipments) from an Excel — by barcode, nothing else changes
+async function wdRename(id, f){
+  const D = WS.delivs.find(d => d.id === id); if (!D || !f) return;
+  try{ const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let best = null;
+    for (const n of wb.SheetNames){ const r = WH.parseList(XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null}), {nameSrc: 'file'}); if (!r.error && (!best || r.pcs > best.pcs)) best = r; }
+    if (!best){ alert('Баркод (EAN) ба барааны нэрийн багана олдсонгүй.'); return; }
+    const names = {}; for (const [e, k] of Object.entries(best.eans)){ const it = best.items[k]; if (it && it.n && it.n !== e) names[e] = it.n; }
+    if (!Object.keys(names).length){ alert('Файлд барааны нэр олдсонгүй.'); return; }
+    let nItems = 0, nShip = 0;
+    for (let i = 0; i < (D.parts || 0); i++){ const ref = db.doc('delivpart/' + id + '_' + i), sn = await ref.get(); if (!sn.exists) continue; const x = sn.data(), items = {...(x.items || {})}; let ch = 0;
+      for (const [k, it] of Object.entries(items)) if (names[it.e] && names[it.e] !== it.n){ items[k] = {...it, n: names[it.e]}; ch++; }
+      if (ch){ await ref.update({items}); nItems += ch; } }
+    for (const s of WS.ships.filter(x => x.deliv === id)){ const I = decMap(s.i), u = {}; for (const [e, i] of Object.entries(I)) if (names[e] && names[e] !== i.n){ u['i.' + ek(e) + '.n'] = names[e]; nShip++; }
+      if (Object.keys(u).length) await db.doc('ship/' + s.id).update(u); }
+    delete WS.parts[id]; await loadParts(id); renderWh();
+    alert(`✓ ${fmt(nItems)} барааны нэр, илгээмжид ${fmt(nShip)} мөр шинэчлэгдлээ (${fmt(Object.keys(names).length)} баркод файлд).`);
+  }catch(err){ whErr(err); }
+}
 async function wdSave(){
   if (!WD || !WD.plan || !db) return; const name = $('#wd-name').value.trim() || ('LPP ' + today());
   const dup = sameDelivs(WD); if (dup.length && !confirm(`Энэ жагсаалт аль хэдийн оруулсан: ${dup.map(d => '«' + d.name + '» ' + fmtDT(d.createdAt)).join(', ')}.\n\nДахин шинэ хүргэлт болгож оруулах уу? (Ихэвчлэн ҮГҮЙ — тэр хүргэлтээ ашиглана.)`)) return; $('#wd-save').disabled = true; $('#wd-msg').textContent = 'Хадгалж байна…';
@@ -6412,7 +6430,7 @@ function renderWhDelivs(){
   tb.innerHTML = L.length ? L.map(d => { const t = totOf(d.id), sc = Object.values(t).reduce((a, b) => a + b, 0);
     return `<tr><td><b>${esc(d.name)}</b></td><td class="note">${esc(fmtDT(d.createdAt))}</td><td class="n">${fmt(d.total)}</td><td class="note">${Object.entries(d.pct || {}).filter(([, p]) => p).map(([k, p]) => `${esc(storeName(k))} ${p}%`).join(' · ')}</td>
       <td class="n">${WS.cnt[d.id] ? (WS.cnt[d.id]._err ? '<span title="Скан тоо уншиж чадсангүй — Firestore rules шалгана уу" style="color:var(--bad)">!</span>' : fmt(sc)) : '…'}</td><td>${d.status === 'closed' ? '<span class="chip c-grey">Хаасан</span>' : '<span class="chip c-ok">Идэвхтэй</span>'}</td>
-      <td style="white-space:nowrap"><button class="btn primary" data-wd-rep="${esc(d.id)}">📊 Тайлан / Purchase</button>${d.extraQ ? `<div class="note">+${fmt(d.extraQ)} ш жагсаалтгүй нэмэгдсэн</div>` : ''}${d.status === 'closed' ? `<button class="btn" data-wd-open="${esc(d.id)}">Нээх</button>` : `<button class="btn" data-wd-close="${esc(d.id)}">Хаах</button>`}${WS.ships.some(s => s.deliv === d.id && s.status !== 'open') ? '' : `<button class="btn" data-wd-del="${esc(d.id)}" title="Буруу жагсаалт оруулсан бол" style="color:var(--bad)">🗑 Устгах</button>`}</td></tr>`; }).join('')
+      <td style="white-space:nowrap"><button class="btn primary" data-wd-rep="${esc(d.id)}">📊 Тайлан / Purchase</button>${isOwner || (window.ALLOWX || {}).wh ? `<button class="btn" data-wd-ren="${esc(d.id)}" title="Барааны нэрийг Excel файлаас (баркодоор) шинэчлэх — хүргэлт, илгээмж, хэвлэх жагсаалт бүгдэд">🔄 Нэр Excel-ээс</button>` : ''}${d.extraQ ? `<div class="note">+${fmt(d.extraQ)} ш жагсаалтгүй нэмэгдсэн</div>` : ''}${d.status === 'closed' ? `<button class="btn" data-wd-open="${esc(d.id)}">Нээх</button>` : `<button class="btn" data-wd-close="${esc(d.id)}">Хаах</button>`}${WS.ships.some(s => s.deliv === d.id && s.status !== 'open') ? '' : `<button class="btn" data-wd-del="${esc(d.id)}" title="Буруу жагсаалт оруулсан бол" style="color:var(--bad)">🗑 Устгах</button>`}</td></tr>`; }).join('')
     : '<tr><td colspan="7" class="empty">Хүргэлт алга.</td></tr>';
 }
 // delete a delivery loaded by mistake (only while nothing has been sent to the stores)
@@ -6516,6 +6534,7 @@ document.addEventListener('click', async e => {
   if (d.whPrint) return printShips(d.whPrint.split(','));
   if (d.whListids) return listFile(d.whListids.split(','));
   if (d.wdDel) return deleteDeliv(d.wdDel);
+  if (d.wdRen){ const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.xlsx,.xls,.csv'; inp.onchange = () => wdRename(d.wdRen, inp.files[0]); inp.click(); return; }
   if (d.whUndo != null) return undoScan(+d.whUndo);
   if (d.whDet){ WS.detail = WS.detail === d.whDet ? '' : d.whDet; renderShipDetail(); const el = $('#wh-ship-detail'); if (WS.detail && el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); return; }
   if (d.whSmart) return smartFile(d.whSmart);
