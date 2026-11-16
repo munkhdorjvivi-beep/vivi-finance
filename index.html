@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd146</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd147</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -2921,14 +2921,14 @@ const WH = (() => {
   const SYN = {
     ean: ['ean', 'баркод', 'баркод (ean)', 'barcode', 'штрихкод', 'штрих-код', 'kod kreskowy', 'ean13'],
     model: ['model', 'загвар', 'загвар (өнгөтэй)', 'модель', 'артикул'],
-    item: ['item', 'барааны код', 'sku', 'код товара', 'indeks'],
-    size: ['size', 'хэмжээ', 'размер', 'rozmiar'],
-    qty: ['qty', 'тоо', 'тоо ширхэг', 'тоо хэмжээ', 'кол-во', 'количество', 'ilość', 'ilosc', 'pcs'],
+    item: ['item', 'барааны код', 'google (барааны код)', 'sku', 'код товара', 'indeks'],
+    size: ['size', 'хэмжээ', 'барааны хэмжээ', 'размер', 'rozmiar'],
+    qty: ['qty', 'тоо', 'тоо ширхэг', 'тоо хэмжээ', 'үлдэгдэл тоо', 'үлдэгдэл', 'кол-во', 'количество', 'ilość', 'ilosc', 'pcs'],
     mn: ['барааны нэр (мн)', 'барааны нэр', 'нэр (мн)', 'нэр'],
     desc: ['item_desc', 'нэр (эх хувь, kz/ru)', 'описание', 'наименование', 'opis'],
     eng: ['eng', 'english', 'description'],
-    cat: ['category'], catmn: ['ангилал'], gender: ['gender', 'хүйс'], brand: ['brand', 'брэнд', 'бренд', 'marka'],
-    price: ['rrp mn2027', 'мн үнэ 2027', 'борлуулах үнэ 2027 (₮)', 'үнэ (₮)'], carton: ['carton', 'картон №', 'хайрцаг', 'короб'],
+    cat: ['category'], catmn: ['ангилал', 'барааны дэд ангилал'], gender: ['gender', 'хүйс', 'барааны хүйс'], brand: ['brand', 'брэнд', 'бренд', 'marka'],
+    price: ['rrp mn2027', 'мн үнэ 2027', 'борлуулах үнэ 2027 (₮)', 'үнэ (₮)', 'кассын үнэ'], carton: ['carton', 'картон №', 'хайрцаг', 'короб'],
   };
   const norm = v => String(v == null ? '' : v).trim().toLowerCase().replace(/\s+/g, ' ');
   const isEan = v => /^\d{8,14}$/.test(eanOf(v));
