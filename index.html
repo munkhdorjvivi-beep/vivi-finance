@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd147</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd146</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -199,6 +199,7 @@ body{margin:0;background:var(--bg)}
     <button role="tab" data-tab="anal" aria-selected="false">Борлуулалтын шинжилгээ</button>
     <button role="tab" data-tab="bank" aria-selected="false">Банкны гүйлгээ<span class="n" id="t-bank" hidden></span></button>
     <button role="tab" data-tab="rev" aria-selected="false">Орлого тулгалт</button>
+    <button role="tab" data-tab="flow" aria-selected="false">Орлого, зарлагын тулгалт</button>
     <button role="tab" data-tab="cash" aria-selected="false">Бэлэн мөнгө<span class="n" id="t-cash" hidden></span></button>
     <button role="tab" data-tab="bal" aria-selected="false">Дансны үлдэгдэл</button>
     <button role="tab" data-tab="pay" aria-selected="false">Цалин<span class="n" id="t-pay" hidden></span></button>
@@ -458,9 +459,6 @@ body{margin:0;background:var(--bg)}
     <div class="card" id="dr-upload">
       <h2>Өдрийн тайлан оруулах</h2>
       <p class="note" style="margin:0 0 10px">Smart-аас өмнөх өдрийн 2 тайланг оруулна: <b>«Борлуулалтын жагсаалт /бараагаар/»</b> (Өртөг баганатай) ба <b>«Борлуулалтын жагсаалт /төлбөрийн хэлбэрээр/»</b>. Хоёуланг нь зэрэг сонгож болно. Олон өдрийн (сарын) тайлан оруулбал өдөр бүрээр нь хадгална.</p>
-      <div class="banner" style="margin:0 0 10px"><b>🔗 POS-оос татах</b> — 2026-11-13-наас хойш борлуулалт манай POS-оор явж байгаа тул Smart файл хэрэггүй: өдрүүдээ сонгоод «POS-оос татах» дарна. Бараагаар (нийлүүлэгч, бүлэг, өртөг) ба төлбөрийн хэлбэрээр (кассчин, баримт бүрээр) өгөгдөл автоматаар бүрдэнэ. Шалгаад «Хадгалах» дарна.
-        <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap;align-items:center"><input type="date" id="dr-pos-a" style="width:auto;max-width:170px"> – <input type="date" id="dr-pos-z" style="width:auto;max-width:170px"><button class="btn primary" id="dr-pos-go">🔗 POS-оос татах</button><span class="note" id="dr-pos-who"></span></div>
-        <label style="display:block;margin-top:6px"><input type="checkbox" id="dr-pos-mix"> <b>Холимог өдөр</b> (нэг дэлгүүр нэг өдөр Smart ба POS хоёуланг ашигласан, жишээ нь 11-12): Smart-ын хадгалсан өгөгдөл дээр POS-ыг <b>нэмнэ</b>. Хоёр системд давхар бүртгэгдсэн дэлгүүрийг (төлбөрийн дүн, цаг таарсан) автоматаар алгасна.</label></div>
       <div class="row"><input id="dr-files" type="file" multiple accept=".xls,.xlsx" style="max-width:340px"><button class="btn primary" id="dr-save" disabled>Хадгалах</button></div>
       <div class="files" id="dr-filelist" style="margin-top:8px"></div>
       <div class="note" id="dr-msg" style="margin-top:6px"></div>
@@ -890,6 +888,30 @@ body{margin:0;background:var(--bg)}
     </div>
   </section>
 
+  <!-- MONEY IN / OUT RECONCILIATION: opening + in − out = closing, per day and account, every outflow with its approval -->
+  <section class="panel" data-panel="flow" hidden>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap">
+        <div><h2 style="margin:0">Орлого, зарлагын тулгалт</h2>
+          <p class="note" style="margin:4px 0 0">Банкны хуулгаар: эхлэх үлдэгдэл + орсон − гарсан = хаалтын үлдэгдэл. Гарсан гүйлгээ бүр хүсэлт, гэрээ, цалингийн жагсаалттай эсэх.</p></div>
+        <button class="btn" id="fl-xlsx">📥 Excel</button>
+      </div>
+      <div class="row" id="fl-bar" style="gap:6px;flex-wrap:wrap;margin-top:10px;align-items:flex-end">
+        <button class="btn" data-fp="today">Өнөөдөр</button><button class="btn" data-fp="yday">Өчигдөр</button><button class="btn" data-fp="7">7 хоног</button><button class="btn" data-fp="mon">Энэ сар</button>
+        <label class="f" style="width:auto">Эхлэх<input type="date" id="fl-from"></label>
+        <label class="f" style="width:auto">Дуусах<input type="date" id="fl-to"></label>
+        <label class="f" style="width:auto">Сар<input type="month" id="fl-mon"></label>
+        <button class="btn primary" id="fl-apply">Харуулах</button><span class="note" id="fl-pend"></span>
+      </div>
+      <div id="fl-kpi" style="margin-top:12px"></div>
+    </div>
+    <div class="card"><h2>Өдрөөр</h2><p class="note" style="margin:0 0 8px">Мөрөн дээр дарж тэр өдрийн данс, гүйлгээг харна.</p><div class="tbl"><table id="fl-days"></table></div></div>
+    <div class="card" id="fl-detail" hidden></div>
+    <div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><h2 style="margin:0">Гарсан гүйлгээ</h2>
+      <div class="row" style="gap:6px;flex-wrap:wrap"><span id="fl-stf" class="row" style="gap:4px;flex-wrap:wrap"></span><input id="fl-q" placeholder="🔍 нэр, данс, утга…" style="width:200px"></div></div>
+      <div class="note" id="fl-outsum" style="margin:6px 0"></div>
+      <div class="tbl"><table id="fl-out"></table></div></div>
+  </section>
   <!-- HR: employee cards, maternity leave, schedule & attendance, leave requests, hiring and leaving -->
   <section class="panel" data-panel="hr" hidden>
     <div id="hr-alert"></div>
@@ -1187,7 +1209,7 @@ window.VIVIFB = (() => {
 <script>
 // ===== VIVI cash control core (shared by page and node tests) =====
 const VIVI = (() => {
-  const OWN = new Set(['4002598034','1825100856','5175306931','5175306920','5175278095','5174134484','5174134473','405095875','405095876','405095877','405096869','405096868','5174135239','5311365725','2106025813','5174139482','5403962410','5403962396','5403962454','5224167095','5224167073','1735156519','1735159300','1735159334','1735159299','405097294','4002622637','405097565','4002594661','4002639706','4002636496','4002599151','5310744690','405102965']);
+  const OWN = new Set(['4003978523','4002598034','1825100856','5175306931','5175306920','5175278095','5174134484','5174134473','405095875','405095876','405095877','405096869','405096868','5174135239','5311365725','2106025813','5174139482','5403962410','5403962396','5403962454','5224167095','5224167073','1735156519','1735159300','1735159334','1735159299','405097294','4002622637','405097565','4002594661','4002639706','4002636496','4002599151','5310744690','405102965']);
   const ACC_STORE = {'5403962396':'Food city','5311365725':'Food city','1735156519':'Food city','5403962410':'Драгон','5174139482':'Драгон','5175278095':'Драгон','5310744690':'Драгон','5403962454':'Дархан / Сандэй плаза','5174134484':'Е март баянгол-3 давхар','405095875':'ХХБ 405095875 (Эрдэнэт, Хан-Уул, онлайн)','5175306920':'Онлайн дэлгүүр'};
   const TERM_STORE = {'FOOD CITY VIVI 3':'Food city','FOOD CITY-4':'Food city','VIVI-FOOD CITY 2-2':'Food city','DRAGON VIVI 1':'Драгон','DRAGON VIVI 2':'Драгон','DRAGON VIVI 3':'Драгон','VIVI GREAT BRANDS 2':'Драгон','VIVI GREAT BRAND':'Драгон','SUNDAY VIVI':'Дархан / Сандэй плаза','FOOD CITY VIVI 1':'Food city','FOOD CITY VIVI 2':'Food city','VIVI-BGD':'Е март баянгол-3 давхар'};
   const CASH_ACC = {'5403962396':'Food city','5403962410':'Драгон','5403962454':'Дархан / Сандэй плаза','5174134484':'Е март баянгол-3 давхар'};
@@ -1682,14 +1704,14 @@ const VIVI = (() => {
     '405096869':'VIVI TDB Хоум (Энхбаатар орлого)','405096868':'VIVI TDB цалин','5174135239':'VIVI Khan USD','5311365725':'Энхбаатар POS FC',
     '2106025813':'VIVI Arig (УИД)','5174139482':'Мөнхдорж Khan','5403962410':'Энхтөр Dragon','5403962396':'Энхтөр Food City','5403962454':'Энхтөр Darkhan/Sunday',
     '5224167095':'Энхбаатар 7095','5224167073':'Энхбаатар цалин 7073','1735156519':'Энхбаатар Golomt','1735159300':'VIVI Golomt цалин',
-    '1735159334':'VIVI Golomt','1735159299':'VIVI Golomt','405097294':'Мөнхдорж TDB (хувийн)','4002622637':'Мөнхдорж TDB (хувийн)','405097565':'Энхбаатар TDB Хэрэглээ',
+    '1735159334':'VIVI Golomt','1735159299':'VIVI Golomt','405097294':'Мөнхдорж TDB (хувийн)','4002622637':'Мөнхдорж TDB (хувийн)','4003978523':'Мөнхдорж TDB USD (хувийн)','405097565':'Энхбаатар TDB Хэрэглээ',
     '5310744690':'Энхбаатар Khan','405102965':'VIVI TDB'};
   for (const [nw, old] of Object.entries({'4002594661':'405095875','4002639706':'405096869','4002636496':'405096868','4002599151':'405095877','4002598034':'405095876'})) ACC_NAME[old] = (ACC_NAME[old] || 'TDB') + ' (шинэ ' + nw + ')';
   const PAYACC = new Set(['109500167338','1105249287','1305143697','1735156283','1735156284','1735156286','1735156288','1735156289','1735156291','1735156292','1735156293','1735156295','1735156297','1735156525','1735156571','1905125044','192200046273','2602036637','2715159415','3665109094','405099752','405126369','458055838','500167338','5001676491','5014232703','5019558822','5020906060','5021476161','5026595377','5026814493','5027299990','5033294847','5033608561','5037266101','5039343277','5056029019','5057669311','5058528471','5059435223','5071683237','5111054591','5157244556','5166146682','5171391025','5251418414','5284076229','5543020794','5598243388','5619052521','5622790325','5653105823','5675291358','5753811879','5845541170','5859083983','5926293828','692387378','8200005364']);
   const CAT = {own_md:'Эзэмшигч – Мөнхдорж хувийн / Właściciel prywatne', own_eb:'Энхбаатар Хэрэглээ / Энхбаатар konsumpcja', internal:'Дотоод шилжүүлэг / Wewnętrzne',
     fee:'Банкны шимтгэл / Prowizje', hipay:'hipay (хэтэвч / portfel)', refund:'Буцаалт / Zwroty klientom', salary:'Цалин / Wynagrodzenia', tax:'Татвар, гааль, НДШ / Podatki, cło, ZUS',
     repair:'Засвар, үйлчилгээ / Remonty', travel:'Томилолт / Delegacje', media:'Цахилгаан, интернэт / Media', rent:'Түрээс / Czynsz', ploan:'Хувийн зээл + хүү / Pożyczki prywatne',
-    bank:'Зээл, ББСБ / Kredyty', f1:'F1 (Энхбаатар)', fx:'Арилжаа / Wymiana walut', cargo:'Тээвэр, карго / Transport', fuel:'Шатахуун / Paliwo', goods:'Бараа, нийлүүлэгч / Towar',
+    bank:'Зээл, ББСБ / Kredyty', f1:'F1 (Энхбаатар)', fx:'Арилжаа / Wymiana walut', cargo:'Тээвэр, карго / Transport', customs:'Гааль — барааны (LPP) / Cło na towar', fuel:'Шатахуун / Paliwo', goods:'Бараа, нийлүүлэгч / Towar',
     other:'Тодруулах / Do wyjaśnienia', ops:'Үйл ажиллагааны бусад / Pozostałe operacyjne'};
   let BASE = null; const setBase = fn => { BASE = fn; };
   // end-of-day balance of a statement: {open, end: {YYYY-MM-DD: balance}, check} — opening from the header, or from the first row's running balance
@@ -1714,6 +1736,7 @@ const VIVI = (() => {
     if (/hipay/.test(s)) return 'hipay';
     if (/буцаалт|butsaalt/.test(s)) return 'refund';
     if (/мост мони/.test(nm) || /цалин/.test(s)) return 'salary';
+    if (/мост\s*финтек/.test(nm) || cp === '4004429171') return 'customs';   // customs duty paid at the border for imported goods (LPP)
     if (/нийгмийн даатгал/.test(nm) || cp === '499071483' || /гааль|бүрдүүлэлт|татвар/.test(s)) return 'tax';
     if (/\/\s*\d\d[.,]\d\d/.test(s) && t.dr < 3000000) return 'salary';
     if (/засвар|zaswar|грүүшиг|грушиг/.test(s)) return 'repair';
@@ -2274,7 +2297,7 @@ const PL = (() => {
   // rent accounts given by the owner (receiver account → store)
   const ACC_STORE_DEFAULT = {'444017046':'Фүүд сити', '5581001313':'Фүүд сити', '5128024567':'Фүүд сити', '1205266311':'Драгон'};
   const CAT_DEFAULT = {rent:'cost', f1:'cost', media:'cost', repair:'cost', travel:'cost', cargo:'cost', fuel:'cost', fee:'cost', tax:'cost', other:'cost', bank:'debt', ploan:'debt',
-    ops:'cost', salary:'skip', goods:'stock', internal:'skip', own_md:'owner', own_eb:'owner', hipay:'owner', fx:'stock', refund:'skip'};
+    ops:'cost', salary:'skip', goods:'stock', customs:'stock', internal:'skip', own_md:'owner', own_eb:'owner', hipay:'owner', fx:'stock', refund:'skip'};
   const CAT_MODE_LABEL = {cost:'Зардал', stock:'Бараа худалдан авалт (өртгөөр аль хэдийн хасагдсан — тусад нь)', debt:'Зээлийн төлбөр (тусад нь)', owner:'Эзэмшигч (тусад нь)', skip:'Тооцохгүй'};
 
   // pl = saved month (sales + stmtTx), payCost = PAY.costs month entry, extTx = e-mail transfers of the month
@@ -3518,6 +3541,7 @@ function renderInner(){
   // balances
   renderBal();
   try{ renderPay(); }catch(e){ console.warn('pay', e); }
+  try{ flRender(); }catch(e){ console.warn('flow', e); }
   try{ renderAnal(); }catch(e){ console.warn('anal', e); }
   try{ renderRot(); }catch(e){ console.warn('rot', e); }
   try{ renderData(); }catch(e){ console.warn('data', e); }
@@ -5136,7 +5160,7 @@ function renderPL(){
   const mc = $('#pl-man-cat'); const co = ['rent', 'media', 'ops', 'repair', 'cargo', 'fuel', 'tax', 'other'].map(k => `<option value="${k}">${esc(VIVI_CAT_LABEL(k))}</option>`).join(''); if (mc.innerHTML !== co) mc.innerHTML = co;
   $('#pl-man-list').innerHTML = M.months.flatMap(m => ((PLS.months[m.per] || {}).manual || []).map((x, i) => `<div>${esc(m.per)} · ${esc(x.unit || 'Компани')} · ${esc(VIVI_CAT_LABEL(x.cat))} · <b>${fmt(x.amount)} ₮</b>/сар${m.share < 1 ? ` <span class="note">(энэ хугацаанд ${fmt(x.amount * m.share)})</span>` : ''} ${esc(x.note || '')} <button class="btn" data-rm="${i}" data-per="${esc(m.per)}" style="padding:1px 6px">✕</button></div>`)).join('') || '<div class="note">Гараар нэмсэн зардал алга. Сарын дүнгээр оруулна (хугацаа богино бол хоногоор хуваагдана).</div>';
 }
-const VIVI_CAT_LABEL = k => (({rent:'Түрээс', f1:'F1 (Фүүд сити түрээс)', media:'Цахилгаан, интернэт, ашиглалт', repair:'Засвар, үйлчилгээ', travel:'Томилолт', cargo:'Тээвэр, карго', fuel:'Шатахуун', fee:'Банкны шимтгэл', tax:'Татвар, гааль, НДШ', other:'Бусад / тодруулах', bank:'Зээл, ББСБ', ploan:'Хувийн зээл, хүү', salary:'Цалин (банкнаас)', goods:'Бараа, нийлүүлэгч', own_md:'Эзэмшигч – хувийн', own_eb:'Энхбаатар хэрэглээ', hipay:'HiPay хэтэвч', fx:'Валют арилжаа (LPP-д төлөх)', refund:'Буцаалт', internal:'Дотоод', ops:'Үйл ажиллагааны бусад (хангамж, үйлчилгээ)'})[k] || k);
+const VIVI_CAT_LABEL = k => (({rent:'Түрээс', f1:'F1 (Фүүд сити түрээс)', media:'Цахилгаан, интернэт, ашиглалт', repair:'Засвар, үйлчилгээ', travel:'Томилолт', cargo:'Тээвэр, карго', customs:'Гааль (барааны, LPP)', fuel:'Шатахуун', fee:'Банкны шимтгэл', tax:'Татвар, гааль, НДШ', other:'Бусад / тодруулах', bank:'Зээл, ББСБ', ploan:'Хувийн зээл, хүү', salary:'Цалин (банкнаас)', goods:'Бараа, нийлүүлэгч', own_md:'Эзэмшигч – хувийн', own_eb:'Энхбаатар хэрэглээ', hipay:'HiPay хэтэвч', fx:'Валют арилжаа (LPP-д төлөх)', refund:'Буцаалт', internal:'Дотоод', ops:'Үйл ажиллагааны бусад (хангамж, үйлчилгээ)'})[k] || k);
 // ----- Excel -----
 $('#pl-xlsx').addEventListener('click', () => { const M = plModel(); const pl = M.pl;
   loadStyledXLSX().then(XS => {
@@ -5165,7 +5189,7 @@ $('#pl-area-save').addEventListener('click', async () => { if (!db) return; cons
 // ===================== 💵 cash flow of the period: where the money came from and where it went =====================
 // opening = recorded balance on the first day (morning); closing = the morning AFTER the last day (card / POS money of the last day lands then)
 const CF_GROUP = {rent: 'op', f1: 'op', media: 'op', repair: 'op', travel: 'op', fuel: 'op', fee: 'op', tax: 'op', ops: 'op', other: 'op', salary: 'op', refund: 'op', fx: 'stock',
-  goods: 'stock', cargo: 'stock', bank: 'debt', ploan: 'debt', own_md: 'owner', own_eb: 'owner', hipay: 'owner'};
+  goods: 'stock', cargo: 'stock', customs: 'stock', bank: 'debt', ploan: 'debt', own_md: 'owner', own_eb: 'owner', hipay: 'owner'};
 const CF_LABEL = {op: 'Үйл ажиллагааны зардал', stock: 'Бараа худалдан авалт (нийлүүлэгч, тээвэр)', debt: 'Зээл, хүү (банк, ББСБ, хувийн)', owner: 'Эзэмшигч (хувийн)'};
 function plCashflow(){
   const box = $('#pl-cf'); if (!box) return; const M = PLS.lastM; if (!M || !DR.canFlow){ box.innerHTML = '<p class="note">Мөнгөн урсгал харахад «Банкны гүйлгээ» ба «Дансны үлдэгдэл» эрх хэрэгтэй.</p>'; return; }
@@ -5244,7 +5268,7 @@ function plCashflow(){
 // ---------- «Тодруулах»: what each unknown outflow is and which store(s) it belongs to ----------
 // the choices live in PLS.unkSel, so a refresh from new data never wipes what the user is picking
 PLS.unkSel = PLS.unkSel || {}; PLS.unkOpen = PLS.unkOpen || {};
-const PL_CATS = ['goods', 'cargo', 'rent', 'media', 'ops', 'repair', 'fuel', 'tax', 'travel', 'salary', 'ploan', 'bank', 'own_md', 'fx', 'refund', 'other'];
+const PL_CATS = ['goods', 'customs', 'cargo', 'rent', 'media', 'ops', 'repair', 'fuel', 'tax', 'travel', 'salary', 'ploan', 'bank', 'own_md', 'fx', 'refund', 'other'];
 const PL_ALLOC = [['sales', 'борлуулалтын хувиар'], ['area', 'талбайн хэмжээгээр'], ['equal', 'тэнцүү']];
 const PL_NOSTORE = new Set(['goods', 'fx', 'ploan', 'bank', 'own_md', 'own_eb', 'hipay', 'refund']);
 function plUnkPicker(key, def){ const st = PLS.unkSel[key] || (PLS.unkSel[key] = {cat: def.cat || '', stores: def.stores || [], alloc: def.alloc || 'sales'}), U = plUnits();
@@ -5370,9 +5394,6 @@ $('#dr-files').addEventListener('change', async e => {
       P.info.push(`<div><span class="chip c-bad">?</span> Танигдсангүй · ${esc(f.name)}</div>`);
     }catch(err){ console.warn(err); P.info.push(`<div><span class="chip c-bad">?</span> Уншиж чадсангүй · ${esc(f.name)}</div>`); }
   }
-  await drFinish(P);
-});
-async function drFinish(P){
   // check: sales = payments per day; long uploads get a summary + per-store difference instead of one line per day
   const dates = [...new Set([...Object.keys((P.sales || {}).days || {}), ...Object.keys(P.pay || {})])].sort();
   if (dates.length && typeof drEnsure === 'function'){ $('#dr-msg').textContent = 'Өмнө хадгалсантай тулгаж байна…'; await drEnsure(dates[0], dates[dates.length - 1]); }
@@ -5400,136 +5421,7 @@ async function drFinish(P){
   for (const m of missD) P.info.push(`<div><span class="chip c-warn">Дутуу</span> ${esc(m)}</div>`);
   DR.parsed = dates.length ? {...P, dates} : null;
   $('#dr-filelist').innerHTML = P.info.join(''); $('#dr-save').disabled = !DR.parsed; $('#dr-msg').textContent = '';
-}
-// ===== 🔗 POS → «Өдрийн тайлан»: борлуулалтыг vivi-pos (манай POS) төслөөс шууд уншина =====
-// POS-ын баримт (pos_sales) → Smart-ын 2 тайлантай ижил бүтэц: бараагаар (stores, sup, items, codes) ба төлбөрийн хэлбэрээр (pay, dailykas).
-// Нэвтрэлт: POS төсөлд Google-ээр тусад нь нэвтэрнэ (POS самбар → «👤 Хэрэглэгч»-д энэ Gmail бүртгэлтэй байх ёстой).
-const POSFB = (() => {
-  const CFG = {apiKey: 'AIzaSyCk8Y3Orec0FPOlB0Nco95Z9DqJFUivElg', authDomain: 'vivi-pos-test.firebaseapp.com', projectId: 'vivi-pos-test', storageBucket: 'vivi-pos-test.firebasestorage.app', messagingSenderId: '578097542957', appId: '1:578097542957:web:c11efc01987985df9e45a4'};
-  let app = null, cost = null;
-  const get = () => app || (app = firebase.initializeApp(CFG, 'vivi-pos'));
-  const authReady = () => new Promise(r => { const u = get().auth().onAuthStateChanged(() => { u(); r(); }); });
-  async function login(){
-    const a = get().auth(); await authReady();
-    if (!a.currentUser){ const p = new firebase.auth.GoogleAuthProvider(); p.setCustomParameters({prompt: 'select_account'}); await a.signInWithPopup(p); }
-    return {db: get().firestore(), email: (a.currentUser.email || '').toLowerCase()};
-  }
-  async function costs(pdb){   // нэгж өртөг: pos_cost (самбарын файл) → pos_itemcost (шинэ бараа); эрхгүй бол хоосон
-    if (cost) return cost; const m = new Map(); let ok = true;
-    try{ const meta = await pdb.collection('pos_cost').doc('meta').get();
-      if (meta.exists) for (const c of meta.data().chunks || []){ const d = await pdb.collection('pos_cost').doc(c.id).get(); if (d.exists) JSON.parse(d.data().d).forEach(x => m.set(String(x[0]), +x[1] || 0)); }
-      const s = await pdb.collection('pos_itemcost').get(); s.docs.forEach(d => { const x = d.data(); if (x && x.code && x.cost > 0 && !m.get(String(x.code))) m.set(String(x.code), +x.cost); });
-    }catch(e){ console.warn('pos cost', e); ok = false; }
-    const r = {m, ok}; if (ok) cost = r; return r;
-  }
-  const out = () => { cost = null; return app ? app.auth().signOut() : Promise.resolve(); };
-  const who = async () => { if (!app) return ''; await authReady(); return (app.auth().currentUser || {}).email || ''; };
-  return {login, costs, out, who};
-})();
-const POS_UNIT = {FC: 'Фүүд сити', DR: 'Драгон', NS: 'Нийслэл', ON: 'Онлайн дэлгүүр', YV: 'Поп-ап (түр цэг)'};
-// POS баримтуудыг (нэг буюу олон өдөр) Smart-ын хоёр тайлангийн бүтэц рүү хөрвүүлнэ. Цэвэр функц — Firestore-оос хамааралгүй.
-function posDaily(list, costMap, unitOf){
-  const r2 = x => Math.round(x * 100) / 100, ORION_COST = 6500, days = {}, items = {}, codes = {}, rows = [];
-  let n = 0, adjN = 0;
-  for (const s of list){
-    const day = String(s.date || '').replace(/\//g, '-'); if (!/^\d{4}-\d\d-\d\d$/.test(day)) continue;
-    const unit = POS_UNIT[s.store] || unitOf(s.storeName || s.store || '');
-    const D = days[day] = days[day] || {date: day, stores: {}, sup: {}, lines: 0, adjN: 0};
-    for (const l of s.lines || []){
-      const qty = +l.qty || 0, net = +l.sum || 0, sup = String(l.sup || '').trim() || '(нийлүүлэгчгүй)', grp = String(l.grp || '').trim().replace(/\.$/, '') || '–';
-      const h = (+l.base || 0) * qty - net, uc = costMap.get(String(l.code));
-      let cost = uc > 0 ? uc * qty : 0;
-      if (!cost && /ORION/i.test(sup) && qty){ cost = ORION_COST * qty; adjN++; D.adjN++; }
-      D.lines++; n++;
-      const S = D.stores[unit] = D.stores[unit] || {s: 0, c: 0, q: 0, r: 0, h: 0};
-      S.s += net; S.c += cost; S.q += qty; S.h += h; if (net < 0) S.r += -net;
-      const X = (D.sup[unit] = D.sup[unit] || {})[sup] = (D.sup[unit] || {})[sup] || {s: 0, c: 0, q: 0, h: 0, g: {}};
-      X.s += net; X.c += cost; X.q += qty; X.h += h;
-      const G = X.g[grp] = X.g[grp] || {s: 0, c: 0, q: 0, h: 0}; G.s += net; G.c += cost; G.q += qty; G.h += h;
-      const ck = String(l.code == null ? '' : l.code).trim().replace(/[.\/#$\[\]~*`]/g, '_');
-      if (ck){ if (!codes[ck] || (qty > 0 && uc > 0)) codes[ck] = grp.replace(/\d+$/, '').trim() + '|' + sup + '|' + String(l.name || '').trim().replace(/\|/g, '/').slice(0, 70) + '|' + (uc > 0 ? Math.round(uc) : '') + '|' + (+l.base > 0 ? Math.round(+l.base) : qty > 0 ? Math.round(net / qty) : '');
-        const IU = (items[day] = items[day] || {})[unit] = (items[day] || {})[unit] || {}; const it = IU[ck] = IU[ck] || [0, 0, 0]; it[0] += qty; it[1] = r2(it[1] + net); it[2] = r2(it[2] + cost); }
-    }
-    // төлбөр: Smart-ын «төлбөрийн хэлбэрээр» мөр шиг. Ваучер, солилт банкинд орохгүй тул зээлийн «хүн» шиг (Зээл: Ваучер / Зээл: Солилт)
-    for (const p of s.payments || []){ const amt = +p.amount || 0; if (!amt) continue;
-      const f = p.form === 'Бэлнээр' ? {form: 'Бэлнээр'} : p.form === 'Банкаар' ? {form: 'Банкаар', bank: p.bank || 'Банкаар'} : p.form === 'Зээлээр' ? {form: 'Зээлээр', who: p.partner || ''} : {form: 'Зээлээр', who: p.form || 'Бусад'};
-      rows.push({d: day, store: unit, ...f, amt, kas: s.cashier || '', t: String(s.time || '').slice(0, 5), no: String(s.id || ''), pos: s.reg ? 'Касс ' + s.reg : ''}); }
-  }
-  for (const D of Object.values(days)){
-    for (const S of Object.values(D.stores)){ S.s = r2(S.s); S.c = r2(S.c); S.r = r2(S.r); S.h = r2(S.h); }
-    for (const U of Object.values(D.sup)) for (const X of Object.values(U)){ X.s = r2(X.s); X.c = r2(X.c); X.h = r2(X.h); for (const G of Object.values(X.g)){ G.s = r2(G.s); G.c = r2(G.c); G.h = r2(G.h); } } }
-  return {sales: {days, lines: n, adjN, skipped: [], codes, items}, rows};
-}
-
-// Холимог өдөр: Smart-ын хадгалсан дээр POS-ыг нэмнэ; POS-ын төлбөрийн 80%+ нь Smart-ын төлбөртэй (дүн ±1 ₮, цаг ±20 мин) таарвал давхар бүртгэл гэж үзээд тэр дэлгүүрийн POS-ыг алгасна
-async function posMix(P, rows){
-  const add = (o, x, ks) => { for (const k of ks) o[k] = Math.round(((o[k] || 0) + (x[k] || 0)) * 100) / 100; };
-  const mins = t => { const m = /^(\d\d):(\d\d)/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; };
-  for (const d of Object.keys(P.sales.days)){
-    const O = DR.days[d]; if (!O || !O.stores) continue;
-    let OK = {}; try{ const x = await db.doc('dailykas/' + d).get(); OK = x.exists ? x.data().u || {} : {}; }catch(e){}
-    let OI = {}; try{ const x = await db.doc('itemday/' + d).get(); OI = x.exists ? (x.data().t != null ? ROT.unpackDay(x.data().t) : (x.data().u || {})) : {}; }catch(e){}
-    const SD = P.sales.days[d];
-    for (const u of Object.keys(SD.stores)){
-      const os = O.stores[u]; if (!os || !(os.s || os.c || os.q)) continue;   // Smart-д энэ дэлгүүр алга → POS л
-      const pr = rows.filter(r => r.d === d && r.store === u), old = DAILY.parseList(OK[u]).map(x => ({...x, used: false}));
-      let pAmt = 0, mAmt = 0; for (const r of pr){ pAmt += Math.abs(r.amt); const tm = mins(r.t);
-        const hit = old.find(x => !x.used && Math.abs(x.a - r.amt) <= 1 && (tm == null || mins(x.t) == null || Math.abs(mins(x.t) - tm) <= 20)); if (hit){ hit.used = true; mAmt += Math.abs(r.amt); } }
-      const share = pAmt ? mAmt / pAmt : 0, posS = SD.stores[u].s;
-      const same = Math.abs((os.s || 0) - posS) <= Math.max(1, Math.abs(posS) * 0.001);   // гараар оруулсан (баримтын жагсаалтгүй) ч дүн яг таарвал — нэг л борлуулалт
-      if ((old.length && share >= 0.8) || same){   // давхар — хадгалсныг үлдээнэ
-        delete SD.stores[u]; if (SD.sup) delete SD.sup[u]; if (P.sales.items[d]) delete P.sales.items[d][u]; if (P.pay[d]) delete P.pay[d][u]; if (P.kas[d]) delete P.kas[d][u];
-        P.info.push(`<div><span class="chip c-grey">Давхар — алгассан</span> ${d} ${esc(u)}: ${same && !(old.length && share >= 0.8) ? `хадгалсан дүн POS-той яг ижил (${fmt(Math.round(posS))} ₮) — нэг л борлуулалт` : `POS-ын ${fmt(Math.round(posS))} ₮-ийн ${Math.round(share * 100)}% нь хадгалсан төлбөртэй таарсан (дүн, цаг)`} → хадгалсан ${fmt(Math.round(os.s))} ₮ хэвээр.</div>`); continue; }
-      // нэмэх
-      const ns = SD.stores[u]; add(ns, os, ['s', 'c', 'q', 'r', 'h']);
-      const NU = SD.sup[u] = SD.sup[u] || {}; for (const [sp, X] of Object.entries((O.sup || {})[u] || {})){ const Y = NU[sp] = NU[sp] || {s: 0, c: 0, q: 0, h: 0, g: {}}; add(Y, X, ['s', 'c', 'q', 'h']); Y.g = Y.g || {};
-        for (const [g, G] of Object.entries(X.g || {})){ const Z = Y.g[g] = Y.g[g] || {s: 0, c: 0, q: 0, h: 0}; add(Z, G, ['s', 'c', 'q', 'h']); } }
-      const PU = (P.pay[d] = P.pay[d] || {})[u] = (P.pay[d] || {})[u] || {}; for (const [f, F] of Object.entries((O.pay || {})[u] || {})){ const Y = PU[f] = PU[f] || {a: 0, n: 0, k: F.k}; Y.a = Math.round((Y.a + (+F.a || 0)) * 100) / 100; Y.n += +F.n || 0; }
-      if (OK[u]) (P.kas[d] = P.kas[d] || {})[u] = OK[u] + (P.kas[d] && P.kas[d][u] ? ';' + P.kas[d][u] : '');
-      const IU = (P.sales.items[d] = P.sales.items[d] || {})[u] = (P.sales.items[d] || {})[u] || {}; for (const [c, v] of Object.entries(OI[u] || {})){ const it = IU[c] = IU[c] || [0, 0, 0]; it[0] += v[0] || 0; it[1] = Math.round((it[1] + (v[1] || 0)) * 100) / 100; it[2] = Math.round((it[2] + (v[2] || 0)) * 100) / 100; }
-      P.info.push(`<div><span class="chip c-acc">Нэмсэн</span> ${d} ${esc(u)}: хадгалсан (Smart${old.length ? '' : ', баримтын жагсаалтгүй'}) ${fmt(Math.round(os.s))} ₮ + POS ${fmt(Math.round(posS))} ₮ = <b>${fmt(Math.round(ns.s))} ₮</b>${mAmt ? ` (POS-ын ${fmt(Math.round(mAmt))} ₮ нь Smart-ын төлбөртэй таарсан — давхар эсэхийг шалгана уу)` : ''}</div>`); }
-  }
-}
-async function drPosWho(){ const e = await POSFB.who().catch(() => ''); $('#dr-pos-who').innerHTML = e ? `POS: <b>${esc(e)}</b> · <a href="#" id="dr-pos-out">гарах</a>` : 'POS-д анх удаа Google-ээр нэвтэрнэ'; const o = $('#dr-pos-out'); if (o) o.onclick = async ev => { ev.preventDefault(); await POSFB.out(); drPosWho(); }; }
-{ const y = shiftDay(today(), -1); $('#dr-pos-a').value = y; $('#dr-pos-z').value = y; $('#dr-pos-who').textContent = 'POS-д анх удаа Google-ээр нэвтэрнэ'; }
-$('#dr-pos-go').addEventListener('click', async () => {
-  let a = $('#dr-pos-a').value, z = $('#dr-pos-z').value; if (!a || !z) return $('#dr-msg').textContent = 'Өдрөө сонгоно уу.';
-  if (a > z) [a, z] = [z, a]; if (z > today()) z = today();
-  const ds = []; for (let d = a; d <= z && ds.length < 92; d = shiftDay(d, 1)) ds.push(d);
-  if (ds.length >= 92) return $('#dr-msg').textContent = 'Нэг удаад 3 сараас ихгүй.';
-  const btn = $('#dr-pos-go'); btn.disabled = true; $('#dr-filelist').innerHTML = ''; $('#dr-save').disabled = true; DR.parsed = null;
-  try{
-    $('#dr-msg').textContent = 'POS-д нэвтэрч байна…'; const {db: pdb, email} = await POSFB.login(); drPosWho();
-    $('#dr-msg').textContent = 'Өртөг уншиж байна…'; const C = await POSFB.costs(pdb);
-    const list = [], empty = [];
-    for (let i = 0; i < ds.length; i++){ $('#dr-msg').textContent = `POS баримт уншиж байна… ${ds[i]} (${i + 1}/${ds.length})`;
-      const q = await pdb.collection('pos_sales').where('date', '==', ds[i].replace(/-/g, '/')).get();
-      const L = q.docs.map(x => x.data()).filter(s => s.date === ds[i].replace(/-/g, '/')); if (!L.length) empty.push(ds[i]); list.push(...L); }
-    const B = posDaily(list, C.m, PAY.unitOf), got = Object.keys(B.sales.days).sort();
-    if (!got.length){ $('#dr-msg').textContent = `${a} – ${z}: POS-д борлуулалт алга.`; return; }
-    const P = {sales: B.sales, pay: DAILY.payDays(B.rows, u => u), kas: DAILY.payList(B.rows, u => u), info: [], files: []};
-    const rec = list.length, F = {file: 'POS (' + email + ')', hash: '', a: got[0], z: got[got.length - 1]};
-    P.files.push({...F, kind: 'sales', n: B.sales.lines}, {...F, kind: 'pay', n: B.rows.length});
-    const st = {}; for (const D of Object.values(B.sales.days)) for (const [u, S] of Object.entries(D.stores)) st[u] = (st[u] || 0) + S.s;
-    P.info.push(`<div><span class="chip c-ok">✓ POS</span> ${drDaysLabel(got)} · ${fmt(rec)} баримт · ${fmt(B.sales.lines)} мөр · ${Object.entries(st).map(([u, v]) => esc(u) + ' ' + fmt(Math.round(v)) + ' ₮').join(' · ')}</div>`);
-    if (!C.ok || !C.m.size) P.info.push(`<div><span class="chip c-warn">Өртөггүй</span> POS-ын өртгийг уншиж чадсангүй (POS самбарын «👤 Хэрэглэгч»-д ${esc(email)}-д «Өртөг» эрх өгнө үү). Ашиг, маржин гарахгүй — ORION л 6 500 ₮/ш.</div>`);
-    else { const nc = {}; let tot = 0, ncS = 0; for (const s of list) for (const l of s.lines || []){ tot += +l.sum || 0; if (!(C.m.get(String(l.code)) > 0) && !/ORION/i.test(l.sup || '') && +l.sum){ const k = String(l.code), o = nc[k] = nc[k] || {code: k, name: l.name || '', sup: l.sup || '', q: 0, s: 0}; o.q += +l.qty || 0; o.s += +l.sum || 0; ncS += +l.sum || 0; } }
-      const NL = Object.values(nc).sort((x, y) => y.s - x.s);
-      if (NL.length) P.info.push(`<div><span class="chip c-warn">Өртөггүй бараа</span> ${fmt(NL.length)} барааны өртөг POS-д алга — борлуулалт ${fmt(Math.round(ncS))} ₮ (${tot ? (ncS / tot * 100).toFixed(1) : 0}%). Энэ хэсэгт өртөг 0 тул ашиг, маржин <b>өндөр</b> гарна. POS самбар → «Бараа, үнэ, шошго»-д өртгийг оруулаад дахин татна уу. Хамгийн их борлуулалттай:<br>${NL.slice(0, 12).map(o => `<span class="mono">${esc(o.code)}</span> ${esc(o.name)}${o.sup ? ' · ' + esc(o.sup) : ''} — ${fmt(o.q)} ш, ${fmt(Math.round(o.s))} ₮`).join('<br>')}${NL.length > 12 ? '<br>… бусад ' + (NL.length - 12) : ''}</div>`); }
-    if (B.sales.adjN) P.info.push(`<div><span class="chip c-acc">ORION</span> өртөггүй ${fmt(B.sales.adjN)} мөр → 6 500 ₮/ш</div>`);
-    if (z === today()) P.info.push(`<div><span class="chip c-warn">Өнөөдөр</span> ${z} дуусаагүй — өдөр дууссаны дараа дахин татаж хадгална уу.</div>`);
-    if (empty.length) P.info.push(`<div><span class="chip c-grey">Хоосон</span> ${drDaysLabel(empty)} — POS-д баримт алга</div>`);
-    if (list.some(s => (s.payments || []).some(p => p.form === 'Ваучер' || p.form === 'Солилт'))) P.info.push(`<div><span class="chip c-grey">Тэмдэглэл</span> Ваучер, солилтоор төлсөн хэсэг банкинд орохгүй тул «Зээл: Ваучер», «Зээл: Солилт» гэж харагдана.</div>`);
-    if ($('#dr-pos-mix').checked){ $('#dr-msg').textContent = 'Smart-ын хадгалсантай нийлүүлж байна…'; await drEnsure(got[0], got[got.length - 1]); await posMix(P, B.rows); }
-    await drFinish(P);
-    $('#dr-msg').textContent = 'Шалгаад «Хадгалах» дарна уу.';
-  }catch(e){ console.warn('pos pull', e);
-    const c = e && e.code || '';
-    $('#dr-msg').innerHTML = /permission/.test(c) ? `<span style="color:var(--bad)">POS эрхгүй: ${esc(await POSFB.who().catch(() => '') || 'энэ Gmail')} POS самбарын «👤 Хэрэглэгч»-д бүртгэлгүй эсвэл «Борлуулалтын тайлан» эрхгүй байна. POS самбарт эзэмшигчээр орж нэмнэ үү.</span>`
-      : /popup/.test(c) ? 'Google цонх нээгдсэнгүй (popup хаагдсан) — дахин «POS-оос татах» дарна уу.' : `<span style="color:var(--bad)">Алдаа: ${esc(c || e.message || e)}</span>`;
-  }finally{ btn.disabled = false; }
 });
-
 $('#dr-save').addEventListener('click', async () => {
   const P = DR.parsed; if (!P || !db) return;
   const closed = [...new Set(P.dates.map(d => d.slice(0, 7)))].filter(m => typeof DS !== 'undefined' && DS.closed[m]);
@@ -5697,7 +5589,7 @@ const r2x = x => Math.round(x * 100) / 100;
 
 // ----- money flow -----
 // accounts that are NOT part of «Дансны үлдэгдэл»: a transfer into them is money leaving the recorded balance
-const DR_OUTSIDE = new Set(['4002622637', '405097294', '405097565']);
+const DR_OUTSIDE = new Set(['4002622637', '4003978523', '405097294', '405097565']);
 function drFlowTx(a, z){
   // owner keeps the last 45 days of bank e-mails live; older ranges are loaded once
   const since = new Date(Date.now() - 44 * 86400e3).toISOString().slice(0, 10);
@@ -7284,6 +7176,149 @@ function renderCtDue(){
       <td>${o.req ? `<span class="chip c-acc">хүсэлт ${esc((s2 => ST[s2] || s2 || 'илгээсэн')(typeof reqStatus === 'function' ? reqStatus(o.req) : o.req.status))}</span>` : (window.ALLOWX || {}).req ? `<button class="btn primary" type="button" data-ct-req="${esc(o.c.id)}" data-ct-due="${esc(o.x.d)}">➕ Хүсэлт үүсгэх</button>` : ''}</td></tr>`).join('')}</tbody></table></div>
     <p class="note" style="margin:4px 0 0">Төлбөр шилжих хүртэл өдөр бүр харагдана (имэйл / хуулгаар шалгана). Гэрээнд «Төлөх данс» оруулаагүй бол шилжсэнийг танихгүй.</p></div>`;
 }
+// ===== Орлого, зарлагын тулгалт: per day and account — opening + in − out = closing (bank statements), every outflow with its approval =====
+const FL = {a: '', z: '', day: '', st: '', q: '', sort: ['dt', -1], acc: ''};
+(function(){ const t = today(); FL.z = t; FL.a = shiftDay(t, -6); })();
+const flSkip = a => DR_OUTSIDE.has(a) || a === '5026747956' || (typeof DS_PRIVATE !== 'undefined' && DS_PRIVATE.has(a));
+const flAccName = a => (VIVI.ACC_NAME && VIVI.ACC_NAME[a]) || a;
+function flDayOf(acc, d){ const D = (DR.stmt || {})[acc + '_' + d.slice(0, 7)]; return D && D.days && D.days[d.slice(8)] || null; }
+function flDays(a, z){ const out = []; for (let d = a, k = 0; d <= z && k < 400; d = shiftDay(d, 1), k++) out.push(d); return out; }
+// every company account that has statements around the period (plus the required list of «Өгөгдлийн төлөв», when loaded)
+function flAccs(a, z){
+  const s = new Set(); for (const D of Object.values(DR.stmt || {})){ if (flSkip(D.acc)) continue; if (D.per >= shiftDay(a, -40).slice(0, 7) && D.per <= z.slice(0, 7)) s.add(D.acc); }
+  try{ if (typeof dsAccs === 'function' && DS.duty) for (const x of dsAccs()) if (!flSkip(x)) s.add(x); }catch(e){}
+  return [...s].sort();
+}
+// one account, one day: opening (end of the day before), money in/out (outside / own accounts), closing, and whether they add up
+function flAccDay(acc, d){
+  const x = flDayOf(acc, d); if (!x) return null;
+  const p = flDayOf(acc, shiftDay(d, -1)), close = x.bal != null ? +x.bal : x.cur != null ? +x.cur : null;
+  const inn = +x.in || 0, iin = +x.iin || 0, out = +x.out || 0, iout = +x.iout || 0, net = inn + iin - out - iout;
+  const open = p && p.bal != null ? +p.bal : close != null ? Math.round((close - net) * 100) / 100 : null;
+  const calc = open != null ? Math.round((open + net) * 100) / 100 : null, diff = calc != null && close != null && p && p.bal != null ? Math.round((close - calc) * 100) / 100 : null;
+  return {acc, d, open, openKnown: !!(p && p.bal != null), inn, iin, out, iout, sp: +x.sp || 0, pk: +x.pk || 0, close, partial: x.bal == null && x.cur != null, curAt: x.curAt || '', calc, diff, n: x.n || 0};
+}
+// approval state of an outflow: request, recurring payment, contract, payroll list, owner's own, internal…
+function flStatus(t, mt, mailIdx){
+  if (t.mine || t.cat === 'own_md') return {st: 'own', label: 'Хувийн (эзэмшигч)', cls: 'c-grey'};
+  let m = t.src === 'mail' ? mt[t.id] : null;
+  if (!m){ const k = String(t.date) + '|' + Math.round(+t.amount) + '|' + VIVI.norm(t.toAcc); const mail = mailIdx[k]; if (mail) m = mt[mail.id]; }
+  if (m && m.st === 'ok') return {st: 'ok', label: m.label || 'Зөвшөөрөлтэй', cls: 'c-ok', req: m.req};
+  const to = VIVI.norm(t.toAcc), amt = +t.amount || 0;
+  if (!m){ const r = (S.requests || []).find(r => VIVI.norm(r.payeeAcc) === to && Math.abs((+r.amount || 0) - amt) <= 1 && ['approved', 'paid'].includes(typeof reqStatus === 'function' ? reqStatus(r) : r.status));
+    if (r) return {st: 'ok', label: 'Зөвшөөрөлтэй', cls: 'c-ok', req: r.id};
+    if (typeof recurMatch === 'function'){ const rm = recurMatch({...t, toAcc: t.toAcc, amount: amt}); if (rm && rm.st === 'ok') return {st: 'ok', label: rm.label || 'Тогтмол төлбөр', cls: 'c-ok'}; } }
+  if ((typeof CT !== 'undefined' ? CT.list || [] : []).some(c => c.toAcc && PAY.accShort(String(c.toAcc).replace(/\s/g, '')) === PAY.accShort(to))) return {st: 'ok', label: 'Гэрээгээр (зээл)', cls: 'c-ok'};
+  if (t.src === 'mail' && typeof payUsedLabel === 'function'){ try{ const pu = payUsedLabel(t); if (pu) return {st: pu.st === 'ok' ? 'sal' : 'warn', label: pu.label, cls: pu.cls}; }catch(e){} }
+  if (t.cat === 'salary') return {st: 'sal', label: 'Цалин (жагсаалтаар)', cls: 'c-ok'};
+  if (['fee', 'bank'].includes(t.cat)) return {st: 'fee', label: 'Банкны шимтгэл', cls: 'c-grey'};
+  if (t.cat === 'refund') return {st: 'fee', label: 'Буцаалт (худалдан авагч)', cls: 'c-grey'};
+  if (m && m.st === 'warn') return {st: 'warn', label: m.label, cls: 'c-warn', req: m.req};
+  return {st: 'none', label: 'Хүсэлтгүй', cls: 'c-bad'};
+}
+function flModel(){
+  const a = FL.a, z = FL.z, days = flDays(a, z), accs = flAccs(a, z);
+  const mt = typeof matchBank === 'function' ? matchBank() : {}, mailIdx = {};
+  for (const t of S.banktx || []) mailIdx[String(t.dt).slice(0, 10) + '|' + Math.round(+t.amount) + '|' + VIVI.norm(t.toAcc)] = t;
+  const outs = drFlowTx(a, z).filter(t => t.cat !== 'internal').map(t => ({...t, S: flStatus(t, mt, mailIdx)}));
+  const R = d => { try{ return DAILY.flow(Object.values(DR.days || {}), [], [], d, d, 0).rows[0] || null; }catch(e){ return null; } };
+  const rows = days.map(d => {
+    const A = accs.map(acc => flAccDay(acc, d)), got = A.filter(Boolean), miss = accs.filter((acc, i) => !A[i]);
+    const sum = k => Math.round(got.reduce((q, x) => q + (+x[k] || 0), 0) * 100) / 100;
+    const o = outs.filter(t => t.date === d), oSum = st => Math.round(o.filter(t => st.includes(t.S.st)).reduce((q, t) => q + t.amount, 0) * 100) / 100;
+    const breaks = got.filter(x => x.diff != null && Math.abs(x.diff) > 1), sm = R(d);
+    return {d, A, got, miss, open: got.some(x => x.open != null) ? sum('open') : null, inn: sum('inn'), iin: sum('iin'), out: sum('out'), iout: sum('iout'), sp: sum('sp'), pk: sum('pk'),
+      close: got.some(x => x.close != null) ? sum('close') : null, partial: got.some(x => x.partial), breaks, smart: sm ? Math.round(sm.bank || 0) : null, cash: sm ? Math.round(sm.cash || 0) : null,
+      ok: oSum(['ok', 'sal', 'fee']), own: oSum(['own']), warn: oSum(['warn']), none: oSum(['none']), noneN: o.filter(t => t.S.st === 'none').length, outMail: Math.round(o.reduce((q, t) => q + t.amount, 0) * 100) / 100};
+  });
+  return {a, z, days, accs, rows, outs};
+}
+function flRender(){
+  const P = document.querySelector('[data-panel="flow"]'); if (!P || P.hidden) return;
+  $('#fl-from').value = FL.a; $('#fl-to').value = FL.z;
+  if (!DR.stmtLoaded && !Object.keys(DR.stmt || {}).length){ $('#fl-kpi').innerHTML = '<div class="note">Хуулга ачаалж байна…</div>'; return; }
+  const M = flModel(), F = M.rows, sumR = k => Math.round(F.reduce((q, r) => q + (+r[k] || 0), 0) * 100) / 100;
+  const first = F.find(r => r.open != null), last = [...F].reverse().find(r => r.close != null);
+  const missDays = F.filter(r => r.miss.length), brk = F.reduce((q, r) => q + r.breaks.length, 0), noneAmt = sumR('none'), noneN = F.reduce((q, r) => q + r.noneN, 0);
+  const chip = (cls, t) => `<span class="chip ${cls}">${t}</span>`;
+  $('#fl-kpi').innerHTML = `<div class="kpis" style="margin:0">
+      <div class="kpi"><div class="l">Эхлэх үлдэгдэл (${esc(first ? first.d : M.a)} өглөө)</div><div class="v">${first ? fmt(first.open) : '–'}</div><div class="s">${first ? first.got.length + ' данс' : 'хуулга алга'}</div></div>
+      <div class="kpi"><div class="l">+ Орсон (гаднаас)</div><div class="v">${fmt(sumR('inn'))}</div><div class="s">дотоод шилжүүлэг ${fmt(sumR('iin'))}</div></div>
+      <div class="kpi"><div class="l">− Гарсан (гадагш)</div><div class="v">${fmt(sumR('out'))}</div><div class="s">дотоод шилжүүлэг ${fmt(sumR('iout'))}</div></div>
+      <div class="kpi ${brk || missDays.length ? 'warn' : ''}"><div class="l">= Хаалтын үлдэгдэл (${esc(last ? last.d : M.z)})</div><div class="v">${last ? fmt(last.close) : '–'}</div><div class="s">${brk ? chip('c-bad', brk + ' зөрүү') : chip('c-ok', '✓ тэнцэж байна')} ${missDays.length ? chip('c-warn', missDays.length + ' өдөр хуулга дутуу') : ''}</div></div>
+      <div class="kpi ${noneN ? 'bad' : ''}" data-flst="none" role="button" tabindex="0" style="cursor:pointer"><div class="l">Хүсэлтгүй зарлага ›</div><div class="v">${noneN}</div><div class="s">${fmt(noneAmt)} ₮</div></div>
+    </div>
+    <p class="note" style="margin:8px 0 0">«Тэнцэж байна» = өмнөх өдрийн хаалтын үлдэгдэл + орсон − гарсан нь банкны хуулгын хаалтын үлдэгдэлтэй таарч байна. Хуулгагүй данс тооцоонд орохгүй тул «хуулга дутуу» өдрийг эхлээд нөхнө үү. Хувийн данс (${[...DR_OUTSIDE].join(', ')}) тооцоонд орохгүй.</p>`;
+  // days
+  $('#fl-days').innerHTML = `<thead><tr><th>Өдөр</th><th class="n">Эхлэх</th><th class="n">+ Орсон</th><th class="n">− Гарсан</th><th class="n">Дотоод (орсон / гарсан)</th><th class="n">= Хаалт</th><th>Тэнцэл</th><th class="n">Smart: банкинд орох</th><th class="n">Гарсан: зөвшөөрөлтэй</th><th class="n">Хүсэлтгүй</th><th>Хуулга</th></tr></thead><tbody>`
+    + F.map(r => `<tr data-flday="${r.d}" style="cursor:pointer${FL.day === r.d ? ';background:var(--acc-soft,rgba(42,120,214,.08))' : ''}"><td class="mono">${esc(r.d)} <span class="note">${esc(MN_WD[new Date(r.d + 'T00:00:00Z').getUTCDay()] || '')}</span></td>
+      <td class="n">${r.open != null ? fmt(r.open) : '–'}</td><td class="n">${fmt(r.inn)}</td><td class="n">${fmt(r.out)}</td><td class="n note">${fmt(r.iin)} / ${fmt(r.iout)}</td>
+      <td class="n">${r.close != null ? fmt(r.close) : '–'}${r.partial ? ' <span class="note">(одоогийн)</span>' : ''}</td>
+      <td>${!r.got.length ? chip('c-grey', 'хуулга алга') : r.breaks.length ? chip('c-bad', r.breaks.length + ' данс зөрүүтэй') : chip('c-ok', '✓')}</td>
+      <td class="n note">${r.smart != null ? fmt(r.smart) : '–'}</td><td class="n">${fmt(r.ok)}</td><td class="n" style="color:${r.none ? 'var(--bad)' : 'inherit'}">${r.none ? fmt(r.none) + ' (' + r.noneN + ')' : '–'}</td>
+      <td>${r.miss.length ? chip('c-warn', r.miss.length + ' данс дутуу') : chip('c-ok', r.got.length + ' данс')}</td></tr>`).join('')
+    + `<tr style="font-weight:600"><td>Нийт</td><td class="n">${first ? fmt(first.open) : '–'}</td><td class="n">${fmt(sumR('inn'))}</td><td class="n">${fmt(sumR('out'))}</td><td class="n note">${fmt(sumR('iin'))} / ${fmt(sumR('iout'))}</td><td class="n">${last ? fmt(last.close) : '–'}</td><td></td><td class="n note">${fmt(sumR('smart'))}</td><td class="n">${fmt(sumR('ok'))}</td><td class="n">${fmt(noneAmt)}</td><td></td></tr></tbody>`;
+  // one day: per account
+  const R = F.find(r => r.d === FL.day);
+  $('#fl-detail').hidden = !R;
+  if (R) $('#fl-detail').innerHTML = `<div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(R.d)} — данс бүрээр</h2><button class="btn" data-flclose>✕</button></div>
+    <div class="tbl" style="margin-top:8px"><table><thead><tr><th>Данс</th><th class="n">Эхлэх</th><th class="n">+ Орсон</th><th class="n">үүнээс StorePay / Pocket</th><th class="n">− Гарсан</th><th class="n">Дотоод орсон / гарсан</th><th class="n">= Тооцоолсон</th><th class="n">Хуулгын хаалт</th><th>Тэнцэл</th></tr></thead><tbody>
+    ${M.accs.map((acc, i) => { const x = R.A[i]; if (!x) return `<tr><td>${esc(flAccName(acc))} <span class="note mono">${esc(acc)}</span></td><td colspan="7" class="note">Энэ өдрийн хуулга оруулаагүй</td><td>${chip('c-warn', 'дутуу')}</td></tr>`;
+      return `<tr><td>${esc(flAccName(acc))} <span class="note mono">${esc(acc)}</span></td><td class="n">${x.open != null ? fmt(x.open) : '–'}${x.openKnown ? '' : ' <span class="note" title="өмнөх өдрийн хуулга алга — хуулгаас буцааж тооцов">*</span>'}</td><td class="n">${fmt(x.inn)}</td><td class="n note">${x.sp || x.pk ? fmt(x.sp) + ' / ' + fmt(x.pk) : '–'}</td><td class="n">${fmt(x.out)}</td><td class="n note">${fmt(x.iin)} / ${fmt(x.iout)}</td>
+        <td class="n">${x.calc != null ? fmt(x.calc) : '–'}</td><td class="n">${x.close != null ? fmt(x.close) : '–'}${x.partial ? ` <span class="note">(${esc(fmtDT(x.curAt).slice(11, 16))} үеийн)</span>` : ''}</td>
+        <td>${x.diff == null ? (x.openKnown ? chip('c-grey', '–') : chip('c-grey', 'өмнөх өдөр алга')) : Math.abs(x.diff) > 1 ? chip('c-bad', 'зөрүү ' + fmt(x.diff)) : chip('c-ok', '✓')}</td></tr>`; }).join('')}
+    </tbody></table></div>
+    <p class="note" style="margin:6px 0 0">* эхлэх үлдэгдэл — өмнөх өдрийн хуулга оруулаагүй тул энэ өдрийн хуулгаас буцааж тооцсон, тэнцлийг шалгах боломжгүй. «Зөрүү» гарвал хоёр хуулгын хооронд гүйлгээ дутсан эсвэл хуулга давхацсан байна.</p>`;
+  // outflows
+  const ST = [['', 'Бүгд'], ['none', 'Хүсэлтгүй'], ['warn', 'Тулгах'], ['ok', 'Зөвшөөрөлтэй'], ['sal', 'Цалин'], ['fee', 'Шимтгэл, буцаалт'], ['own', 'Хувийн']];
+  let L = M.outs.filter(t => !FL.day || t.date === FL.day);
+  const cnt = k => L.filter(t => !k || t.S.st === k).length;
+  $('#fl-stf').innerHTML = ST.map(([k, lb]) => `<button class="btn" data-flst="${k}" aria-pressed="${FL.st === k}" style="${FL.st === k ? 'outline:2px solid var(--acc,#2a78d6)' : ''}">${lb} (${cnt(k)})</button>`).join('') + (FL.day ? ` <button class="btn" data-flday="">${esc(FL.day)} ✕</button>` : '');
+  const q = FL.q.trim().toLowerCase();
+  L = L.filter(t => !FL.st || t.S.st === FL.st).filter(t => !q || [t.toName, t.toAcc, t.desc, t.fromAcc, flAccName(VIVI.norm(t.fromAcc))].some(v => String(v || '').toLowerCase().includes(q)));
+  const [sk, sd] = FL.sort, sv = t => sk === 'amt' ? t.amount : sk === 'st' ? t.S.label : sk === 'cat' ? VIVI_CAT_LABEL(t.cat) : sk === 'to' ? String(t.toName || '') : sk === 'from' ? flAccName(VIVI.norm(t.fromAcc)) : String(t.dt);
+  L.sort((x, y) => { const p = sv(x), r = sv(y); return (typeof p === 'number' ? p - r : String(p).localeCompare(String(r))) * sd; });
+  FL.visible = L;
+  $('#fl-outsum').innerHTML = `${L.length} гүйлгээ · <b>${fmt(L.reduce((s2, t) => s2 + t.amount, 0))} ₮</b>${FL.day ? ' · ' + esc(FL.day) : ' · ' + esc(M.a) + ' – ' + esc(M.z)}`;
+  const th = (k, lb, n) => `<th${n ? ' class="n"' : ''} data-flsort="${k}" style="cursor:pointer">${lb} ${FL.sort[0] === k ? (FL.sort[1] > 0 ? '▲' : '▼') : '↕'}</th>`;
+  $('#fl-out').innerHTML = `<thead><tr>${th('dt', 'Огноо')}${th('from', 'Данснаас')}${th('to', 'Хүлээн авагч')}<th>Утга</th>${th('cat', 'Ангилал')}${th('amt', 'Дүн', 1)}${th('st', 'Төлөв')}</tr></thead><tbody>`
+    + (L.length ? L.slice(0, 500).map(t => `<tr><td class="mono">${esc(String(t.dt).replace('T', ' ').slice(0, 16))}</td><td>${esc(flAccName(VIVI.norm(t.fromAcc)))}</td><td>${esc(t.toName || '')} <span class="note mono">${esc(VIVI.norm(t.toAcc))}</span></td><td class="note">${esc(String(t.desc || '').slice(0, 80))}</td><td>${esc(VIVI_CAT_LABEL(t.cat))}</td><td class="n">${fmt(t.amount)}</td><td><span class="chip ${t.S.cls}">${esc(t.S.label)}</span> <span class="note">${t.src === 'mail' ? '✉' : '📄'}</span></td></tr>`).join('')
+      : `<tr><td colspan="7" class="note">Гүйлгээ алга.</td></tr>`) + '</tbody>';
+}
+// ----- controls -----
+(function(){
+  const P = document.querySelector('[data-panel="flow"]'); if (!P) return;
+  const mark = () => { $('#fl-pend').textContent = ($('#fl-from').value !== FL.a || $('#fl-to').value !== FL.z) ? '← «Харуулах» дарна уу' : ''; };
+  const apply = () => { let f = $('#fl-from').value, t = $('#fl-to').value; if (!f || !t){ $('#fl-pend').textContent = 'Огноогоо бүрэн оруулна уу'; return; } if (t < f) [f, t] = [t, f];
+    FL.a = f; FL.z = t; FL.day = ''; $('#fl-pend').textContent = ''; if (typeof drFlowTx === 'function' && f < shiftDay(today(), -44)) drFlowTx(f, t); render(); };
+  ['#fl-from', '#fl-to'].forEach(s => { $(s).addEventListener('input', mark); $(s).addEventListener('change', mark); $(s).addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); apply(); } }); });
+  $('#fl-apply').addEventListener('click', apply);
+  $('#fl-mon').addEventListener('change', e => { const m = e.target.value; if (!m) return; const [y, mo] = m.split('-').map(Number), last = new Date(Date.UTC(y, mo, 0)).getUTCDate(); $('#fl-from').value = m + '-01'; $('#fl-to').value = m + '-' + String(last).padStart(2, '0'); apply(); });
+  $('#fl-bar').addEventListener('click', e => { const b = e.target.closest('button[data-fp]'); if (!b) return; const t = today(), k = b.dataset.fp;
+    const [f, z] = k === 'today' ? [t, t] : k === 'yday' ? [shiftDay(t, -1), shiftDay(t, -1)] : k === '7' ? [shiftDay(t, -6), t] : [t.slice(0, 8) + '01', t]; $('#fl-from').value = f; $('#fl-to').value = z; apply(); });
+  P.addEventListener('click', e => {
+    const d = e.target.closest('[data-flday]'); if (d){ FL.day = d.dataset.flday === FL.day ? '' : d.dataset.flday; render(); return; }
+    if (e.target.closest('[data-flclose]')){ FL.day = ''; render(); return; }
+    const s = e.target.closest('[data-flst]'); if (s){ FL.st = s.dataset.flst; if (s.classList.contains('kpi')) $('#fl-out').scrollIntoView({behavior: 'smooth', block: 'start'}); render(); return; }
+    const h = e.target.closest('th[data-flsort]'); if (h){ const k = h.dataset.flsort; FL.sort = FL.sort[0] === k ? [k, -FL.sort[1]] : [k, k === 'amt' || k === 'dt' ? -1 : 1]; render(); }
+  });
+  $('#fl-q').addEventListener('input', e => { FL.q = e.target.value; render(); });
+  $('#fl-xlsx').addEventListener('click', () => {
+    if (typeof XLSX === 'undefined'){ alert('Excel уншигч ачаалагдаагүй байна.'); return; }
+    const M = flModel(), wb = XLSX.utils.book_new();
+    const d1 = [['Өдөр', 'Эхлэх үлдэгдэл', 'Орсон (гаднаас)', 'Гарсан (гадагш)', 'Дотоод орсон', 'Дотоод гарсан', 'Хаалтын үлдэгдэл', 'Зөрүүтэй данс', 'Smart: банкинд орох', 'Гарсан: зөвшөөрөлтэй/цалин/шимтгэл', 'Хувийн', 'Тулгах', 'Хүсэлтгүй', 'Хуулгагүй данс']]
+      .concat(M.rows.map(r => [r.d, r.open, r.inn, r.out, r.iin, r.iout, r.close, r.breaks.map(x => x.acc).join(', '), r.smart, r.ok, r.own, r.warn, r.none, r.miss.join(', ')]));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d1), 'Өдрөөр');
+    const d2 = [['Өдөр', 'Данс', 'Нэр', 'Эхлэх', 'Орсон', 'StorePay', 'Pocket', 'Гарсан', 'Дотоод орсон', 'Дотоод гарсан', 'Тооцоолсон', 'Хуулгын хаалт', 'Зөрүү']];
+    for (const r of M.rows) M.accs.forEach((acc, i) => { const x = r.A[i]; d2.push(x ? [r.d, acc, flAccName(acc), x.open, x.inn, x.sp, x.pk, x.out, x.iin, x.iout, x.calc, x.close, x.diff] : [r.d, acc, flAccName(acc), 'хуулга алга']); });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d2), 'Данс × өдөр');
+    const L = FL.visible && FL.visible.length ? FL.visible : M.outs;
+    const d3 = [['Огноо', 'Данснаас', 'Хүлээн авагч', 'Хүлээн авагчийн данс', 'Утга', 'Ангилал', 'Дүн', 'Төлөв', 'Эх сурвалж']].concat(L.map(t => [String(t.dt).replace('T', ' ').slice(0, 16), flAccName(VIVI.norm(t.fromAcc)), t.toName || '', VIVI.norm(t.toAcc), t.desc || '', VIVI_CAT_LABEL(t.cat), t.amount, t.S.label, t.src === 'mail' ? 'и-мэйл' : 'хуулга']));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(d3), 'Гарсан гүйлгээ');
+    XLSX.writeFile(wb, `VIVI_orlogo_zarlaga_${M.a}_${M.z}.xlsx`);
+  });
+  new MutationObserver(() => { if (!P.hidden) flRender(); }).observe(P, {attributes: true, attributeFilter: ['hidden']});
+})();
 // ===================== HR: employee cards, maternity leave, schedule & attendance, leave, hiring and leaving =====================
 // hremp/{id} — the employee card · hrleave/{id} — leave · hrsched/{unit}_{YYYY-MM} — schedule (plan) and attendance (att) · hrrec/{id} — a vacancy with its candidates
 const HR = {att: [], sites: {}, cfg: {}, attD: '', attM: '', emp: [], lv: [], sch: {}, rec: [], t: 'emp', q: '', unit: '', st: 'cur', open: '', edit: false, m: '', sunit: '', mode: 'plan', code: 'Б', lvF: 'pend', init: false};
@@ -8106,7 +8141,7 @@ async function rotExcel(){
 }
 // ---------- data status: what was uploaded, what is missing, who does what, undo, month close ----------
 const DS = {log: [], cov: {}, duty: null, closed: {}, month: '', sel: null, init: false};
-const DS_PRIVATE = new Set(['4002622637', '405097294', '5026747956']);   // private / brother's accounts — never required
+const DS_PRIVATE = new Set(['4002622637', '4003978523', '405097294', '5026747956']);   // private / brother's accounts — never required
 const DS_KIND = {sales: '🧾 Smart — бараагаар', pay: '💳 Smart — төлбөрийн хэлбэрээр', stmt: '🏦 Банкны хуулга', aging: '📦 Насжилтын тайлан', price: '💲 Үлдэгдэл, үнийн тайлан (нягтлан)', lpp: '🚚 LPP жагсаалт', inv: '📋 Тооллогын насжилт', payroll: '👥 Цалингийн жагсаалт'};
 const dsAccLabel = a => (VIVI.ACC_NAME && VIVI.ACC_NAME[a] ? VIVI.ACC_NAME[a] + ' · ' : '') + a;
 // file fingerprint: the same file uploaded twice is recognised
@@ -8486,7 +8521,7 @@ document.addEventListener('visibilitychange', chMarkRead);
 // a chat button under every payment request (count of messages, ● when unread)
 function chatBtn(r){ const c = CH.chats.find(x => x.id === 'req_' + r.id); return `<button class="btn" data-chat-req="${esc(r.id)}" title="Энэ хүсэлтийн чат">💬${c && c.n ? ' ' + c.n : ''}${c && chUnread(c) ? ' <span style="color:var(--bad)">●</span>' : ''}</button>`; }
 // ===================== two-level menu: groups on top, the group's tabs below (wrapping, no sideways scroll) =====================
-const NAV_GROUPS = [['fin', '💰 Санхүү', ['req', 'rqs', 'bank', 'rev', 'cash', 'bal', 'pay', 'contr']], ['rep', '📊 Тайлан', ['daily', 'anal', 'pl']],
+const NAV_GROUPS = [['fin', '💰 Санхүү', ['req', 'rqs', 'bank', 'rev', 'flow', 'cash', 'bal', 'pay', 'contr']], ['rep', '📊 Тайлан', ['daily', 'anal', 'pl']],
   ['wh', '📦 Агуулах, дэлгүүр', ['wh', 'rcv', 'inv', 'rot']], ['hr', '👥 HR', ['hr']], ['chat', '💬 Чат', ['chat']], ['set', '⚙ Тохиргоо', ['set', 'data']]];
 const navGrpOf = t => (NAV_GROUPS.find(g => g[2].includes(t)) || NAV_GROUPS[0])[0];
 let NAV_G = '';
@@ -8610,9 +8645,9 @@ else VIVIFB.start(async () => {
   if (!isOwner){
     try{ const a = await db.doc('config/access').get(); const x = a.exists ? a.data() : {}; ALLOW = {...DEFAULT_PERMS, ...((x.perms || {})[String(user.email()).toLowerCase()] || {})}; }catch(e){ console.warn(e); }
   }
-  ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); ALLOW.inv = !!(ALLOW.inv || ALLOW.invadm); ALLOW.chat = true; ALLOW.anal = !!ALLOW.daily; ALLOW.rot = !!ALLOW.daily; ALLOW.data = !!(ALLOW.daily || ALLOW.rev || ALLOW.cash || isOwner); if (ALLOW.req) ALLOW.reqsub = false;   // an accountant makes real requests; the employee form is only for people without «Төлбөрийн хүсэлт»
+  ALLOW.rcv = ['fc','dr','ns','ht'].some(k => ALLOW['rcv_' + k]); ALLOW.inv = !!(ALLOW.inv || ALLOW.invadm); ALLOW.chat = true; ALLOW.flow = !!(isOwner || (ALLOW.bank && ALLOW.bal)); ALLOW.anal = !!ALLOW.daily; ALLOW.rot = !!ALLOW.daily; ALLOW.data = !!(ALLOW.daily || ALLOW.rev || ALLOW.cash || isOwner); if (ALLOW.req) ALLOW.reqsub = false;   // an accountant makes real requests; the employee form is only for people without «Төлбөрийн хүсэлт»
   window.ALLOWX = ALLOW; if (!isOwner && !ALLOW.req && !ALLOW.rev) $('#role').textContent = 'Ажилтан · ' + user.email();
-  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv', inv:'inv', reqsub:'rqs', contr:'contr', hr:'hr', chat:'chat', anal:'anal', rot:'rot', data:'data'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
+  const TABS = {daily:'daily', req:'req', bank:'bank', rev:'rev', cash:'cash', bal:'bal', pay:'pay', pl:'pl', wh:'wh', rcv:'rcv', inv:'inv', reqsub:'rqs', contr:'contr', flow:'flow', hr:'hr', chat:'chat', anal:'anal', rot:'rot', data:'data'}, KPI = {req:'#k-pend', bank:'#k-unm', cash:'#k-cash', bal:'#k-bal'};
   for (const k in TABS){ const b = document.querySelector(`nav.tabs button[data-tab="${TABS[k]}"]`); if (b) b.hidden = !ALLOW[k]; if (KPI[k]) $(KPI[k]).closest('.kpi').hidden = !ALLOW[k]; }
   { const cur = document.querySelector('nav.tabs button[aria-selected="true"]'); if (!cur || cur.hidden){ const first = [...document.querySelectorAll('nav.tabs button')].find(b => !b.hidden); if (first) showTab(first.dataset.tab); } }
   if (!Object.values(ALLOW).some(Boolean)) gate('Танд харах хэсэг сонгогдоогүй байна. Эзэмшигчид хандана уу.', true);
@@ -8676,7 +8711,7 @@ else VIVIFB.start(async () => {
     db.collection('monthclose').onSnapshot(s => { DS.closed = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); }
   if (isOwner){ $('#aud-card').hidden = false; db.collection('audit').where('at', '>=', new Date(Date.now() - 60 * 864e5).toISOString()).onSnapshot(s => { AUD.list = s.docs.map(d => ({id: d.id, ...d.data()})); renderAudit(); }, onErr); }
   if (ALLOW.daily) db.collection('stocksnap').onSnapshot(s => { AN.snaps = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
-  if (isOwner || (ALLOW.bank && ALLOW.bal) || ALLOW.pl || ALLOW.bal){ db.collection('stmtday').where('per', '>=', new Date(Date.now() - 100 * 864e5).toISOString().slice(0, 7)).onSnapshot(s => { DR.stmt = {...Object.fromEntries(Object.entries(DR.stmt || {}).filter(([, v]) => v.fromRun)), ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; DR.stmtLoaded = true; render(); }, onErr);
+  if (isOwner || (ALLOW.bank && ALLOW.bal) || ALLOW.pl || ALLOW.bal || ALLOW.flow){ db.collection('stmtday').where('per', '>=', new Date(Date.now() - 100 * 864e5).toISOString().slice(0, 7)).onSnapshot(s => { DR.stmt = {...Object.fromEntries(Object.entries(DR.stmt || {}).filter(([, v]) => v.fromRun)), ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; DR.stmtLoaded = true; render(); }, onErr);
     db.collection('txmark').onSnapshot(s => { DR.marks = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); }
   if (ALLOW.daily || ALLOW.rev) db.collection('daily').where('date', '>=', DR_FROM).onSnapshot(s => { const keep = Object.fromEntries(Object.entries(DR.days).filter(([d]) => d < DR_FROM)); DR.days = {...keep, ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; DR.live = true; render(); }, onErr);
   $('#cash-upload').hidden = !(isOwner || ALLOW.rev); window.REV_DAILY = isOwner || !!ALLOW.daily || !!ALLOW.rev;
