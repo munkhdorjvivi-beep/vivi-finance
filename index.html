@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd155</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd157</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -672,7 +672,7 @@ body{margin:0;background:var(--bg)}
 
   <!-- WAREHOUSE (LPP): deliveries, scanner, shipments -->
   <section class="panel" data-panel="wh" hidden>
-    <div class="filter chips" id="wh-mode" style="margin-bottom:12px"><button data-m="scan" aria-pressed="true">📦 Скан</button><button data-m="price" aria-pressed="false">🏷 Үнэ шалгах</button><button data-m="ship" aria-pressed="false">🚚 Илгээмж<span class="n badge" id="wh-ship-n" hidden></span></button><button data-m="deliv" aria-pressed="false">🗂 Хүргэлт (трак)</button></div>
+    <div class="filter chips" id="wh-mode" style="margin-bottom:12px"><button data-m="scan" aria-pressed="true">📦 Скан</button><button data-m="price" aria-pressed="false">🏷 Үнэ шалгах</button><button data-m="ship" aria-pressed="false">🚚 Илгээмж<span class="n badge" id="wh-ship-n" hidden></span></button><button data-m="deliv" aria-pressed="false">🗂 Хүргэлт (трак)</button><button data-m="label" aria-pressed="false">🏷 Шошго хэвлэх</button></div>
 
     <div class="card" id="wh-scan-card">
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
@@ -690,6 +690,38 @@ body{margin:0;background:var(--bg)}
       <div class="row" style="justify-content:space-between;margin-top:14px"><h3 style="margin:0;font-size:14px">🗂 Илгээлтийн архив — хэвлэх</h3><button class="btn" id="wh-arch-more">Бүх архив →</button></div>
       <div class="tbl" style="margin-top:6px"><table><thead><tr><th>Илгээсэн</th><th>Хүргэлт</th><th>Дэлгүүр · ширхэг</th><th class="n">Нийт</th><th>Илгээсэн хүн</th><th></th></tr></thead><tbody id="wh-arch-mini"></tbody></table></div>
       <div id="wh-unk" style="margin-top:10px"></div>
+    </div>
+
+    <!-- price labels: designer + print queue (thermal label printer through its Windows driver) -->
+    <div class="card" id="wh-label-card" hidden>
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 style="margin:0">🏷 Үнийн шошго хэвлэх</h2>
+        <div class="row" style="gap:6px;flex-wrap:wrap"><select id="lb-tpl" style="width:auto"></select><button class="btn" id="lb-new">＋ Шинэ загвар</button><button class="btn" id="lb-dup">Хуулах</button><button class="btn" id="lb-del" style="color:var(--bad)">Устгах</button><button class="btn primary" id="lb-save">💾 Загвар хадгалах</button></div></div>
+      <p class="note" style="margin:4px 0 10px">Шошгоны хэмжээ, лого, үндсэн үнэ, хямдарсан үнэ, нэр, баркод… бүгдийг хулганаар чирж байрлуулна, баруун талд хэмжээ, фонт, өнгө зэргийг засна. Хэвлэхдээ принтерийн (D520BT) драйвераар хэвлэнэ — цаасны хэмжээг шошгоны хэмжээтэй ижил тохируулна.</p>
+      <div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><b>Шошгоны цаас:</b><span id="lb-paper" class="row" style="gap:6px;flex-wrap:wrap;align-items:center"></span></div>
+      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <label class="f" style="width:110px">Загварын өргөн (мм)<input type="number" id="lb-w" step="0.5" min="10"></label>
+        <label class="f" style="width:110px">Загварын өндөр (мм)<input type="number" id="lb-h" step="0.5" min="10"></label>
+        <label class="f" style="width:auto">Хэвлэхдээ эргүүлэх<select id="lb-rot" style="width:auto"><option value="0">0° (эргүүлэхгүй)</option><option value="90">90° ↻</option><option value="270">90° ↺</option></select></label>
+        <label class="f" style="width:110px">Шилжүүлэх X (мм)<input type="number" id="lb-ox" step="0.5"></label>
+        <label class="f" style="width:110px">Шилжүүлэх Y (мм)<input type="number" id="lb-oy" step="0.5"></label>
+        <label class="note" style="display:flex;gap:4px;align-items:center;width:auto"><input type="checkbox" id="lb-border" style="width:auto"> Хүрээ</label>
+        <label class="f" style="width:110px">Харах томрол<input type="range" id="lb-zoom" min="2" max="8" step="0.5" value="5"></label>
+      </div>
+      <div class="row" style="gap:14px;align-items:flex-start;flex-wrap:wrap;margin-top:12px">
+        <div><div class="note" style="margin-bottom:4px">Загвар (чирж зөөнө · сумаар 0.5 мм)</div><div id="lb-canvas" tabindex="0" style="background:repeating-conic-gradient(#f3f3f3 0 25%,#fff 0 50%) 0 0/16px 16px;padding:14px;border:1px solid var(--line);border-radius:8px;outline:none;overflow:auto;max-width:100%"></div>
+          <div class="row" style="gap:4px;flex-wrap:wrap;margin-top:8px" id="lb-add"></div></div>
+        <div style="flex:1;min-width:260px"><div id="lb-els" class="row" style="gap:4px;flex-wrap:wrap;margin-bottom:8px"></div><div id="lb-props"></div></div>
+      </div>
+      <h2 style="margin-top:18px">Хэвлэх жагсаалт</h2>
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <input id="lb-scan" autocomplete="off" placeholder="Баркод уншуулах / бичих → Enter (дахин уншуулбал +1)" style="flex:1;min-width:240px;font-size:16px">
+        <select id="lb-ship" style="width:auto"><option value="">Илгээмжээс нэмэх…</option></select>
+        <label class="btn" style="cursor:pointer">📄 Excel-ээс<input type="file" id="lb-xls" accept=".xlsx,.xls,.csv" hidden></label>
+        <button class="btn" id="lb-clear">Цэвэрлэх</button>
+      </div>
+      <div class="note" id="lb-msg" style="margin:6px 0"></div>
+      <div class="tbl" style="max-height:340px;overflow:auto"><table><thead><tr><th>Баркод</th><th>Нэр</th><th>Хэмжээ</th><th class="n">Үндсэн үнэ</th><th class="n">Хямдарсан үнэ</th><th class="n">Тоо</th><th></th></tr></thead><tbody id="lb-q"></tbody></table></div>
+      <div class="row" style="gap:8px;margin-top:10px;align-items:center"><button class="btn primary" id="lb-print">🖨 Хэвлэх</button><span class="note" id="lb-sum"></span></div>
     </div>
 
     <div class="card" id="wh-price-card" hidden>
@@ -2928,7 +2960,7 @@ const WH = (() => {
     desc: ['item_desc', 'нэр (эх хувь, kz/ru)', 'описание', 'наименование', 'opis'],
     eng: ['eng', 'english', 'description'],
     cat: ['category'], catmn: ['ангилал', 'барааны дэд ангилал'], gender: ['gender', 'хүйс', 'барааны хүйс'], brand: ['brand', 'брэнд', 'бренд', 'marka'],
-    price: ['rrp mn2027', 'мн үнэ 2027', 'борлуулах үнэ 2027 (₮)', 'үнэ (₮)', 'кассын үнэ'], carton: ['carton', 'картон №', 'хайрцаг', 'короб'],
+    price: ['rrp mn2027', 'мн үнэ 2027', 'борлуулах үнэ 2027 (₮)', 'үнэ (₮)', 'кассын үнэ'], carton: ['carton', 'картон №', 'хайрцаг', 'короб'], base: ['үндсэн үнэ', 'худалдах үнэ', 'base price', 'rrp', 'regular price'],
     code: ['барааны ангилал'], color: ['барааны өнгө', 'өнгө', 'color', 'colour', 'kolor'],   // Smart export: model code without colour + colour column
   };
   const norm = v => String(v == null ? '' : v).trim().toLowerCase().replace(/\s+/g, ' ');
@@ -2975,7 +3007,7 @@ const WH = (() => {
       const cat = (m && m[5]) || (c.cat >= 0 && r[c.cat] ? String(r[c.cat]).toUpperCase() : '') || ((ENG_CAT.find(([re]) => re.test(eng.toUpperCase())) || [])[1]) || ((MN_CAT.find(([re]) => re.test((c.catmn >= 0 ? r[c.catmn] || '' : '') + ' ' + (c.mn >= 0 ? r[c.mn] || '' : ''))) || [])[1]) || 'MIX';
       const fileName = c.mn >= 0 && r[c.mn] ? String(r[c.mn]).trim() : '';
       const name = nameSrc === 'file' ? (fileName || (m && m[2]) || (TR ? TR.tr(raw, '', cat)[0] : raw)) : ((m && m[2]) || fileName || (TR ? TR.tr(raw, '', cat)[0] : raw));
-      const it = items[k] = items[k] || {k, m: model, s: size, e, q: 0, n: name, raw: raw || eng, g: (m && m[4]) || String(r[c.gender] || ''), c: cat, b: (m && m[3]) || String(r[c.brand] || ''), p: c.price >= 0 ? num(r[c.price]) : (m ? +m[6] || 0 : 0)};
+      const it = items[k] = items[k] || {k, m: model, s: size, e, q: 0, n: name, raw: raw || eng, g: (m && m[4]) || String(r[c.gender] || ''), c: cat, b: (m && m[3]) || String(r[c.brand] || ''), p: c.price >= 0 ? num(r[c.price]) : (m ? +m[6] || 0 : 0), bp: c.base >= 0 ? num(r[c.base]) : (m ? +m[7] || 0 : 0)};
       it.q += q; pcs += q; eans[e] = k;
     }
     return {items, eans, pcs, lines: Object.keys(items).length, bad, badEan, mism, unknown, conflicts, cols: Object.fromEntries(Object.entries(c).filter(([, v]) => v >= 0).map(([k, v]) => [k, rows[hi][v]]))};
@@ -6357,13 +6389,13 @@ async function wdSave(){
   try{
     const c = wdCfg(), ref = db.collection('deliv').doc(), id = ref.id, keys = Object.keys(WD.items), CH = 800, parts = Math.ceil(keys.length / CH);
     for (let i = 0; i < parts; i++){ const ks = keys.slice(i * CH, (i + 1) * CH); const items = {}, plan = {};
-      for (const k of ks){ const it = WD.items[k]; items[k] = {k, m: it.m, s: it.s, e: it.e, q: it.q, n: it.n, c: it.c, g: it.g, b: it.b, p: it.p, l: WH.suffixOf(it, c)}; if (WD.plan.plan[k]) plan[k] = WD.plan.plan[k]; }
+      for (const k of ks){ const it = WD.items[k]; items[k] = {k, m: it.m, s: it.s, e: it.e, q: it.q, n: it.n, c: it.c, g: it.g, b: it.b, p: it.p, bp: it.bp || 0, l: WH.suffixOf(it, c)}; if (WD.plan.plan[k]) plan[k] = WD.plan.plan[k]; }
       await db.doc('delivpart/' + id + '_' + i).set({deliv: id, i, items, plan}); }
     await db.doc('delivcnt/' + id).set({deliv: id, c: {}, x: {}, u: {}, tot: {}});
     if (typeof upLog === 'function') upLog({kind: 'lpp', file: WD.file || name, a: today(), z: today(), n: WD.lines, note: name + ' · ' + fmt(WD.pcs) + ' ш'});
     await ref.set({name, createdAt: new Date().toISOString(), by: me, status: 'active', total: WD.pcs, lines: WD.lines, fp: WD.fp, parts, pct: Object.fromEntries(c.stores.map(s => [s.key, s.pct])), planTot: WD.plan.got, file: WD.file || ''});
     WS.active = id; try{ localStorage.setItem('vivi-wh-active', id); }catch(e){}
-    if (isOwner && WS.master){ const add = {}; for (const [e, k] of Object.entries(WD.eans || {})) if (!WS.master[e]){ const it = WD.items[k]; add[e] = [it.m, it.s, it.n, it.b, it.g, it.c, it.p, 0, 0]; }
+    if (isOwner && WS.master){ const add = {}; for (const [e, k] of Object.entries(WD.eans || {})) if (!WS.master[e]){ const it = WD.items[k]; add[e] = [it.m, it.s, it.n, it.b, it.g, it.c, it.p, it.bp || 0, 0]; }
       if (Object.keys(add).length){ $('#wd-msg').textContent = 'Шинэ баркодуудыг мастер файлд нэмж байна…'; try{ await saveMaster({...WS.master, ...add}, (WS.masterMeta && WS.masterMeta.file) || 'master'); }catch(e){ console.warn('master add', e); } } }
     WD = null; $('#wd-file').value = ''; $('#wd-name').value = ''; $('#wd-msg').textContent = 'Хадгаллаа — «Скан» хэсэгт сканнердаж эхэлнэ үү.'; wdPreview();
   }catch(err){ whErr(err); $('#wd-msg').textContent = 'Хадгалж чадсангүй.'; $('#wd-save').disabled = false; }
@@ -6573,7 +6605,7 @@ window.addEventListener('online', syncChip); window.addEventListener('offline', 
 
 function renderWh(){
   if (!$('section[data-panel="wh"]')) return;
-  $('#wh-scan-card').hidden = WS.mode !== 'scan'; $('#wh-price-card').hidden = WS.mode !== 'price'; restoreLast(); renderSession(); $('#wh-ship-card').hidden = WS.mode !== 'ship'; $('#wh-deliv-card').hidden = WS.mode !== 'deliv';
+  $('#wh-scan-card').hidden = WS.mode !== 'scan'; $('#wh-price-card').hidden = WS.mode !== 'price'; { const lc = $('#wh-label-card'); if (lc){ lc.hidden = WS.mode !== 'label'; if (WS.mode === 'label' && typeof lbRender === 'function') lbRender(); } } restoreLast(); renderSession(); $('#wh-ship-card').hidden = WS.mode !== 'ship'; $('#wh-deliv-card').hidden = WS.mode !== 'deliv';
   renderWhActive(); renderWhStores(); renderWhLast(); renderWhShips(); renderWhDelivs(); syncChip();
   { const sig = JSON.stringify(whCfg().stores); if (!WD && WS.pctSig !== sig){ WS.pctSig = sig; wdPctInputs(); } }
   try{ renderRcv(); }catch(err){ console.warn('rcv', err); }
@@ -6620,7 +6652,7 @@ async function uploadMaster(f){
     else { const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let best = null;
       for (const n of wb.SheetNames){ const r = WH.parseList(XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null}), {nameSrc: 'file'}); if (!r.error && (!best || r.pcs > best.pcs)) best = r; }
       if (!best) throw new Error('баркод (EAN) багана олдсонгүй');
-      M = {}; for (const [e, k] of Object.entries(best.eans)){ const it = best.items[k]; M[e] = [it.m, it.s, it.n, it.b, it.g, it.c, it.p, 0, it.q]; } }
+      M = {}; for (const [e, k] of Object.entries(best.eans)){ const it = best.items[k]; M[e] = [it.m, it.s, it.n, it.b, it.g, it.c, it.p, it.bp || 0, it.q]; } }
     // merge: barcodes already in the master keep their name/category (one item = one name forever); new barcodes are added
     // «names»: barcodes already in the master get the new name (and brand, gender, price when given) — model, size, category stay, so deliveries keep matching
     let added = Object.keys(M).length, kept = 0, renamed = 0;
@@ -7379,6 +7411,205 @@ function flRender(){
     XLSX.writeFile(wb, `VIVI_orlogo_zarlaga_${M.a}_${M.z}.xlsx`);
   });
   new MutationObserver(() => { if (!P.hidden) flRender(); }).observe(P, {attributes: true, attributeFilter: ['hidden']});
+})();
+// ===== Price labels (warehouse): template designer (drag, size, fonts) + print queue → the thermal printer through its Windows driver =====
+const LB = {tpls: [], cur: '', sel: '', q: [], loaded: false, zoom: 5, drag: null};
+const LB_MM = 96 / 25.4;   // CSS px per mm
+const LB_FIELDS = [['base', 'Үндсэн үнэ (тоо)'], ['sale', 'Хямдарсан / кассын үнэ (тоо)'], ['disc', 'Хямдралын дүн'], ['pct', 'Хямдралын хувь'], ['name', 'Барааны нэр'], ['model', 'Загвар'], ['size', 'Хэмжээ'], ['ean', 'Баркод (тоогоор)'], ['brand', 'Брэнд']];
+function lbDefault(){
+  return {id: 'vivi', name: 'VIVI 50×30', w: 30, h: 50, rot: 270, ox: 0, oy: 0, border: false, els: [
+    {id: 'e1', type: 'text', txt: 'VIVI', x: 2, y: 2, fs: 24, bold: true, color: '#000'},
+    {id: 'e2', type: 'text', txt: 'Great\nbrands', x: 19, y: 3.5, fs: 6.5, bold: true, color: '#000'},
+    {id: 'e3', type: 'text', txt: 'Үндсэн үнэ', x: 2, y: 15, fs: 8, bold: true, color: '#000', when: 'disc'},
+    {id: 'e4', type: 'field', field: 'base', suf: '₮', x: 2, y: 19, fs: 15, bold: true, color: '#000', strike: 'diag', strikeColor: '#e00000', when: 'disc'},
+    {id: 'e5', type: 'text', txt: 'Хямдарсан үнэ', x: 2, y: 31, fs: 8, bold: true, color: '#000', when: 'disc'},
+    {id: 'e6', type: 'field', field: 'sale', suf: '₮', x: 2, y: 35, fs: 17, bold: true, color: '#000'},
+    {id: 'e7', type: 'barcode', x: 2, y: 44, w: 26, h: 5, show: false},
+    {id: 'e8', type: 'field', field: 'name', x: 2, y: 12, w: 26, fs: 5, color: '#000', show: false}]};
+}
+// resize a template to a paper size (as it comes out of the printer); everything on it scales with it
+function lbResize(t, pw, ph){
+  const W = t.rot ? ph : pw, H = t.rot ? pw : ph, sx = W / t.w, sy = H / t.h, sf = Math.min(sx, sy), r = v => Math.round(v * 2) / 2;
+  for (const e of t.els){ e.x = r((+e.x || 0) * sx); e.y = r((+e.y || 0) * sy); if (e.w) e.w = r(e.w * sx); if (e.h) e.h = r(e.h * sy); if (e.fs) e.fs = Math.round(e.fs * sf * 2) / 2; }
+  t.w = W; t.h = H; return t;
+}
+const lbPaper = t => t.rot ? [t.h, t.w] : [t.w, t.h];
+function lbDefaults(){ return [Object.assign(lbResize(lbDefault(), 60, 40), {id: 'vivi60', name: 'VIVI 60×40'}), Object.assign(lbResize(lbDefault(), 40, 30), {id: 'vivi40', name: 'VIVI 40×30'})]; }
+const lbTpl = () => LB.tpls.find(t => t.id === LB.cur) || LB.tpls[0];
+const lbEl = () => { const t = lbTpl(); return t && t.els.find(e => e.id === LB.sel); };
+const lbMoney = v => (+v ? String(Math.round(+v)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '');
+// ----- templates: shared (owner saves to config/labels), everybody may keep a local copy -----
+async function lbLoad(){
+  if (LB.loaded) return; LB.loaded = true;
+  let shared = null; try{ const d = await db.doc('config/labels').get(); if (d.exists) shared = d.data().tpls; }catch(e){ console.warn('labels', e); }
+  let local = null; try{ local = JSON.parse(localStorage.getItem('vivi-lbl-tpls') || 'null'); }catch(e){}
+  LB.tpls = (local && local.length ? local : shared && shared.length ? shared : lbDefaults());
+  try{ LB.cur = localStorage.getItem('vivi-lbl-cur') || ''; }catch(e){}
+  if (!LB.tpls.some(t => t.id === LB.cur)) LB.cur = LB.tpls[0].id;
+  lbRender();
+}
+function lbLocal(){ try{ localStorage.setItem('vivi-lbl-tpls', JSON.stringify(LB.tpls)); localStorage.setItem('vivi-lbl-cur', LB.cur); }catch(e){} }
+// ----- EAN-13 as SVG (other codes: shown as text) -----
+function lbEanSvg(code, wmm, hmm){
+  const e = String(code || ''); if (!/^\d{13}$/.test(e)) return `<div style="font:${Math.max(6, hmm * 1.6)}pt monospace">${esc(e)}</div>`;
+  const L = ['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'], G = ['0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'],
+    R = ['1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'], P = ['LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'];
+  let b = '101'; for (let i = 1; i <= 6; i++) b += (P[+e[0]][i - 1] === 'L' ? L : G)[+e[i]]; b += '01010'; for (let i = 7; i <= 12; i++) b += R[+e[i]]; b += '101';
+  let r = ''; for (let i = 0; i < b.length; i++) if (b[i] === '1') r += `<rect x="${i}" y="0" width="1" height="${i < 3 || (i > 44 && i < 50) || i > 91 ? 60 : 52}"/>`;
+  return `<svg viewBox="0 0 95 60" preserveAspectRatio="none" style="width:${wmm}mm;height:${hmm}mm;display:block" fill="#000">${r}</svg>`;
+}
+// ----- one label in mm units (the same HTML is used for the preview and for printing) -----
+function lbItemVals(it){ const base = +it.base || 0, sale = +it.sale || 0;
+  return {base: lbMoney(base), sale: lbMoney(sale || base), disc: base > sale && sale ? lbMoney(base - sale) : '', pct: base > sale && sale ? Math.round((base - sale) / base * 100) + '%' : '', name: it.n || '', model: it.m || '', size: it.s || '', ean: it.e || '', brand: it.b || '', hasDisc: base > 0 && sale > 0 && base > sale}; }
+function lbElHTML(el, V, edit){
+  if (el.show === false) return '';
+  if (!edit && el.when === 'disc' && !V.hasDisc) return ''; if (!edit && el.when === 'nodisc' && V.hasDisc) return '';
+  const st = [`position:absolute`, `left:${+el.x || 0}mm`, `top:${+el.y || 0}mm`, el.w ? `width:${+el.w}mm` : '', el.type === 'barcode' || el.type === 'img' ? `height:${+el.h || 5}mm` : '', `font-size:${+el.fs || 8}pt`, `font-weight:${el.bold ? 700 : 400}`,
+    `color:${el.color || '#000'}`, `text-align:${el.align || 'left'}`, `white-space:pre`, `line-height:1.05`, el.rot ? `transform:rotate(${+el.rot}deg);transform-origin:top left` : '', `font-family:${el.font || 'Arial, Helvetica, sans-serif'}`,
+    edit ? `cursor:move;outline:${LB.sel === el.id ? '1px dashed #2a78d6' : '1px dotted rgba(0,0,0,.18)'};outline-offset:1px` : '', (el.when && edit) ? 'opacity:' + (V.hasDisc || el.when !== 'disc' ? 1 : .45) : ''].filter(Boolean).join(';');
+  let inner;
+  if (el.type === 'barcode') inner = lbEanSvg(V.ean || '5900000000000', +el.w || 26, +el.h || 5);
+  else if (el.type === 'img') inner = el.src ? `<img src="${el.src}" style="width:100%;height:100%;object-fit:contain;display:block">` : '<div style="border:1px dashed #999;height:100%;font-size:6pt">зураг</div>';
+  else if (el.type === 'line') inner = `<div style="border-top:${+el.th || 0.3}mm solid ${el.color || '#000'};width:${+el.w || 20}mm"></div>`;
+  else { const t = el.type === 'field' ? (el.pre || '') + (V[el.field] || '') + ((V[el.field] || '') ? (el.suf || '') : '') : (el.txt || '');
+    inner = esc(t);
+    if (el.strike === 'line') inner = `<span style="text-decoration:line-through;text-decoration-color:${el.strikeColor || '#e00000'};text-decoration-thickness:${+el.sth || 0.5}mm">${inner}</span>`;
+    if (el.strike === 'diag') inner = `<span style="position:relative;display:inline-block">${inner}<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;left:-4%;top:0;width:108%;height:100%;overflow:visible"><line x1="0" y1="100" x2="100" y2="0" stroke="${el.strikeColor || '#e00000'}" stroke-width="${(+el.sth || 0.5) * 12}" vector-effect="non-scaling-stroke" style="stroke-width:${+el.sth || 0.5}mm"/></svg></span>`; }
+  return `<div data-lbel="${esc(el.id)}" style="${st}">${inner}</div>`;
+}
+function lbLabelHTML(t, it, edit){
+  const V = lbItemVals(it || {});
+  return `<div class="lbl" style="position:relative;width:${t.w}mm;height:${t.h}mm;overflow:hidden;background:#fff;${t.border ? 'outline:0.3mm solid #000;outline-offset:-0.3mm;' : ''}">${t.els.map(e => lbElHTML(e, V, edit)).join('')}</div>`;
+}
+const lbSample = () => LB.q[0] || {e: '5907092498423', n: 'Sinsay 703EN Жинсэн өмд Хүүхэд Цэнхэр 140', m: '703EN', s: '140', base: 55900, sale: 35900, b: 'SINSAY'};
+// ----- render -----
+function lbRender(){
+  const card = $('#wh-label-card'); if (!card || card.hidden) return; if (!LB.loaded){ lbLoad(); return; }
+  const t = lbTpl(); if (!t) return;
+  $('#lb-tpl').innerHTML = LB.tpls.map(x => `<option value="${esc(x.id)}" ${x.id === t.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
+  for (const [id, k] of [['#lb-w', 'w'], ['#lb-h', 'h'], ['#lb-ox', 'ox'], ['#lb-oy', 'oy']]) if (document.activeElement !== $(id)) $(id).value = t[k] || 0;
+  { const [pw, ph] = lbPaper(t); $('#lb-paper').innerHTML = [[60, 40], [40, 30], [50, 30]].map(([a2, b2]) => `<button class="btn" data-lbpaper="${a2}x${b2}" style="${pw === a2 && ph === b2 ? 'outline:2px solid #2a78d6;font-weight:700' : ''}">${a2}×${b2} мм</button>`).join('') + ` <span class="note">цаас одоо: <b>${pw}×${ph} мм</b></span>`; }
+  $('#lb-rot').value = String(t.rot || 0); $('#lb-border').checked = !!t.border; $('#lb-zoom').value = LB.zoom;
+  $('#lb-save').textContent = isOwner ? '💾 Загвар хадгалах (бүгдэд)' : '💾 Энэ компьютерт хадгалах';
+  $('#lb-canvas').innerHTML = `<div style="width:${t.w * LB_MM * LB.zoom / 3.78 * 3.78}px;height:${t.h * LB_MM * LB.zoom}px"><div id="lb-stage" style="transform:scale(${LB.zoom});transform-origin:top left;width:${t.w}mm;height:${t.h}mm;box-shadow:0 1px 6px rgba(0,0,0,.25)">${lbLabelHTML(t, lbSample(), true)}</div></div>`;
+  $('#lb-add').innerHTML = [['text', '＋ Текст'], ['field', '＋ Талбар (үнэ, нэр…)'], ['barcode', '＋ Баркод'], ['img', '＋ Лого / зураг'], ['line', '＋ Зураас']].map(([k, l]) => `<button class="btn" data-lbadd="${k}">${l}</button>`).join('');
+  $('#lb-els').innerHTML = t.els.map(e => `<button class="btn" data-lbsel="${esc(e.id)}" style="${LB.sel === e.id ? 'outline:2px solid #2a78d6' : ''};${e.show === false ? 'opacity:.5' : ''}">${esc(lbElName(e))}</button>`).join('');
+  lbProps(); lbQueue();
+}
+function lbElName(e){ return e.type === 'text' ? '“' + String(e.txt || '').replace(/\n/g, ' ').slice(0, 16) + '”' : e.type === 'field' ? (LB_FIELDS.find(f => f[0] === e.field) || [, e.field])[1].replace(/ \(.*\)/, '') : e.type === 'barcode' ? 'Баркод' : e.type === 'img' ? 'Лого / зураг' : 'Зураас'; }
+function lbProps(){
+  const el = lbEl(), box = $('#lb-props'); if (!el){ box.innerHTML = '<div class="note">Загвар дээрх элемент дээр дарж сонгоод засна.</div>'; return; }
+  const n = (k, l, step, w) => `<label class="f" style="width:${w || 92}px">${l}<input type="number" step="${step || 0.5}" data-lbp="${k}" value="${el[k] != null ? el[k] : ''}"></label>`;
+  const sel = (k, l, opts) => `<label class="f" style="width:auto">${l}<select data-lbp="${k}" style="width:auto">${opts.map(([v, t]) => `<option value="${v}" ${String(el[k] || '') === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>`;
+  box.innerHTML = `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+    ${el.type === 'text' ? `<label class="f" style="width:100%">Текст (шинэ мөр — Enter)<textarea data-lbp="txt" rows="2">${esc(el.txt || '')}</textarea></label>` : ''}
+    ${el.type === 'field' ? sel('field', 'Талбар', LB_FIELDS) + `<label class="f" style="width:80px">Өмнө<input data-lbp="pre" value="${esc(el.pre || '')}"></label><label class="f" style="width:80px">Ард<input data-lbp="suf" value="${esc(el.suf || '')}"></label>` : ''}
+    ${el.type === 'img' ? `<label class="btn" style="cursor:pointer">🖼 Зураг сонгох<input type="file" accept="image/*" data-lbimg hidden></label>` : ''}
+    ${n('x', 'X (мм)')}${n('y', 'Y (мм)')}${['barcode', 'img', 'line'].includes(el.type) || el.w ? n('w', 'Өргөн (мм)') : n('w', 'Өргөн (мм, заавал биш)')}${['barcode', 'img'].includes(el.type) ? n('h', 'Өндөр (мм)') : ''}
+    ${['text', 'field'].includes(el.type) ? n('fs', 'Фонт (pt)') + `<label class="note" style="display:flex;gap:4px;align-items:center;width:auto"><input type="checkbox" data-lbp="bold" ${el.bold ? 'checked' : ''} style="width:auto"> Тод</label>` + sel('align', 'Зэрэгцүүлэх', [['left', 'Зүүн'], ['center', 'Төв'], ['right', 'Баруун']]) : ''}
+    ${el.type === 'line' ? n('th', 'Зузаан (мм)', 0.1) : ''}
+    ${el.type !== 'barcode' && el.type !== 'img' ? `<label class="f" style="width:70px">Өнгө<input type="color" data-lbp="color" value="${esc(el.color || '#000000')}"></label>` : ''}
+    ${['text', 'field'].includes(el.type) ? sel('strike', 'Дарах зураас', [['', 'Үгүй'], ['diag', 'Ташуу (/)'], ['line', 'Хэвтээ']]) + (el.strike ? `<label class="f" style="width:70px">Зураасны өнгө<input type="color" data-lbp="strikeColor" value="${esc(el.strikeColor || '#e00000')}"></label>` + n('sth', 'Зузаан (мм)', 0.1) : '') : ''}
+    ${sel('rot', 'Эргүүлэх', [['', '0°'], ['90', '90°'], ['180', '180°'], ['270', '270°']])}
+    ${sel('when', 'Хэзээ харуулах', [['', 'Үргэлж'], ['disc', 'Хямдралтай үед'], ['nodisc', 'Хямдралгүй үед']])}
+    <label class="note" style="display:flex;gap:4px;align-items:center;width:auto"><input type="checkbox" data-lbp="show" ${el.show === false ? '' : 'checked'} style="width:auto"> Харуулах</label>
+    <button class="btn" data-lbrm style="color:var(--bad)">Элемент устгах</button></div>`;
+}
+function lbQueue(){
+  const tb = $('#lb-q'); if (!tb) return;
+  tb.innerHTML = LB.q.length ? LB.q.map((it, i) => `<tr><td class="mono">${esc(it.e)}</td><td><input data-lbq="${i}|n" value="${esc(it.n || '')}" style="min-width:200px"></td><td>${esc(it.s || '')}</td>
+    <td class="n"><input type="number" data-lbq="${i}|base" value="${+it.base || ''}" style="width:90px;text-align:right"></td><td class="n"><input type="number" data-lbq="${i}|sale" value="${+it.sale || ''}" style="width:90px;text-align:right"></td>
+    <td class="n"><input type="number" min="0" data-lbq="${i}|qty" value="${+it.qty || 0}" style="width:64px;text-align:right"></td><td><button class="btn" data-lbqrm="${i}">✕</button></td></tr>`).join('') : '<tr><td colspan="7" class="note">Баркод уншуулах, илгээмж эсвэл Excel-ээс нэмнэ үү.</td></tr>';
+  const n = LB.q.reduce((a, it) => a + (+it.qty || 0), 0); $('#lb-sum').textContent = `${LB.q.length} бараа · ${n} шошго`;
+  const sh = $('#lb-ship'); if (sh && !sh.dataset.n || sh && +sh.dataset.n !== WS.ships.length){ sh.dataset.n = WS.ships.length;
+    sh.innerHTML = '<option value="">Илгээмжээс нэмэх…</option>' + WS.ships.slice().sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 60).map(s => `<option value="${esc(s.id)}">${esc(s.no)} · ${esc(storeName(s.store))} · ${fmt(s.tq || 0)} ш</option>`).join(''); }
+}
+// ----- items: active delivery first, then the master file -----
+async function lbLookup(e){
+  const id = WS.active, P = id ? await loadParts(id) : null, k = P && P.eans[e], it = k ? P.items[k] : null;
+  const M = await loadMaster(), m = M && M[e];
+  if (!it && !m) return null;
+  return {e, n: (it && it.n) || (m && m[2]) || '', m: (it && it.m) || (m && m[0]) || '', s: (it && it.s) || (m && m[1]) || '', b: (it && it.b) || (m && m[3]) || '', sale: (it && +it.p) || (m && +m[6]) || 0, base: (it && +it.bp) || (m && +m[7]) || 0};
+}
+function lbAdd(x, q){ const o = LB.q.find(y => y.e === x.e); if (o) o.qty = (+o.qty || 0) + q; else LB.q.push({...x, qty: q}); lbQueue(); }
+// ----- print: one page per label, page size = label size (turned if the roll runs the other way) -----
+function lbPrint(){
+  const t = lbTpl(), L = []; for (const it of LB.q) for (let i = 0; i < (+it.qty || 0); i++) L.push(it);
+  if (!L.length){ $('#lb-msg').textContent = 'Хэвлэх шошго алга.'; return; }
+  const rot = +t.rot || 0, PW = rot ? t.h : t.w, PH = rot ? t.w : t.h;
+  const tr = rot === 90 ? `transform:translateX(${t.h}mm) rotate(90deg);` : rot === 270 ? `transform:translateY(${t.w}mm) rotate(-90deg);` : '';
+  const w = window.open('', '_blank'); if (!w){ alert('Цонх нээгдсэнгүй — хөтчийн popup зөвшөөрнө үү.'); return; }
+  w.document.open(); w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Шошго · ${esc(t.name)} · ${L.length} ш</title><style>
+    @page{size:${PW}mm ${PH}mm;margin:0} html,body{margin:0;padding:0} .pg{position:relative;width:${PW}mm;height:${PH}mm;overflow:hidden;page-break-after:always;break-after:page}
+    .pg:last-child{page-break-after:auto;break-after:auto} .in{position:absolute;left:${+t.ox || 0}mm;top:${+t.oy || 0}mm;transform-origin:top left;${tr}}
+    .bar{font:14px Arial;padding:8px;background:#ffd;border-bottom:1px solid #cc9} @media print{.bar{display:none}} *{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
+    <div class="bar">${L.length} шошго · ${esc(t.name)} · цаас ${PW}×${PH} мм — хэвлэх цонхонд принтер D520BT, цаасны хэмжээ ${PW}×${PH} мм, Margins: None, Scale: 100% сонгоно. <button onclick="print()">🖨 Хэвлэх</button></div>
+    ${L.map(it => `<div class="pg"><div class="in">${lbLabelHTML(t, it, false)}</div></div>`).join('')}</body></html>`);
+  w.document.close(); setTimeout(() => { try{ w.focus(); w.print(); }catch(e){} }, 400);
+}
+// ----- events -----
+(function(){
+  const card = $('#wh-label-card'); if (!card) return;
+  const T = () => lbTpl(), save = () => { lbLocal(); lbRender(); };
+  $('#lb-tpl').addEventListener('change', e => { LB.cur = e.target.value; LB.sel = ''; save(); });
+  for (const [id, k] of [['#lb-w', 'w'], ['#lb-h', 'h'], ['#lb-ox', 'ox'], ['#lb-oy', 'oy']]) $(id).addEventListener('input', e => { const v = parseFloat(e.target.value); if (!isNaN(v)){ T()[k] = v; save(); } });
+  $('#lb-rot').addEventListener('change', e => { T().rot = +e.target.value; save(); });
+  $('#lb-border').addEventListener('change', e => { T().border = e.target.checked; save(); });
+  $('#lb-zoom').addEventListener('input', e => { LB.zoom = +e.target.value; lbRender(); });
+  $('#lb-new').addEventListener('click', () => { const nm = prompt('Шинэ загварын нэр:', 'Шинэ шошго'); if (!nm) return; const t = {...lbResize(lbDefault(), 60, 40), id: 't' + Date.now().toString(36), name: nm}; LB.tpls.push(t); LB.cur = t.id; LB.sel = ''; save(); });
+  $('#lb-dup').addEventListener('click', () => { const t = JSON.parse(JSON.stringify(T())); t.id = 't' + Date.now().toString(36); t.name += ' (хуулбар)'; LB.tpls.push(t); LB.cur = t.id; save(); });
+  $('#lb-del').addEventListener('click', () => { if (LB.tpls.length < 2){ alert('Сүүлийн загварыг устгах боломжгүй.'); return; } if (!confirm(`«${T().name}» загварыг устгах уу?`)) return; LB.tpls = LB.tpls.filter(x => x.id !== LB.cur); LB.cur = LB.tpls[0].id; LB.sel = ''; save(); });
+  $('#lb-save').addEventListener('click', async () => { lbLocal(); if (!isOwner){ $('#lb-msg').textContent = '✓ Энэ компьютерт хадгаллаа.'; return; }
+    try{ await db.doc('config/labels').set({tpls: LB.tpls, at: new Date().toISOString(), by: me}); try{ localStorage.removeItem('vivi-lbl-tpls'); }catch(e){} $('#lb-msg').textContent = '✓ Загвар хадгалагдлаа — бүх хэрэглэгчид харагдана.'; }catch(err){ whErr(err); } });
+  card.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
+    if (d.lbsel){ LB.sel = d.lbsel; lbRender(); return; }
+    if (d.lbpaper){ const [pw, ph] = d.lbpaper.split('x').map(Number), t = T(); lbResize(t, pw, ph); if (/\d+×\d+/.test(t.name)) t.name = t.name.replace(/\d+×\d+/, pw + '×' + ph); save(); return; }
+    if (d.lbadd){ const t = T(), id = 'e' + Date.now().toString(36), base = {id, x: 2, y: 2, color: '#000'};
+      const el = d.lbadd === 'text' ? {...base, type: 'text', txt: 'Текст', fs: 8} : d.lbadd === 'field' ? {...base, type: 'field', field: 'name', fs: 6, w: Math.max(10, t.w - 4)} : d.lbadd === 'barcode' ? {...base, type: 'barcode', w: Math.min(30, t.w - 4), h: 6} : d.lbadd === 'img' ? {...base, type: 'img', w: 12, h: 8} : {...base, type: 'line', w: Math.max(10, t.w - 4), th: 0.3};
+      t.els.push(el); LB.sel = id; save(); return; }
+    if (d.lbrm != null){ const t = T(); t.els = t.els.filter(x => x.id !== LB.sel); LB.sel = ''; save(); return; }
+    if (d.lbqrm != null){ LB.q.splice(+d.lbqrm, 1); lbQueue(); lbRender(); return; }
+  });
+  card.addEventListener('input', e => {
+    const p = e.target.dataset.lbp, el = lbEl();
+    if (p && el){ const tg = e.target; let v = tg.type === 'checkbox' ? tg.checked : tg.type === 'number' ? (tg.value === '' ? null : parseFloat(tg.value)) : tg.value;
+      if (p === 'rot') v = v ? +v : 0; el[p] = v; lbLocal(); const keepFocus = tg.tagName !== 'SELECT' && tg.type !== 'checkbox';
+      if (keepFocus){ const st = $('#lb-stage'); if (st) st.innerHTML = lbLabelHTML(T(), lbSample(), true); $('#lb-els').innerHTML = T().els.map(x => `<button class="btn" data-lbsel="${esc(x.id)}" style="${LB.sel === x.id ? 'outline:2px solid #2a78d6' : ''};${x.show === false ? 'opacity:.5' : ''}">${esc(lbElName(x))}</button>`).join(''); }
+      else lbRender(); return; }
+    const q = e.target.dataset.lbq; if (q){ const [i, k] = q.split('|'); const it = LB.q[+i]; if (it){ it[k] = k === 'n' ? e.target.value : +e.target.value || 0; if (k === 'qty') $('#lb-sum').textContent = `${LB.q.length} бараа · ${LB.q.reduce((a, x) => a + (+x.qty || 0), 0)} шошго`; if (+i === 0 && k !== 'qty'){ const st = $('#lb-stage'); if (st) st.innerHTML = lbLabelHTML(T(), lbSample(), true); } } }
+  });
+  card.addEventListener('change', e => {
+    if (e.target.matches('[data-lbimg]')){ const f = e.target.files[0], el = lbEl(); if (!f || !el) return; if (f.size > 300000){ alert('Зураг 300 KB-аас бага байх ёстой.'); return; }
+      const r = new FileReader(); r.onload = () => { el.src = r.result; save(); }; r.readAsDataURL(f); }
+  });
+  // drag in the preview
+  $('#lb-canvas').addEventListener('pointerdown', e => { const d = e.target.closest('[data-lbel]'); if (!d) return; const el = T().els.find(x => x.id === d.dataset.lbel); if (!el) return;
+    LB.sel = el.id; LB.drag = {el, sx: e.clientX, sy: e.clientY, x: +el.x || 0, y: +el.y || 0}; e.preventDefault(); $('#lb-canvas').focus(); lbRender(); });
+  window.addEventListener('pointermove', e => { const g = LB.drag; if (!g) return; const k = LB_MM * LB.zoom;
+    g.el.x = Math.round((g.x + (e.clientX - g.sx) / k) * 2) / 2; g.el.y = Math.round((g.y + (e.clientY - g.sy) / k) * 2) / 2;
+    const st = $('#lb-stage'); if (st) st.innerHTML = lbLabelHTML(T(), lbSample(), true); });
+  window.addEventListener('pointerup', () => { if (LB.drag){ LB.drag = null; lbLocal(); lbProps(); } });
+  $('#lb-canvas').addEventListener('keydown', e => { const el = lbEl(); if (!el) return; const st = e.shiftKey ? 2 : 0.5, m = {ArrowLeft: ['x', -st], ArrowRight: ['x', st], ArrowUp: ['y', -st], ArrowDown: ['y', st]}[e.key];
+    if (m){ e.preventDefault(); el[m[0]] = Math.round(((+el[m[0]] || 0) + m[1]) * 2) / 2; lbLocal(); lbRender(); $('#lb-canvas').focus(); }
+    if (e.key === 'Delete' && confirm('Элементийг устгах уу?')){ T().els = T().els.filter(x => x.id !== el.id); LB.sel = ''; save(); } });
+  // queue sources
+  $('#lb-scan').addEventListener('keydown', async e => { if (e.key !== 'Enter') return; e.preventDefault(); const v = WH.eanOf(e.target.value); e.target.value = ''; if (!v) return;
+    const x = await lbLookup(v); if (!x){ lbAdd({e: v, n: '', s: '', m: '', b: '', base: 0, sale: 0}, 1); $('#lb-msg').textContent = `${v} — мастер файлд алга, нэр, үнийг гараар бичнэ үү.`; }
+    else { lbAdd(x, 1); $('#lb-msg').textContent = `✓ ${x.n} — ${lbMoney(x.sale)}₮`; } lbRender(); });
+  $('#lb-ship').addEventListener('change', async e => { const s = WS.ships.find(x => x.id === e.target.value); e.target.value = ''; if (!s) return;
+    const L = decMap(s.l), I = decMap(s.i), M = await loadMaster(); let n = 0;
+    for (const [ean, q] of Object.entries(L)){ if (!(q > 0)) continue; const i = I[ean] || {}, m = M && M[ean], x = (await lbLookup(ean)) || {e: ean, n: i.n || '', s: '', m: '', b: ''};
+      lbAdd({...x, n: i.n || x.n, sale: +i.p || x.sale || (m && +m[6]) || 0, base: x.base || (m && +m[7]) || 0}, q); n += q; }
+    $('#lb-msg').textContent = `✓ ${s.no}: ${n} шошго нэмэгдлээ.`; lbRender(); });
+  $('#lb-xls').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    try{ const wb = XLSX.read(await f.arrayBuffer(), {type: 'array'}); let best = null; const M = await loadMaster();
+      for (const n of wb.SheetNames){ const r = WH.parseList(XLSX.utils.sheet_to_json(wb.Sheets[n], {header: 1, raw: true, defval: null}), {master: M, nameSrc: 'file'}); if (!r.error && (!best || r.pcs > best.pcs)) best = r; }
+      if (!best){ $('#lb-msg').textContent = 'Баркод (EAN) багана олдсонгүй.'; return; } let n = 0;
+      for (const it of Object.values(best.items)){ const ean = it.e, m = M && M[ean]; lbAdd({e: ean, n: it.n, m: it.m, s: it.s, b: it.b, sale: +it.p || (m && +m[6]) || 0, base: +it.bp || (m && +m[7]) || 0}, it.q || 1); n += it.q || 1; }
+      $('#lb-msg').textContent = `✓ ${f.name}: ${n} шошго нэмэгдлээ.`; lbRender(); }catch(err){ console.warn(err); $('#lb-msg').textContent = 'Уншиж чадсангүй.'; } });
+  $('#lb-clear').addEventListener('click', () => { if (LB.q.length && !confirm('Хэвлэх жагсаалтыг цэвэрлэх үү?')) return; LB.q = []; lbRender(); });
+  $('#lb-print').addEventListener('click', lbPrint);
 })();
 // ===================== HR: employee cards, maternity leave, schedule & attendance, leave, hiring and leaving =====================
 // hremp/{id} — the employee card · hrleave/{id} — leave · hrsched/{unit}_{YYYY-MM} — schedule (plan) and attendance (att) · hrrec/{id} — a vacancy with its candidates
