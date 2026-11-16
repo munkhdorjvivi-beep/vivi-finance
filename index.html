@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd157</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd159</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -705,6 +705,7 @@ body{margin:0;background:var(--bg)}
         <label class="f" style="width:110px">Шилжүүлэх X (мм)<input type="number" id="lb-ox" step="0.5"></label>
         <label class="f" style="width:110px">Шилжүүлэх Y (мм)<input type="number" id="lb-oy" step="0.5"></label>
         <label class="note" style="display:flex;gap:4px;align-items:center;width:auto"><input type="checkbox" id="lb-border" style="width:auto"> Хүрээ</label>
+        <label class="f" style="width:100px">Хүрээний зай (мм)<input type="number" id="lb-fin" step="0.1" min="0"></label><label class="f" style="width:100px">Хүрээний зузаан (мм)<input type="number" id="lb-fth" step="0.05" min="0.1"></label>
         <label class="f" style="width:110px">Харах томрол<input type="range" id="lb-zoom" min="2" max="8" step="0.5" value="5"></label>
       </div>
       <div class="row" style="gap:14px;align-items:flex-start;flex-wrap:wrap;margin-top:12px">
@@ -7416,16 +7417,25 @@ function flRender(){
 const LB = {tpls: [], cur: '', sel: '', q: [], loaded: false, zoom: 5, drag: null};
 const LB_MM = 96 / 25.4;   // CSS px per mm
 const LB_FIELDS = [['base', 'Үндсэн үнэ (тоо)'], ['sale', 'Хямдарсан / кассын үнэ (тоо)'], ['disc', 'Хямдралын дүн'], ['pct', 'Хямдралын хувь'], ['name', 'Барааны нэр'], ['model', 'Загвар'], ['size', 'Хэмжээ'], ['ean', 'Баркод (тоогоор)'], ['brand', 'Брэнд']];
-function lbDefault(){
-  return {id: 'vivi', name: 'VIVI 50×30', w: 30, h: 50, rot: 270, ox: 0, oy: 0, border: false, els: [
-    {id: 'e1', type: 'text', txt: 'VIVI', x: 2, y: 2, fs: 24, bold: true, color: '#000'},
-    {id: 'e2', type: 'text', txt: 'Great\nbrands', x: 19, y: 3.5, fs: 6.5, bold: true, color: '#000'},
-    {id: 'e3', type: 'text', txt: 'Үндсэн үнэ', x: 2, y: 15, fs: 8, bold: true, color: '#000', when: 'disc'},
-    {id: 'e4', type: 'field', field: 'base', suf: '₮', x: 2, y: 19, fs: 15, bold: true, color: '#000', strike: 'diag', strikeColor: '#e00000', when: 'disc'},
-    {id: 'e5', type: 'text', txt: 'Хямдарсан үнэ', x: 2, y: 31, fs: 8, bold: true, color: '#000', when: 'disc'},
-    {id: 'e6', type: 'field', field: 'sale', suf: '₮', x: 2, y: 35, fs: 17, bold: true, color: '#000'},
-    {id: 'e7', type: 'barcode', x: 2, y: 44, w: 26, h: 5, show: false},
-    {id: 'e8', type: 'field', field: 'name', x: 2, y: 12, w: 26, fs: 5, color: '#000', show: false}]};
+function lbDefault(){   // 40×60, upright, inner frame — like the label printed from Smart
+  return {id: 'vivi4060', name: 'VIVI 40×60', w: 40, h: 60, rot: 0, ox: 0, oy: 0, border: true, fin: 1.8, fth: 0.35, els: [
+    {id: 'e1', type: 'text', txt: 'VIVI', x: 4.5, y: 4, fs: 26, bold: false, color: '#000'},
+    {id: 'e2', type: 'text', txt: 'Great\nbrands', x: 24.5, y: 5.5, fs: 7.5, bold: false, color: '#000'},
+    {id: 'e3', type: 'text', txt: 'Үндсэн үнэ', x: 4.5, y: 21, fs: 9, bold: true, color: '#000', when: 'disc'},
+    {id: 'e4', type: 'field', field: 'base', suf: '₮', x: 4.5, y: 25.5, fs: 15, bold: false, color: '#000', strike: 'diag', strikeColor: '#000000', sth: 0.5, when: 'disc'},
+    {id: 'e5', type: 'text', txt: 'Хямдарсан үнэ', x: 4.5, y: 43, fs: 10, bold: true, color: '#000', when: 'disc'},
+    {id: 'e6', type: 'field', field: 'sale', suf: '₮', x: 4.5, y: 48, fs: 19, bold: true, color: '#000'},
+    {id: 'e7', type: 'barcode', x: 4.5, y: 36, w: 31, h: 5, show: false},
+    {id: 'e8', type: 'field', field: 'name', x: 4.5, y: 15, w: 31, fs: 5, color: '#000', show: false}]};
+}
+function lbDefault4030(){
+  return {id: 'vivi4030', name: 'VIVI 40×30', w: 40, h: 30, rot: 0, ox: 0, oy: 0, border: true, fin: 1.2, fth: 0.3, els: [
+    {id: 'e1', type: 'text', txt: 'VIVI', x: 3, y: 2.5, fs: 15, color: '#000'},
+    {id: 'e2', type: 'text', txt: 'Great\nbrands', x: 15, y: 3.2, fs: 4.5, color: '#000'},
+    {id: 'e3', type: 'text', txt: 'Үндсэн үнэ', x: 3, y: 10.5, fs: 6, bold: true, color: '#000', when: 'disc'},
+    {id: 'e4', type: 'field', field: 'base', suf: '₮', x: 3, y: 13.5, fs: 10, color: '#000', strike: 'diag', strikeColor: '#000000', sth: 0.4, when: 'disc'},
+    {id: 'e5', type: 'text', txt: 'Хямдарсан үнэ', x: 3, y: 19.5, fs: 6, bold: true, color: '#000', when: 'disc'},
+    {id: 'e6', type: 'field', field: 'sale', suf: '₮', x: 3, y: 22.5, fs: 13, bold: true, color: '#000'}]};
 }
 // resize a template to a paper size (as it comes out of the printer); everything on it scales with it
 function lbResize(t, pw, ph){
@@ -7434,7 +7444,7 @@ function lbResize(t, pw, ph){
   t.w = W; t.h = H; return t;
 }
 const lbPaper = t => t.rot ? [t.h, t.w] : [t.w, t.h];
-function lbDefaults(){ return [Object.assign(lbResize(lbDefault(), 60, 40), {id: 'vivi60', name: 'VIVI 60×40'}), Object.assign(lbResize(lbDefault(), 40, 30), {id: 'vivi40', name: 'VIVI 40×30'})]; }
+function lbDefaults(){ return [lbDefault(), lbDefault4030()]; }
 const lbTpl = () => LB.tpls.find(t => t.id === LB.cur) || LB.tpls[0];
 const lbEl = () => { const t = lbTpl(); return t && t.els.find(e => e.id === LB.sel); };
 const lbMoney = v => (+v ? String(Math.round(+v)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '');
@@ -7445,6 +7455,8 @@ async function lbLoad(){
   let local = null; try{ local = JSON.parse(localStorage.getItem('vivi-lbl-tpls') || 'null'); }catch(e){}
   LB.tpls = (local && local.length ? local : shared && shared.length ? shared : lbDefaults());
   try{ LB.cur = localStorage.getItem('vivi-lbl-cur') || ''; }catch(e){}
+  let v2 = null; try{ v2 = localStorage.getItem('vivi-lbl-v2'); }catch(e){}
+  if (!v2){ for (const d of lbDefaults()) if (!LB.tpls.some(t => t.id === d.id)) LB.tpls.unshift(d); LB.cur = 'vivi4060'; try{ localStorage.setItem('vivi-lbl-v2', '1'); }catch(e){} lbLocal(); }
   if (!LB.tpls.some(t => t.id === LB.cur)) LB.cur = LB.tpls[0].id;
   lbRender();
 }
@@ -7475,11 +7487,12 @@ function lbElHTML(el, V, edit){
     inner = esc(t);
     if (el.strike === 'line') inner = `<span style="text-decoration:line-through;text-decoration-color:${el.strikeColor || '#e00000'};text-decoration-thickness:${+el.sth || 0.5}mm">${inner}</span>`;
     if (el.strike === 'diag') inner = `<span style="position:relative;display:inline-block">${inner}<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;left:-4%;top:0;width:108%;height:100%;overflow:visible"><line x1="0" y1="100" x2="100" y2="0" stroke="${el.strikeColor || '#e00000'}" stroke-width="${(+el.sth || 0.5) * 12}" vector-effect="non-scaling-stroke" style="stroke-width:${+el.sth || 0.5}mm"/></svg></span>`; }
-  return `<div data-lbel="${esc(el.id)}" style="${st}">${inner}</div>`;
+  const hd = edit && LB.sel === el.id ? `<div data-lbrs="${esc(el.id)}" title="Чирж хэмжээг өөрчлөх" style="position:absolute;right:-1.2mm;bottom:-1.2mm;width:2mm;height:2mm;background:#2a78d6;border:0.2mm solid #fff;cursor:nwse-resize"></div>` : '';
+  return `<div data-lbel="${esc(el.id)}" style="${st}">${inner}${hd}</div>`;
 }
 function lbLabelHTML(t, it, edit){
   const V = lbItemVals(it || {});
-  return `<div class="lbl" style="position:relative;width:${t.w}mm;height:${t.h}mm;overflow:hidden;background:#fff;${t.border ? 'outline:0.3mm solid #000;outline-offset:-0.3mm;' : ''}">${t.els.map(e => lbElHTML(e, V, edit)).join('')}</div>`;
+  return `<div class="lbl" style="position:relative;width:${t.w}mm;height:${t.h}mm;overflow:hidden;background:#fff;">${t.border ? `<div style="position:absolute;left:${+t.fin || 0}mm;top:${+t.fin || 0}mm;right:${+t.fin || 0}mm;bottom:${+t.fin || 0}mm;border:${+t.fth || 0.3}mm solid #000"></div>` : ''}${t.els.map(e => lbElHTML(e, V, edit)).join('')}</div>`;
 }
 const lbSample = () => LB.q[0] || {e: '5907092498423', n: 'Sinsay 703EN Жинсэн өмд Хүүхэд Цэнхэр 140', m: '703EN', s: '140', base: 55900, sale: 35900, b: 'SINSAY'};
 // ----- render -----
@@ -7487,8 +7500,8 @@ function lbRender(){
   const card = $('#wh-label-card'); if (!card || card.hidden) return; if (!LB.loaded){ lbLoad(); return; }
   const t = lbTpl(); if (!t) return;
   $('#lb-tpl').innerHTML = LB.tpls.map(x => `<option value="${esc(x.id)}" ${x.id === t.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
-  for (const [id, k] of [['#lb-w', 'w'], ['#lb-h', 'h'], ['#lb-ox', 'ox'], ['#lb-oy', 'oy']]) if (document.activeElement !== $(id)) $(id).value = t[k] || 0;
-  { const [pw, ph] = lbPaper(t); $('#lb-paper').innerHTML = [[60, 40], [40, 30], [50, 30]].map(([a2, b2]) => `<button class="btn" data-lbpaper="${a2}x${b2}" style="${pw === a2 && ph === b2 ? 'outline:2px solid #2a78d6;font-weight:700' : ''}">${a2}×${b2} мм</button>`).join('') + ` <span class="note">цаас одоо: <b>${pw}×${ph} мм</b></span>`; }
+  for (const [id, k] of [['#lb-w', 'w'], ['#lb-h', 'h'], ['#lb-ox', 'ox'], ['#lb-oy', 'oy'], ['#lb-fin', 'fin'], ['#lb-fth', 'fth']]) if (document.activeElement !== $(id)) $(id).value = t[k] || 0;
+  { const [pw, ph] = lbPaper(t); $('#lb-paper').innerHTML = [[40, 60], [40, 30], [60, 40]].map(([a2, b2]) => `<button class="btn" data-lbpaper="${a2}x${b2}" style="${pw === a2 && ph === b2 ? 'outline:2px solid #2a78d6;font-weight:700' : ''}">${a2}×${b2} мм</button>`).join('') + ` <span class="note">цаас одоо: <b>${pw}×${ph} мм</b></span>`; }
   $('#lb-rot').value = String(t.rot || 0); $('#lb-border').checked = !!t.border; $('#lb-zoom').value = LB.zoom;
   $('#lb-save').textContent = isOwner ? '💾 Загвар хадгалах (бүгдэд)' : '💾 Энэ компьютерт хадгалах';
   $('#lb-canvas').innerHTML = `<div style="width:${t.w * LB_MM * LB.zoom / 3.78 * 3.78}px;height:${t.h * LB_MM * LB.zoom}px"><div id="lb-stage" style="transform:scale(${LB.zoom});transform-origin:top left;width:${t.w}mm;height:${t.h}mm;box-shadow:0 1px 6px rgba(0,0,0,.25)">${lbLabelHTML(t, lbSample(), true)}</div></div>`;
@@ -7501,7 +7514,9 @@ function lbProps(){
   const el = lbEl(), box = $('#lb-props'); if (!el){ box.innerHTML = '<div class="note">Загвар дээрх элемент дээр дарж сонгоод засна.</div>'; return; }
   const n = (k, l, step, w) => `<label class="f" style="width:${w || 92}px">${l}<input type="number" step="${step || 0.5}" data-lbp="${k}" value="${el[k] != null ? el[k] : ''}"></label>`;
   const sel = (k, l, opts) => `<label class="f" style="width:auto">${l}<select data-lbp="${k}" style="width:auto">${opts.map(([v, t]) => `<option value="${v}" ${String(el[k] || '') === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>`;
-  box.innerHTML = `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+  const big = ['text', 'field'].includes(el.type) ? `<div class="row" style="gap:6px;align-items:center;margin-bottom:8px"><b>${esc(lbElName(el))}</b><span class="note">хэмжээ:</span><button class="btn" data-lbfs="-1" title="Жижигрүүлэх">A−</button><b style="min-width:48px;text-align:center">${+el.fs || 8} pt</b><button class="btn" data-lbfs="1" title="Томруулах">A+</button><input type="range" min="4" max="60" step="0.5" value="${+el.fs || 8}" data-lbp="fs" style="width:160px"></div>`
+    : ['barcode', 'img'].includes(el.type) ? `<div class="row" style="gap:6px;align-items:center;margin-bottom:8px"><b>${esc(lbElName(el))}</b><span class="note">хэмжээ:</span><button class="btn" data-lbfs="-1">−</button><button class="btn" data-lbfs="1">＋</button></div>` : '';
+  box.innerHTML = big + `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
     ${el.type === 'text' ? `<label class="f" style="width:100%">Текст (шинэ мөр — Enter)<textarea data-lbp="txt" rows="2">${esc(el.txt || '')}</textarea></label>` : ''}
     ${el.type === 'field' ? sel('field', 'Талбар', LB_FIELDS) + `<label class="f" style="width:80px">Өмнө<input data-lbp="pre" value="${esc(el.pre || '')}"></label><label class="f" style="width:80px">Ард<input data-lbp="suf" value="${esc(el.suf || '')}"></label>` : ''}
     ${el.type === 'img' ? `<label class="btn" style="cursor:pointer">🖼 Зураг сонгох<input type="file" accept="image/*" data-lbimg hidden></label>` : ''}
@@ -7543,7 +7558,7 @@ function lbPrint(){
     @page{size:${PW}mm ${PH}mm;margin:0} html,body{margin:0;padding:0} .pg{position:relative;width:${PW}mm;height:${PH}mm;overflow:hidden;page-break-after:always;break-after:page}
     .pg:last-child{page-break-after:auto;break-after:auto} .in{position:absolute;left:${+t.ox || 0}mm;top:${+t.oy || 0}mm;transform-origin:top left;${tr}}
     .bar{font:14px Arial;padding:8px;background:#ffd;border-bottom:1px solid #cc9} @media print{.bar{display:none}} *{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style></head><body>
-    <div class="bar">${L.length} шошго · ${esc(t.name)} · цаас ${PW}×${PH} мм — хэвлэх цонхонд принтер D520BT, цаасны хэмжээ ${PW}×${PH} мм, Margins: None, Scale: 100% сонгоно. <button onclick="print()">🖨 Хэвлэх</button></div>
+    <div class="bar"><b>${L.length} шошго · ${esc(t.name)} · цаас ${PW}×${PH} мм.</b> Хэвлэх цонхонд: Destination — <b>D520 Printer</b> · More settings → Paper size — <b>${PW}×${PH} мм</b> (${PW < PH ? 'Portrait' : 'Landscape'}) · Margins — <b>None</b> · Scale — <b>Default (100)</b> · <b>Headers and footers — тэмдэглэгээг арилгана</b>. <button onclick="print()">🖨 Хэвлэх</button></div>
     ${L.map(it => `<div class="pg"><div class="in">${lbLabelHTML(t, it, false)}</div></div>`).join('')}</body></html>`);
   w.document.close(); setTimeout(() => { try{ w.focus(); w.print(); }catch(e){} }, 400);
 }
@@ -7552,18 +7567,22 @@ function lbPrint(){
   const card = $('#wh-label-card'); if (!card) return;
   const T = () => lbTpl(), save = () => { lbLocal(); lbRender(); };
   $('#lb-tpl').addEventListener('change', e => { LB.cur = e.target.value; LB.sel = ''; save(); });
-  for (const [id, k] of [['#lb-w', 'w'], ['#lb-h', 'h'], ['#lb-ox', 'ox'], ['#lb-oy', 'oy']]) $(id).addEventListener('input', e => { const v = parseFloat(e.target.value); if (!isNaN(v)){ T()[k] = v; save(); } });
+  for (const [id, k] of [['#lb-w', 'w'], ['#lb-h', 'h'], ['#lb-ox', 'ox'], ['#lb-oy', 'oy'], ['#lb-fin', 'fin'], ['#lb-fth', 'fth']]) $(id).addEventListener('input', e => { const v = parseFloat(e.target.value); if (!isNaN(v)){ T()[k] = v; save(); } });
   $('#lb-rot').addEventListener('change', e => { T().rot = +e.target.value; save(); });
   $('#lb-border').addEventListener('change', e => { T().border = e.target.checked; save(); });
   $('#lb-zoom').addEventListener('input', e => { LB.zoom = +e.target.value; lbRender(); });
-  $('#lb-new').addEventListener('click', () => { const nm = prompt('Шинэ загварын нэр:', 'Шинэ шошго'); if (!nm) return; const t = {...lbResize(lbDefault(), 60, 40), id: 't' + Date.now().toString(36), name: nm}; LB.tpls.push(t); LB.cur = t.id; LB.sel = ''; save(); });
+  $('#lb-new').addEventListener('click', () => { const nm = prompt('Шинэ загварын нэр:', 'Шинэ шошго'); if (!nm) return; const t = {...lbDefault(), id: 't' + Date.now().toString(36), name: nm}; LB.tpls.push(t); LB.cur = t.id; LB.sel = ''; save(); });
   $('#lb-dup').addEventListener('click', () => { const t = JSON.parse(JSON.stringify(T())); t.id = 't' + Date.now().toString(36); t.name += ' (хуулбар)'; LB.tpls.push(t); LB.cur = t.id; save(); });
   $('#lb-del').addEventListener('click', () => { if (LB.tpls.length < 2){ alert('Сүүлийн загварыг устгах боломжгүй.'); return; } if (!confirm(`«${T().name}» загварыг устгах уу?`)) return; LB.tpls = LB.tpls.filter(x => x.id !== LB.cur); LB.cur = LB.tpls[0].id; LB.sel = ''; save(); });
-  $('#lb-save').addEventListener('click', async () => { lbLocal(); if (!isOwner){ $('#lb-msg').textContent = '✓ Энэ компьютерт хадгаллаа.'; return; }
-    try{ await db.doc('config/labels').set({tpls: LB.tpls, at: new Date().toISOString(), by: me}); try{ localStorage.removeItem('vivi-lbl-tpls'); }catch(e){} $('#lb-msg').textContent = '✓ Загвар хадгалагдлаа — бүх хэрэглэгчид харагдана.'; }catch(err){ whErr(err); } });
+  $('#lb-save').addEventListener('click', async () => { lbLocal(); if (!isOwner){ $('#lb-msg').textContent = '✓ Энэ компьютерт хадгаллаа.'; const bt = $('#lb-save'); bt.textContent = '✓ Хадгалагдлаа'; setTimeout(() => lbRender(), 2500); return; }
+    try{ await db.doc('config/labels').set({tpls: LB.tpls, at: new Date().toISOString(), by: me}); try{ localStorage.removeItem('vivi-lbl-tpls'); }catch(e){} $('#lb-msg').textContent = '✓ Загвар хадгалагдлаа — бүх хэрэглэгчид харагдана.'; const bt = $('#lb-save'), old = bt.textContent; bt.textContent = '✓ Хадгалагдлаа'; setTimeout(() => { bt.textContent = old; }, 2500); }catch(err){ whErr(err); } });
   card.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
     if (d.lbsel){ LB.sel = d.lbsel; lbRender(); return; }
+    if (d.lbfs){ const el = lbEl(); if (!el) return; const k = +d.lbfs;
+      if (['barcode', 'img'].includes(el.type)){ const f = k > 0 ? 1.1 : 1 / 1.1; el.w = Math.round((+el.w || 20) * f * 2) / 2; el.h = Math.round((+el.h || 5) * f * 2) / 2; }
+      else el.fs = Math.max(3, Math.round(((+el.fs || 8) + k) * 2) / 2);
+      save(); return; }
     if (d.lbpaper){ const [pw, ph] = d.lbpaper.split('x').map(Number), t = T(); lbResize(t, pw, ph); if (/\d+×\d+/.test(t.name)) t.name = t.name.replace(/\d+×\d+/, pw + '×' + ph); save(); return; }
     if (d.lbadd){ const t = T(), id = 'e' + Date.now().toString(36), base = {id, x: 2, y: 2, color: '#000'};
       const el = d.lbadd === 'text' ? {...base, type: 'text', txt: 'Текст', fs: 8} : d.lbadd === 'field' ? {...base, type: 'field', field: 'name', fs: 6, w: Math.max(10, t.w - 4)} : d.lbadd === 'barcode' ? {...base, type: 'barcode', w: Math.min(30, t.w - 4), h: 6} : d.lbadd === 'img' ? {...base, type: 'img', w: 12, h: 8} : {...base, type: 'line', w: Math.max(10, t.w - 4), th: 0.3};
@@ -7584,9 +7603,15 @@ function lbPrint(){
       const r = new FileReader(); r.onload = () => { el.src = r.result; save(); }; r.readAsDataURL(f); }
   });
   // drag in the preview
-  $('#lb-canvas').addEventListener('pointerdown', e => { const d = e.target.closest('[data-lbel]'); if (!d) return; const el = T().els.find(x => x.id === d.dataset.lbel); if (!el) return;
+  $('#lb-canvas').addEventListener('pointerdown', e => { const rs = e.target.closest('[data-lbrs]'); if (rs){ const el = T().els.find(x => x.id === rs.dataset.lbrs); if (!el) return;
+      LB.drag = {el, rs: 1, sx: e.clientX, sy: e.clientY, fs: +el.fs || 8, w: +el.w || 20, h: +el.h || 5}; e.preventDefault(); e.stopPropagation(); return; }
+    const d = e.target.closest('[data-lbel]'); if (!d) return; const el = T().els.find(x => x.id === d.dataset.lbel); if (!el) return;
     LB.sel = el.id; LB.drag = {el, sx: e.clientX, sy: e.clientY, x: +el.x || 0, y: +el.y || 0}; e.preventDefault(); $('#lb-canvas').focus(); lbRender(); });
   window.addEventListener('pointermove', e => { const g = LB.drag; if (!g) return; const k = LB_MM * LB.zoom;
+    if (g.rs){ const dmm = ((e.clientX - g.sx) + (e.clientY - g.sy)) / 2 / k;
+      if (['barcode', 'img'].includes(g.el.type)){ g.el.w = Math.max(3, Math.round((g.w + (e.clientX - g.sx) / k) * 2) / 2); g.el.h = Math.max(2, Math.round((g.h + (e.clientY - g.sy) / k) * 2) / 2); }
+      else g.el.fs = Math.max(3, Math.round((g.fs + dmm / 0.3528) * 2) / 2);
+      const st = $('#lb-stage'); if (st) st.innerHTML = lbLabelHTML(T(), lbSample(), true); return; }
     g.el.x = Math.round((g.x + (e.clientX - g.sx) / k) * 2) / 2; g.el.y = Math.round((g.y + (e.clientY - g.sy) / k) * 2) / 2;
     const st = $('#lb-stage'); if (st) st.innerHTML = lbLabelHTML(T(), lbSample(), true); });
   window.addEventListener('pointerup', () => { if (LB.drag){ LB.drag = null; lbLocal(); lbProps(); } });
