@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd150</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd151</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -6216,7 +6216,7 @@ function renderWhShips(){
     return `<tr class="${s.status === 'diff' ? 'sev-bad' : ''}"><td class="mono">${esc(s.no || s.id)}</td><td><b style="color:${STORE_COLOR[s.store] || '#555'}">${esc(storeName(s.store))}</b></td><td>${esc(s.dname || '')}</td>
       <td class="n">${fmt(s.tq || 0)}</td><td class="n">${s.status === 'open' || s.status === 'sent' ? '–' : fmt(s.rq || 0)}</td><td><span class="chip ${st[1]}">${st[0]}</span>${s.cmp && !s.cmp.ok ? `<div class="note">дутуу ${fmt(s.cmp.miss)} · илүү ${fmt(s.cmp.extra)}</div>` : ''}</td>
       <td class="note">${esc(fmtDT(s.sentAt || s.createdAt))}${s.recvAt ? '<br>хүлээн авсан ' + esc(fmtDT(s.recvAt)) : ''}</td>
-      <td style="white-space:nowrap"><button class="btn" data-wh-det="${esc(s.id)}">Дэлгэрэнгүй</button><button class="btn" data-wh-list="${esc(s.id)}" title="Хуваарилалтын жагсаалт (Excel)">📄</button>${s.status !== 'open' ? `<button class="btn" data-wh-print="${esc(s.id)}" title="Хэвлэх">🖨</button>` : ''}${['recv', 'diff', 'closed'].includes(s.status) ? `<button class="btn" data-wh-rcvx="${esc(s.id)}" title="Тулгалтын тайлан">📋</button>` : ''}${s.status === 'open' && s.store !== whCfg().over.key ? `<button class="btn" data-wh-send="${esc(s.id)}">🚚 Илгээх</button>` : ''}${can ? `<button class="btn primary" data-wh-smart="${esc(s.id)}">📥 Smart</button>` : ''}</td></tr>`; }).join('')
+      <td style="white-space:nowrap"><button class="btn" data-wh-det="${esc(s.id)}">Дэлгэрэнгүй</button>${(window.ALLOWX || {}).wh ? `<button class="btn" data-wh-det="${esc(s.id)}" title="Засах: мөр хасах, буцааж нээх">✏️</button><button class="btn" data-wh-cancel="${esc(s.id)}" title="Илгээмжийг цуцлах (устгах)" style="color:var(--bad)">🗑</button>` : ''}<button class="btn" data-wh-list="${esc(s.id)}" title="Хуваарилалтын жагсаалт (Excel)">📄</button>${s.status !== 'open' ? `<button class="btn" data-wh-print="${esc(s.id)}" title="Хэвлэх">🖨</button>` : ''}${['recv', 'diff', 'closed'].includes(s.status) ? `<button class="btn" data-wh-rcvx="${esc(s.id)}" title="Тулгалтын тайлан">📋</button>` : ''}${s.status === 'open' && s.store !== whCfg().over.key ? `<button class="btn" data-wh-send="${esc(s.id)}">🚚 Илгээх</button>` : ''}${can ? `<button class="btn primary" data-wh-smart="${esc(s.id)}">📥 Smart</button>` : ''}</td></tr>`; }).join('')
     : '<tr><td colspan="8" class="empty">Илгээмж алга.</td></tr>';
   renderShipDetail(); renderArch();
 }
@@ -6517,7 +6517,7 @@ document.addEventListener('click', async e => {
   if (d.whListids) return listFile(d.whListids.split(','));
   if (d.wdDel) return deleteDeliv(d.wdDel);
   if (d.whUndo != null) return undoScan(+d.whUndo);
-  if (d.whDet){ WS.detail = WS.detail === d.whDet ? '' : d.whDet; return renderShipDetail(); }
+  if (d.whDet){ WS.detail = WS.detail === d.whDet ? '' : d.whDet; renderShipDetail(); const el = $('#wh-ship-detail'); if (WS.detail && el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); return; }
   if (d.whSmart) return smartFile(d.whSmart);
   if (d.whResolve) return resolveShip(d.whResolve);
   if (d.whRm){ const [sid, e, n] = d.whRm.split('|'); return shipRemove(sid, e, n); }
