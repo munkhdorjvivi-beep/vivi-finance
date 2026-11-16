@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd160</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd162</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -6253,7 +6253,7 @@ function renderWhShips(){
     return `<tr class="${s.status === 'diff' ? 'sev-bad' : ''}"><td class="mono">${esc(s.no || s.id)}</td><td><b style="color:${STORE_COLOR[s.store] || '#555'}">${esc(storeName(s.store))}</b></td><td>${esc(s.dname || '')}</td>
       <td class="n">${fmt(s.tq || 0)}</td><td class="n">${s.status === 'open' || s.status === 'sent' ? '–' : fmt(s.rq || 0)}</td><td><span class="chip ${st[1]}">${st[0]}</span>${s.cmp && !s.cmp.ok ? `<div class="note">дутуу ${fmt(s.cmp.miss)} · илүү ${fmt(s.cmp.extra)}</div>` : ''}</td>
       <td class="note">${esc(fmtDT(s.sentAt || s.createdAt))}${s.recvAt ? '<br>хүлээн авсан ' + esc(fmtDT(s.recvAt)) : ''}</td>
-      <td style="white-space:nowrap"><button class="btn" data-wh-det="${esc(s.id)}">Дэлгэрэнгүй</button>${(window.ALLOWX || {}).wh ? `<button class="btn" data-wh-det="${esc(s.id)}" title="Засах: мөр хасах, буцааж нээх">✏️</button><button class="btn" data-wh-cancel="${esc(s.id)}" title="Илгээмжийг цуцлах (устгах)" style="color:var(--bad)">🗑</button>` : ''}<button class="btn" data-wh-list="${esc(s.id)}" title="Хуваарилалтын жагсаалт (Excel)">📄</button>${s.status !== 'open' ? `<button class="btn" data-wh-print="${esc(s.id)}" title="Хэвлэх">🖨</button>` : ''}${['recv', 'diff', 'closed'].includes(s.status) ? `<button class="btn" data-wh-rcvx="${esc(s.id)}" title="Тулгалтын тайлан">📋</button>` : ''}${s.status === 'open' && s.store !== whCfg().over.key ? `<button class="btn" data-wh-send="${esc(s.id)}">🚚 Илгээх</button>` : ''}${can ? `<button class="btn primary" data-wh-smart="${esc(s.id)}">📥 Smart</button>` : ''}</td></tr>`; }).join('')
+      <td style="white-space:nowrap"><button class="btn" data-wh-det="${esc(s.id)}">Дэлгэрэнгүй</button>${(window.ALLOWX || {}).wh ? `<button class="btn" data-wh-edit="${esc(s.id)}" title="Засах: мөр хасах, буцааж нээх">✏️</button><button class="btn" data-wh-cancel="${esc(s.id)}" title="Илгээмжийг цуцлах (устгах)" style="color:var(--bad)">🗑</button>` : ''}<button class="btn" data-wh-list="${esc(s.id)}" title="Хуваарилалтын жагсаалт (Excel)">📄</button>${s.status !== 'open' ? `<button class="btn" data-wh-print="${esc(s.id)}" title="Хэвлэх">🖨</button>` : ''}${['recv', 'diff', 'closed'].includes(s.status) ? `<button class="btn" data-wh-rcvx="${esc(s.id)}" title="Тулгалтын тайлан">📋</button>` : ''}${s.status === 'open' && s.store !== whCfg().over.key ? `<button class="btn" data-wh-send="${esc(s.id)}">🚚 Илгээх</button>` : ''}${can ? `<button class="btn primary" data-wh-smart="${esc(s.id)}">📥 Smart</button>` : ''}</td></tr>`; }).join('')
     : '<tr><td colspan="8" class="empty">Илгээмж алга.</td></tr>';
   renderShipDetail(); renderArch();
 }
@@ -6277,17 +6277,39 @@ function renderShipDetail(){
       return `<tr><td class="mono">${esc(e)}</td><td>${esc(i.n || '')}${i.x ? ' <span class="chip c-warn">жагсаалтгүй</span>' : ''}</td><td class="mono">${esc(i.k || '')}</td><td>${esc((WH.storeOf(s.store, whCfg()) || {}).base + (s.store === whCfg().over.key ? '' : (i.l || '')))}</td><td class="n">${fmt(n)}</td>${ed ? `<td style="white-space:nowrap"><button class="btn" data-wh-rm="${esc(s.id)}|${esc(e)}|1" title="1 ширхэг хасах">−1</button>${n > 1 ? `<button class="btn" data-wh-rm="${esc(s.id)}|${esc(e)}|${n}" title="Энэ мөрийг бүхэлд нь хасах">✕</button>` : ''}</td>` : ''}</tr>`; }).join('')}</tbody></table></div>`;
 }
 // ---------- editing a shipment already sent (mistakes, tests): remove pieces, re-open, cancel — the delivery's counts follow ----------
-function shipCanEdit(s){ const A = window.ALLOWX || {}; return !!(A.wh) && s.status !== 'closed'; }
+function shipCanEdit(s){ const A = window.ALLOWX || {}; return !!(A.wh) && s.status !== 'closed' && WS.editShip === s.id; }
 function shipEditBar(s){
   const A = window.ALLOWX || {}; if (!A.wh) return ''; const got = Object.values(decMap(s.r)).some(q => q > 0);
-  return `<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">
+  const RM = Array.isArray(s.rm) ? s.rm : [];
+  const log = RM.length ? `<div class="banner" style="margin-bottom:8px"><b>Хассан мөрүүд (${RM.reduce((q, x) => q + (+x.n || 0), 0)} ш):</b> ${RM.map((x, ix) => `<span style="white-space:nowrap">${esc(x.e)} ${esc(String(x.name || '').slice(0, 30))} −${x.n} <span class="note">${esc(fmtDT(x.at).slice(5, 16))}${x.undone ? ' · буцаасан' : ''}</span>${x.undone ? '' : ` <button class="btn" data-wh-rm-undo="${esc(s.id)}|${ix}" title="Буцааж нэмэх">↩</button>`}</span>`).join(' · ')}</div>` : '';
+  if (WS.editShip !== s.id) return log;
+  return log + `<div class="banner warn" style="margin-bottom:8px">✏️ <b>Засах горим</b> — «−1 / ✕» дарахад асууж баталгаажуулна. Буруу хассан бол дээрх «↩»-ээр буцаана. <button class="btn" data-wh-editx="1">Засварыг дуусгах</button></div><div class="row" style="gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><b>＋ Баркод нэмэх:</b><input data-wh-addean="${esc(s.id)}" autocomplete="off" placeholder="Баркод уншуулах / бичих → Enter (1 ширхэг)" style="width:300px"><span class="note" id="wh-addmsg"></span></div><div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">
     ${s.status === 'sent' && !got ? `<button class="btn" data-wh-reopen="${esc(s.id)}" title="Илгээмжийг буцааж нээгээд нэмж скан хийх / засах">↩ Буцааж нээх</button>` : ''}
     <button class="btn" data-wh-cancel="${esc(s.id)}" style="color:var(--bad)" title="Илгээмжийг бүхэлд нь устгаж, барааг хүргэлтийн тооллогоос буцаана">🗑 Илгээмжийг цуцлах</button>
     <span class="note">${s.status === 'closed' ? 'Хаагдсан илгээмж — зөвхөн цуцлах боломжтой.' : 'Мөр бүрийн «−1 / ✕»-ээр буруу скан хийсэн барааг хасна; хүргэлтийн тоо хамт засагдана.'}${got ? ' Дэлгүүр хүлээн авсан тоо бий — цуцалбал тэр нь ч устна.' : ''}</span></div>`;
 }
 async function shipRemove(sid, e, n){
   const s = WS.ships.find(x => x.id === sid); if (!s) return; const i = decMap(s.i)[e] || {}, have = decMap(s.l)[e] || 0; n = Math.min(+n || 0, have); if (!(n > 0) || !i.k) return;
+  if (!confirm(`${s.no}: ${e} ${i.n || ''} — ${n} ширхэг хасах уу?`)) return;
   addPend(s.deliv, (i.x ? 'x|' : 'c|') + i.k, s.store, -n); addShipPend(sid, null, e, -n); await flush();
+  try{ await db.doc('ship/' + sid).update({rm: fv().arrayUnion({e, n, k: i.k, x: i.x ? 1 : 0, name: i.n || '', at: new Date().toISOString(), by: me})}); }catch(err){ console.warn('rm log', err); }
+}
+// add one piece to a shipment by hand (forgotten / wrongly removed pieces): counts of the delivery follow, the line is logged
+async function shipAddEan(sid, raw){
+  const s = WS.ships.find(x => x.id === sid), e = WH.eanOf(raw), out = t => { const m = $('#wh-addmsg'); if (m) m.textContent = t; }; if (!s || !e) return;
+  const P = await loadParts(s.deliv); let k = P && P.eans[e], it = k ? P.items[k] : null, x = 0;
+  if (!it || it.x){ const M = await loadMaster(), m = M && M[e]; if (!it && !m){ out(`✗ ${e} — хүргэлт, мастер файлд алга.`); beep('bad'); return; }
+    if (!it){ k = WH.keyOf(m[0], m[1]); it = {k, m: m[0], s: m[1], e, n: m[2], c: m[5], b: m[3], p: +m[6] || 0}; } x = 1; }
+  const loc = WH.locs(it, s.store, whCfg());
+  addPend(s.deliv, (x ? 'x|' : 'c|') + k, s.store, 1); addShipPend(sid, null, e, 1, {n: it.n || '', k, l: loc.suf, x, p: it.p || 0}); await flush();
+  try{ await db.doc('ship/' + sid).update({add: fv().arrayUnion({e, n: 1, name: it.n || '', at: new Date().toISOString(), by: me, r: Math.random().toString(36).slice(2, 7)})}); }catch(err){ console.warn('add log', err); }
+  out(`✓ +1 ${e} ${it.n || ''}`); beep('ok');
+}
+async function shipRemoveUndo(sid, ix){
+  const s = WS.ships.find(x => x.id === sid); if (!s) return; const RM = (Array.isArray(s.rm) ? s.rm : []).slice(), x = RM[ix]; if (!x || x.undone) return;
+  if (!confirm(`${x.e} ${x.name || ''} — ${x.n} ширхэгийг илгээмжид буцааж нэмэх үү?`)) return;
+  addPend(s.deliv, (x.x ? 'x|' : 'c|') + x.k, s.store, +x.n); addShipPend(sid, null, x.e, +x.n); await flush();
+  RM[ix] = {...x, undone: new Date().toISOString()}; try{ await db.doc('ship/' + sid).update({rm: RM}); }catch(err){ whErr(err); }
 }
 async function shipCancel(sid){
   const s = WS.ships.find(x => x.id === sid); if (!s) return; const L = decMap(s.l), I = decMap(s.i), tot = Object.values(L).reduce((a, q) => a + Math.max(0, q), 0);
@@ -6572,7 +6594,10 @@ document.addEventListener('click', async e => {
   if (d.wdDel) return deleteDeliv(d.wdDel);
   if (d.wdRen){ const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.xlsx,.xls,.csv'; inp.onchange = () => wdRename(d.wdRen, inp.files[0]); inp.click(); return; }
   if (d.whUndo != null) return undoScan(+d.whUndo);
-  if (d.whDet){ WS.detail = WS.detail === d.whDet ? '' : d.whDet; renderShipDetail(); const el = $('#wh-ship-detail'); if (WS.detail && el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); return; }
+  if (d.whEdit){ WS.detail = d.whEdit; WS.editShip = WS.editShip === d.whEdit ? '' : d.whEdit; renderShipDetail(); const el = $('#wh-ship-detail'); if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); return; }
+  if (d.whEditx){ WS.editShip = ''; return renderShipDetail(); }
+  if (d.whRmUndo){ const [sid, ix] = d.whRmUndo.split('|'); return shipRemoveUndo(sid, +ix); }
+  if (d.whDet){ WS.editShip = ''; WS.detail = WS.detail === d.whDet ? '' : d.whDet; renderShipDetail(); const el = $('#wh-ship-detail'); if (WS.detail && el) el.scrollIntoView({behavior: 'smooth', block: 'start'}); return; }
   if (d.whSmart) return smartFile(d.whSmart);
   if (d.whResolve) return resolveShip(d.whResolve);
   if (d.whRm){ const [sid, e, n] = d.whRm.split('|'); return shipRemove(sid, e, n); }
@@ -6586,6 +6611,7 @@ document.addEventListener('click', async e => {
   if (d.rcOpen || d.rcView){ await rcFlush(); WS.rc = {ship: d.rcOpen || d.rcView, pend: {}, last: []}; $('#rc-msg').textContent = ''; renderRcvCount(); if (d.rcOpen) $('#rc-input').focus(); return; }
   if (d.rcUndo != null){ const x = WS.rc.last[+d.rcUndo]; if (x && !x.undone){ x.undone = true; WS.rc.pend[x.e] = (WS.rc.pend[x.e] || 0) - 1; renderRcvCount(); } return; }
 });
+document.addEventListener('keydown', e => { const t = e.target; if (e.key !== 'Enter' || !t.matches || !t.matches('input[data-wh-addean]')) return; e.preventDefault(); const v = t.value; t.value = ''; shipAddEan(t.dataset.whAddean, v).then(() => { const n = document.querySelector('input[data-wh-addean]'); if (n) n.focus(); }); });
 $('#rc-finish').addEventListener('click', rcFinish);
 $('#wh-end').addEventListener('click', endSession);
 $('#wh-arch-d').addEventListener('change', renderArch);
