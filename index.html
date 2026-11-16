@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd163</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd164</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -672,7 +672,7 @@ body{margin:0;background:var(--bg)}
 
   <!-- WAREHOUSE (LPP): deliveries, scanner, shipments -->
   <section class="panel" data-panel="wh" hidden>
-    <div class="filter chips" id="wh-mode" style="margin-bottom:12px"><button data-m="scan" aria-pressed="true">📦 Скан</button><button data-m="price" aria-pressed="false">🏷 Үнэ шалгах</button><button data-m="ship" aria-pressed="false">🚚 Илгээмж<span class="n badge" id="wh-ship-n" hidden></span></button><button data-m="deliv" aria-pressed="false">🗂 Хүргэлт (трак)</button><button data-m="label" aria-pressed="false">🏷 Шошго хэвлэх</button></div>
+    <div class="filter chips" id="wh-mode" style="margin-bottom:12px"><button data-m="scan" aria-pressed="true">📦 Скан</button><button data-m="price" aria-pressed="false">🏷 Үнэ шалгах</button><button data-m="ship" aria-pressed="false">🚚 Илгээмж<span class="n badge" id="wh-ship-n" hidden></span></button><button data-m="deliv" aria-pressed="false">🗂 Хүргэлт (трак)</button><button data-m="label" aria-pressed="false">🏷 Шошго хэвлэх</button><button data-m="prod" aria-pressed="false">📈 Бүтээмж</button></div>
 
     <div class="card" id="wh-scan-card">
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
@@ -681,6 +681,7 @@ body{margin:0;background:var(--bg)}
       </div>
       <div id="wh-prog" class="note" style="margin-bottom:8px"></div>
       <input id="wh-input" autocomplete="off" inputmode="none" placeholder="Баркод уншуулна уу… (скан хийх бүрт Enter)" style="font-size:22px;padding:14px;text-align:center;letter-spacing:1px">
+      <div id="wh-mystat" class="note" style="margin:6px 0;font-size:14px"></div>
       <div id="wh-result" class="wh-result"><div class="wh-big">Сканнердахад бэлэн</div><div class="note">Баркод уншигчаа энэ талбарт чиглүүлнэ үү.</div></div>
       <div class="tbl" style="margin-top:12px"><table><thead><tr><th>Дэлгүүр</th><th class="n">Төлөвлөгөө</th><th class="n">Скан</th><th class="n">Үлдсэн</th><th class="n">Нээлттэй илгээмж</th><th></th></tr></thead><tbody id="wh-stores"></tbody></table></div>
       <h3 style="margin:14px 0 6px;font-size:14px">Сүүлийн скан</h3>
@@ -693,6 +694,24 @@ body{margin:0;background:var(--bg)}
     </div>
 
     <!-- price labels: designer + print queue (thermal label printer through its Windows driver) -->
+    <!-- productivity of the warehouse team: pieces scanned per person per day, active hours, pace, daily target -->
+    <div class="card" id="wh-prod-card" hidden>
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:flex-end"><div><h2 style="margin:0">📈 Агуулахын бүтээмж</h2>
+        <p class="note" style="margin:4px 0 0">Хүн бүр өдөрт хэдэн ширхэг скан хийсэн, хэдэн цаг идэвхтэй ажилласан (10 минутын хэсгээр), цагт хэдэн ширхэг, нормын биелэлт. Илгээмжээр дэлгүүрт явуулсан тоо.</p></div>
+        <button class="btn" id="pr-xlsx">📥 Excel</button></div>
+      <div class="row" id="pr-bar" style="gap:6px;flex-wrap:wrap;margin-top:10px;align-items:flex-end">
+        <button class="btn" data-pp="today">Өнөөдөр</button><button class="btn" data-pp="7">7 хоног</button><button class="btn" data-pp="mon">Энэ сар</button>
+        <label class="f" style="width:auto">Эхлэх<input type="date" id="pr-from"></label><label class="f" style="width:auto">Дуусах<input type="date" id="pr-to"></label>
+        <button class="btn primary" id="pr-apply">Харуулах</button>
+        <label class="f" style="width:auto">Ажилтан<select id="pr-who" style="width:auto"><option value="">Бүгд</option></select></label>
+        <label class="f" style="width:150px">Өдрийн норм (1 хүнд, ш)<input type="number" id="pr-target" min="0" step="100"></label><button class="btn" id="pr-tsave">Норм хадгалах</button>
+        <span class="note" id="pr-msg"></span></div>
+      <div id="pr-kpi" style="margin-top:12px"></div>
+      <h3 style="margin:14px 0 6px">Өдрөөр (баг)</h3><div class="tbl"><table id="pr-days"></table></div>
+      <h3 style="margin:14px 0 6px">Өдөр × ажилтан</h3><div class="tbl" style="max-height:420px;overflow:auto"><table id="pr-rows"></table></div>
+      <p class="note">Идэвхтэй цаг = скан хийсэн 10 минутын хэсгүүдийн нийлбэр (завсарлага, хоосон хүлээлт тоологдохгүй). Хурд = скан ÷ идэвхтэй цаг. Скан тоолуур энэ шинэчлэлээс эхэлнэ; өмнөх өдрүүдэд зөвхөн «илгээсэн» тоо харагдана.</p>
+    </div>
+
     <div class="card" id="wh-label-card" hidden>
       <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 style="margin:0">🏷 Үнийн шошго хэвлэх</h2>
         <div class="row" style="gap:6px;flex-wrap:wrap"><select id="lb-tpl" style="width:auto"></select><button class="btn" id="lb-new">＋ Шинэ загвар</button><button class="btn" id="lb-dup">Хуулах</button><button class="btn" id="lb-del" style="color:var(--bad)">Устгах</button><button class="btn primary" id="lb-save">💾 Загвар хадгалах</button></div></div>
@@ -6051,12 +6070,15 @@ function totOf(id){ const t = {...((cntOf(id).tot) || {})}; for (const [key, o] 
 function openShip(id, st){ return WS.ships.find(s => s.deliv === id && s.store === st && s.status === 'open'); }
 
 // ---------- scanning ----------
+function statAdd(n){ const d = new Date(), day = today(), b = 'b' + String(Math.floor((d.getHours() * 60 + d.getMinutes()) / 10)).padStart(3, '0');
+  const S3 = WS.statP = WS.statP || {}, o = S3[day] = S3[day] || {n: 0, b: {}}; o.n += n; o.b[b] = (o.b[b] || 0) + n; WS.myLocal = (WS.myLocal || 0) + n; renderMyStat(); }
 function addPend(id, key, st, n){ const P = WS.pend[id] = WS.pend[id] || {}; const o = P[key] = P[key] || {}; o[st] = (o[st] || 0) + n; WS.pendN += Math.abs(n); syncChip(); }
 const shipPend = {};      // shipId → {ean: n, info}
 function addShipPend(shipId, base, e, n, info){ const S2 = shipPend[shipId] = shipPend[shipId] || {base, l: {}, i: {}}; S2.l[e] = (S2.l[e] || 0) + n; if (info) S2.i[e] = info; WS.pendN += Math.abs(n); syncChip(); }
 function syncChip(){ const el = $('#wh-sync'); if (!el) return; const n = WS.pendN; el.textContent = n ? `⏳ Илгээгдээгүй ${n}` : (navigator.onLine === false ? '⚠ Интернэтгүй — хадгалсан' : '✓ Синк хийгдсэн'); el.className = 'chip ' + (n ? 'c-warn' : 'c-ok'); }
 async function flush(){
-  if (WS.flushing || !db || (!WS.pendN && !Object.keys(shipPend).length)) return; WS.flushing = true;
+  if (WS.flushing || !db || (!WS.pendN && !Object.keys(shipPend).length && !Object.keys(WS.statP || {}).length)) return; WS.flushing = true;
+  const ST = WS.statP || {}; WS.statP = {};
   const P = WS.pend, SP = {...shipPend}; WS.pend = {}; for (const k in shipPend) delete shipPend[k]; const was = WS.pendN; WS.pendN = 0;
   try{
     const b = db.batch(), inc = n => fv().increment(n);
@@ -6069,8 +6091,12 @@ async function flush(){
       for (const [e, n] of Object.entries(x.l)){ if (!n) continue; u['l.' + ek(e)] = inc(n); tq += n; }
       for (const [e, info] of Object.entries(x.i)) u['i.' + ek(e)] = info;
       if (tq) u.tq = inc(tq); if (Object.keys(u).length) b.update(ref, u); }
-    await b.commit();
+    for (const [day, o] of Object.entries(ST)){ if (!o.n && !Object.values(o.b).some(Boolean)) continue; const ref = db.doc('whstat/' + day + '_' + me);
+      b.set(ref, {day, uid: me, name: (typeof S !== 'undefined' && S.names && S.names[me]) || (window.VIVIFB && VIVIFB.email) || '', at: new Date().toISOString()}, {merge: true});
+      const u = {n: inc(o.n)}; for (const [k, n] of Object.entries(o.b)) if (n) u['b.' + k] = inc(n); b.update(ref, u); }
+    await b.commit(); WS.myLocal = 0;
   }catch(err){ console.warn('flush', err);   // keep the counts: merge them back and retry next time
+    for (const [day, o] of Object.entries(ST)){ const T = WS.statP[day] = WS.statP[day] || {n: 0, b: {}}; T.n += o.n; for (const [k, n] of Object.entries(o.b)) T.b[k] = (T.b[k] || 0) + n; }
     for (const [id, map] of Object.entries(P)) for (const [key, o] of Object.entries(map)) for (const [st, n] of Object.entries(o)) addPend(id, key, st, n);
     for (const [sid, x] of Object.entries(SP)){ for (const [e, n] of Object.entries(x.l)) addShipPend(sid, x.base, e, n, x.i[e]); }
     WS.pendN = Math.max(WS.pendN, was);
@@ -6088,12 +6114,12 @@ async function onScan(raw){
   if (!id){ showResult('bad', 'Хүргэлт сонгоогүй', 'Дээрээс идэвхтэй хүргэлтээ сонгоно уу.'); return; }
   const P = await loadParts(id); if (!P){ showResult('bad', 'Хүргэлт ачаалж чадсангүй', ''); return; }
   let k = P.eans[e], it = k ? P.items[k] : null, st, kind = 'ok';
-  if (it && it.x){ st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1); }
-  else if (it){ st = WH.pick(k, P.plan[k], cntK(id, k), whCfg(), totOf(id)); if (st === whCfg().over.key) kind = 'over'; addPend(id, 'c|' + k, st, 1); }
+  if (it && it.x){ st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1); statAdd(1); }
+  else if (it){ st = WH.pick(k, P.plan[k], cntK(id, k), whCfg(), totOf(id)); if (st === whCfg().over.key) kind = 'over'; addPend(id, 'c|' + k, st, 1); statAdd(1); }
   else {
     const M = await loadMaster(), m = M && M[e];
-    if (!m){ addPend(id, 'u|' + e, '_', 1); showResult('bad', 'ТӨЛӨВЛӨГӨӨНД БАЙХГҮЙ', `${e} — мастер файлд ч байхгүй. Тусад нь тавиад, дараа шалгана.`); beep('bad'); pushLast({e, n: '—', s: '', st: '', kind: 'bad'}); return; }
-    k = WH.keyOf(m[0], m[1]); it = {k, m: m[0], s: m[1], e, n: m[2], c: m[5], b: m[3], p: +m[6] || 0}; st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1);
+    if (!m){ addPend(id, 'u|' + e, '_', 1); statAdd(1); showResult('bad', 'ТӨЛӨВЛӨГӨӨНД БАЙХГҮЙ', `${e} — мастер файлд ч байхгүй. Тусад нь тавиад, дараа шалгана.`); beep('bad'); pushLast({e, n: '—', s: '', st: '', kind: 'bad'}); return; }
+    k = WH.keyOf(m[0], m[1]); it = {k, m: m[0], s: m[1], e, n: m[2], c: m[5], b: m[3], p: +m[6] || 0}; st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1); statAdd(1);
   }
   let sh = openShip(id, st), sid = sh ? sh.id : WS.open[id + '|' + st], base = null;
   if (!sid){ sid = db.collection('ship').doc().id; WS.open[id + '|' + st] = sid; base = newShipBase(id, st); WS.ships.push({id: sid, ...base, _local: true}); }
@@ -6129,7 +6155,7 @@ async function undoScan(i){
   const sh = WS.ships.find(y => y.id === x.sid), fresh = x.ts && Date.now() - x.ts < 5 * 60e3 && (!sh || sh.status === 'open');
   if (!fresh && !whCanEdit()){ alert('Буцаах хугацаа (5 мин) өнгөрсөн эсвэл илгээмж илгээгдсэн — засах эрхтэй хүнд хандана уу.'); return; }
   whLog('undoScan', {ship: x.sid || '', store: x.st, deliv: id, e: x.e, n: 1, name: x.n || ''});
-  addPend(id, (x.kind === 'extra' ? 'x|' : 'c|') + x.k, x.st, -1); addShipPend(x.sid, null, x.e, -1); x.undone = true; renderWhLast(); renderWhStores();
+  addPend(id, (x.kind === 'extra' ? 'x|' : 'c|') + x.k, x.st, -1); statAdd(-1); addShipPend(x.sid, null, x.e, -1); x.undone = true; renderWhLast(); renderWhStores();
 }
 async function sendShip(sid){
   await flush(); const s = WS.ships.find(x => x.id === sid); if (!s) return;
@@ -6650,7 +6676,7 @@ window.addEventListener('online', syncChip); window.addEventListener('offline', 
 
 function renderWh(){
   if (!$('section[data-panel="wh"]')) return;
-  $('#wh-scan-card').hidden = WS.mode !== 'scan'; $('#wh-price-card').hidden = WS.mode !== 'price'; { const lc = $('#wh-label-card'); if (lc){ lc.hidden = WS.mode !== 'label'; if (WS.mode === 'label' && typeof lbRender === 'function') lbRender(); } } restoreLast(); renderSession(); $('#wh-ship-card').hidden = WS.mode !== 'ship'; $('#wh-deliv-card').hidden = WS.mode !== 'deliv';
+  $('#wh-scan-card').hidden = WS.mode !== 'scan'; $('#wh-price-card').hidden = WS.mode !== 'price'; { const pc = $('#wh-prod-card'); if (pc){ pc.hidden = WS.mode !== 'prod'; if (WS.mode === 'prod' && typeof prodRender === 'function') prodRender(); } } renderMyStat(); { const lc = $('#wh-label-card'); if (lc){ lc.hidden = WS.mode !== 'label'; if (WS.mode === 'label' && typeof lbRender === 'function') lbRender(); } } restoreLast(); renderSession(); $('#wh-ship-card').hidden = WS.mode !== 'ship'; $('#wh-deliv-card').hidden = WS.mode !== 'deliv';
   renderWhActive(); renderWhStores(); renderWhLast(); renderWhShips(); renderWhDelivs(); syncChip(); { const h = $('#wh-hist'); if (h) h.innerHTML = WS.mode === 'ship' && whCanEdit() ? whHistHTML(() => true, 200) : ''; }
   { const sig = JSON.stringify(whCfg().stores); if (!WD && WS.pctSig !== sig){ WS.pctSig = sig; wdPctInputs(); } }
   try{ renderRcv(); }catch(err){ console.warn('rcv', err); }
@@ -6681,6 +6707,7 @@ async function saveWhSettings(){
   const pairs = t => t.split('\n').map(l => l.split('=')).filter(p => p.length === 2).map(([a, b]) => [a.trim(), b.trim()]);
   const cfg = {stores, over: {...c.over, base: v('#whs-over').trim() || c.over.base}, catLoc, wordLoc: pairs(v('#whs-words')).filter(([a]) => a).map(([w, s]) => ({w, s})),
     srcLoc: Object.fromEntries(pairs(v('#whs-src'))), small: +v('#whs-small') || 5, purchase: {...c.purchase, supplier: v('#whs-p-sup').trim(), loc: v('#whs-p-loc').trim(), account: v('#whs-p-acc').trim()}, at: new Date().toISOString(), by: me};
+  if (WS.cfg && WS.cfg.target) cfg.target = WS.cfg.target;
   try{ await db.doc('config/wh').set(cfg); $('#whs-msg').textContent = 'Хадгаллаа.'; }catch(err){ whErr(err); }
 }
 // master file: our JSON (EAN → [model, size, name МН, brand, gender, category, price, base price, qty]) or the KZ Excel
@@ -7684,6 +7711,84 @@ function lbPrint(){
       $('#lb-msg').textContent = `✓ ${f.name}: ${n} шошго нэмэгдлээ.`; lbRender(); }catch(err){ console.warn(err); $('#lb-msg').textContent = 'Уншиж чадсангүй.'; } });
   $('#lb-clear').addEventListener('click', () => { if (LB.q.length && !confirm('Хэвлэх жагсаалтыг цэвэрлэх үү?')) return; LB.q = []; lbRender(); });
   $('#lb-print').addEventListener('click', lbPrint);
+})();
+// ===== Warehouse productivity: whstat/{day}_{uid} = {day, uid, name, n, b: {b000..b143: pieces per 10-minute slot}} =====
+const PR = {a: '', z: '', who: '', rows: null, sort: ['day', -1], busy: false};
+(function(){ const t = today(); PR.z = t; PR.a = shiftDay(t, -6); })();
+const prTarget = () => +((WS.cfg || {}).target) || 0;
+const prHM = slot => { const m = slot * 10; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
+// my own counter in the scan screen
+function renderMyStat(){
+  const el = $('#wh-mystat'); if (!el || !db || !me) return;
+  if (!WS.mySub || WS.mySub !== today()){ WS.mySub = today(); try{ if (WS.myUnsub) WS.myUnsub(); WS.myUnsub = db.doc('whstat/' + today() + '_' + me).onSnapshot(d => { WS.myDoc = d.exists ? d.data() : null; renderMyStat(); }, () => {}); }catch(e){} }
+  const n = ((WS.myDoc && +WS.myDoc.n) || 0) + (WS.myLocal || 0), T = prTarget();
+  el.innerHTML = `👷 Өнөөдөр та: <b>${fmt(n)} ш</b> скан хийсэн${T ? ` · өдрийн норм ${fmt(T)} ш — <b style="color:${n >= T ? 'var(--ok,#1a7f37)' : 'inherit'}">${Math.round(n / T * 100)}%</b>` : ''}`;
+}
+async function prLoad(){
+  if (PR.busy) return; PR.busy = true; $('#pr-msg').textContent = 'Ачаалж байна…';
+  try{ const all = whCanEdit();
+    const q = all ? db.collection('whstat').where('day', '>=', PR.a) : db.collection('whstat').where('uid', '==', me);
+    const sn = await q.get(); PR.stat = sn.docs.map(d => d.data()).filter(x => x.day >= PR.a && x.day <= PR.z); PR.loadedFor = PR.a + '|' + PR.z; $('#pr-msg').textContent = ''; }
+  catch(err){ console.warn('whstat', err); PR.stat = []; PR.loadedFor = PR.a + '|' + PR.z; $('#pr-msg').textContent = 'Уншиж чадсангүй: ' + (err.message || err); }
+  PR.busy = false; prRender();
+}
+function prModel(){
+  const T = prTarget(), M = {}, key = (d, u) => d + '|' + u, all = whCanEdit();
+  const row = (d, u, nm) => M[key(d, u)] = M[key(d, u)] || {day: d, uid: u, name: nm || '', n: 0, sent: 0, ships: 0, slots: [], first: null, last: null};
+  for (const x of PR.stat || []){ const r = row(x.day, x.uid, x.name); r.n += +x.n || 0; const S2 = Object.entries(x.b || {}).filter(([, v]) => +v > 0).map(([k]) => +k.slice(1));
+    r.slots = [...new Set([...r.slots, ...S2])]; }
+  for (const s of WS.ships || []){ if (!s.sentAt || !s.sentBy) continue; const d = fmtDT(s.sentAt).slice(0, 10); if (d < PR.a || d > PR.z) continue; if (!all && s.sentBy !== me) continue;
+    const r = row(d, s.sentBy); r.sent += +s.tq || 0; r.ships++; }
+  const rows = Object.values(M).map(r => { const sl = r.slots.sort((a, b) => a - b), h = sl.length * 10 / 60;
+    return {...r, name: r.name || whWho(r.uid), h, first: sl.length ? prHM(sl[0]) : '', last: sl.length ? prHM(sl[sl.length - 1] + 1) : '', pace: h ? r.n / h : 0, pct: T ? r.n / T * 100 : null}; })
+    .filter(r => !PR.who || r.uid === PR.who);
+  const days = {}; for (const r of rows){ const D = days[r.day] = days[r.day] || {day: r.day, people: 0, n: 0, sent: 0, h: 0}; if (r.n > 0) D.people++; D.n += r.n; D.sent += r.sent; D.h += r.h; }
+  return {T, rows, days: Object.values(days).sort((a, b) => b.day.localeCompare(a.day))};
+}
+function prRender(){
+  const card = $('#wh-prod-card'); if (!card || card.hidden) return;
+  $('#pr-from').value = PR.a; $('#pr-to').value = PR.z; if (document.activeElement !== $('#pr-target')) $('#pr-target').value = prTarget() || '';
+  $('#pr-target').disabled = $('#pr-tsave').disabled = !isOwner;
+  if (PR.loadedFor !== PR.a + '|' + PR.z){ prLoad(); return; }
+  const {T, rows, days} = prModel(), sum = k => rows.reduce((q, r) => q + (+r[k] || 0), 0), N = sum('n'), H = sum('h'), wd = days.filter(d => d.n > 0), pd = rows.filter(r => r.n > 0);
+  const users = [...new Map((PR.stat || []).map(x => [x.uid, x.name || whWho(x.uid)])).entries()];
+  $('#pr-who').innerHTML = '<option value="">Бүгд</option>' + users.map(([u, n]) => `<option value="${esc(u)}" ${PR.who === u ? 'selected' : ''}>${esc(n)}</option>`).join('');
+  const best = wd.slice().sort((a, b) => b.n - a.n)[0];
+  $('#pr-kpi').innerHTML = `<div class="kpis" style="margin:0">
+    <div class="kpi"><div class="l">Скан хийсэн</div><div class="v">${fmt(N)} ш</div><div class="s">${wd.length} ажлын өдөр · илгээсэн ${fmt(sum('sent'))} ш</div></div>
+    <div class="kpi"><div class="l">Өдрийн дундаж (баг)</div><div class="v">${wd.length ? fmt(Math.round(N / wd.length)) : '–'} ш</div><div class="s">хамгийн их: ${best ? fmt(best.n) + ' ш · ' + esc(best.day) : '–'}</div></div>
+    <div class="kpi"><div class="l">1 хүний өдрийн дундаж</div><div class="v">${pd.length ? fmt(Math.round(N / pd.length)) : '–'} ш</div><div class="s">${T ? 'норм ' + fmt(T) + ' ш' + (pd.length ? ' — ' + Math.round(N / pd.length / T * 100) + '%' : '') : 'норм тогтоогоогүй'}</div></div>
+    <div class="kpi"><div class="l">Хурд</div><div class="v">${H ? fmt(Math.round(N / H)) : '–'} ш/цаг</div><div class="s">идэвхтэй ${H.toFixed(1)} цаг</div></div></div>`;
+  const mx = Math.max(1, ...days.map(d => d.n));
+  $('#pr-days').innerHTML = `<thead><tr><th>Өдөр</th><th class="n">Хүн</th><th class="n">Скан</th><th style="width:30%"></th><th class="n">Илгээсэн</th><th class="n">Идэвхтэй цаг</th><th class="n">Хурд (ш/цаг)</th><th class="n">Норм (баг)</th></tr></thead><tbody>`
+    + (days.length ? days.map(d => `<tr><td class="mono">${esc(d.day)} <span class="note">${esc(MN_WD[new Date(d.day + 'T00:00:00Z').getUTCDay()] || '')}</span></td><td class="n">${d.people}</td><td class="n"><b>${fmt(d.n)}</b></td>
+      <td><div style="height:10px;background:var(--acc,#2a78d6);opacity:.75;border-radius:3px;width:${Math.round(d.n / mx * 100)}%"></div></td><td class="n">${fmt(d.sent)}</td><td class="n">${d.h.toFixed(1)}</td><td class="n">${d.h ? fmt(Math.round(d.n / d.h)) : '–'}</td>
+      <td class="n">${T && d.people ? Math.round(d.n / (T * d.people) * 100) + '%' : '–'}</td></tr>`).join('') : '<tr><td colspan="8" class="note">Энэ хугацаанд скан алга.</td></tr>') + '</tbody>';
+  const [sk, sd] = PR.sort, sv = r => r[sk]; rows.sort((x, y) => { const p = sv(x), q2 = sv(y); return (typeof p === 'number' || p == null ? (+p || 0) - (+q2 || 0) : String(p).localeCompare(String(q2))) * sd; });
+  const th = (k, l, n) => `<th${n ? ' class="n"' : ''} data-prsort="${k}" style="cursor:pointer">${l} ${PR.sort[0] === k ? (PR.sort[1] > 0 ? '▲' : '▼') : '↕'}</th>`;
+  $('#pr-rows').innerHTML = `<thead><tr>${th('day', 'Өдөр')}${th('name', 'Ажилтан')}${th('n', 'Скан', 1)}${th('pct', 'Норм', 1)}${th('first', 'Эхэлсэн')}${th('last', 'Дууссан')}${th('h', 'Идэвхтэй цаг', 1)}${th('pace', 'Хурд ш/цаг', 1)}${th('sent', 'Илгээсэн', 1)}</tr></thead><tbody>`
+    + (rows.length ? rows.map(r => `<tr><td class="mono">${esc(r.day)}</td><td>${esc(r.name)}</td><td class="n"><b>${fmt(r.n)}</b></td><td class="n" style="color:${r.pct == null ? 'inherit' : r.pct >= 100 ? 'var(--ok,#1a7f37)' : r.pct < 70 ? 'var(--bad)' : 'inherit'}">${r.pct == null ? '–' : Math.round(r.pct) + '%'}</td>
+      <td class="mono">${esc(r.first)}</td><td class="mono">${esc(r.last)}</td><td class="n">${r.h.toFixed(1)}</td><td class="n">${r.pace ? fmt(Math.round(r.pace)) : '–'}</td><td class="n">${r.sent ? fmt(r.sent) + ` <span class="note">(${r.ships})</span>` : '–'}</td></tr>`).join('')
+      : '<tr><td colspan="9" class="note">Мэдээлэл алга.</td></tr>') + '</tbody>';
+  PR.visible = rows; PR.visDays = days;
+}
+function prodRender(){ prRender(); }
+(function(){
+  const card = $('#wh-prod-card'); if (!card) return;
+  const apply = () => { let f = $('#pr-from').value, t = $('#pr-to').value; if (!f || !t) return; if (t < f) [f, t] = [t, f]; PR.a = f; PR.z = t; prRender(); };
+  $('#pr-apply').addEventListener('click', apply);
+  $('#pr-bar').addEventListener('click', e => { const b = e.target.closest('button[data-pp]'); if (!b) return; const t = today(), k = b.dataset.pp;
+    const [f, z] = k === 'today' ? [t, t] : k === '7' ? [shiftDay(t, -6), t] : [t.slice(0, 8) + '01', t]; $('#pr-from').value = f; $('#pr-to').value = z; apply(); });
+  $('#pr-who').addEventListener('change', e => { PR.who = e.target.value; prRender(); });
+  $('#pr-tsave').addEventListener('click', async () => { if (!isOwner) return; const v = Math.max(0, Math.round(+$('#pr-target').value || 0));
+    try{ await db.doc('config/wh').set({target: v}, {merge: true}); WS.cfg = {...(WS.cfg || {}), target: v}; $('#pr-msg').textContent = '✓ Норм хадгалагдлаа.'; prRender(); renderMyStat(); }catch(err){ whErr(err); } });
+  card.addEventListener('click', e => { const h = e.target.closest('th[data-prsort]'); if (!h) return; const k = h.dataset.prsort; PR.sort = PR.sort[0] === k ? [k, -PR.sort[1]] : [k, ['n', 'pct', 'h', 'pace', 'sent', 'day'].includes(k) ? -1 : 1]; prRender(); });
+  $('#pr-xlsx').addEventListener('click', () => {
+    if (typeof XLSX === 'undefined') return; prRender(); const wb = XLSX.utils.book_new(), T = prTarget();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Өдөр', 'Хүн', 'Скан (ш)', 'Илгээсэн (ш)', 'Идэвхтэй цаг', 'Хурд (ш/цаг)', 'Норм (баг) %']].concat((PR.visDays || []).map(d => [d.day, d.people, d.n, d.sent, +d.h.toFixed(2), d.h ? Math.round(d.n / d.h) : '', T && d.people ? Math.round(d.n / (T * d.people) * 100) : '']))), 'Өдрөөр');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Өдөр', 'Ажилтан', 'Скан (ш)', 'Норм %', 'Эхэлсэн', 'Дууссан', 'Идэвхтэй цаг', 'Хурд (ш/цаг)', 'Илгээсэн (ш)', 'Илгээмж']].concat((PR.visible || []).map(r => [r.day, r.name, r.n, r.pct == null ? '' : Math.round(r.pct), r.first, r.last, +r.h.toFixed(2), r.pace ? Math.round(r.pace) : '', r.sent, r.ships]))), 'Ажилтнаар');
+    XLSX.writeFile(wb, `VIVI_aguulah_buteemj_${PR.a}_${PR.z}.xlsx`);
+  });
 })();
 // ===================== HR: employee cards, maternity leave, schedule & attendance, leave, hiring and leaving =====================
 // hremp/{id} — the employee card · hrleave/{id} — leave · hrsched/{unit}_{YYYY-MM} — schedule (plan) and attendance (att) · hrrec/{id} — a vacancy with its candidates
