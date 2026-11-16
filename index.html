@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd148</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd150</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -6134,11 +6134,12 @@ function sendGroups(){
   const G = {}; for (const s of WS.ships) if (s.sentAt && s.status !== 'open'){ const k = s.deliv + '|' + s.sentAt; (G[k] = G[k] || {at: s.sentAt, deliv: s.deliv, dname: s.dname || '', by: s.sentBy || '', ids: []}).ids.push(s.id); }
   return Object.values(G).sort((a, b) => String(b.at).localeCompare(String(a.at)));
 }
+function whWho(id){ if (!id) return ''; if (typeof S !== 'undefined' && S.names && !S.names[id] && typeof resolveNames === 'function') resolveNames([id]); return id === me ? (S.names && S.names[id]) || 'Та' : (S.names && S.names[id]) || 'Хэрэглэгч'; }
 function renderArch(){ renderArchInto('#wh-arch', 30, ($('#wh-arch-d') || {}).value || '', WS.archAll); renderArchInto('#wh-arch-mini', 8, '', false); }
 function renderArchInto(sel, max, d, showAll){
   const tb = $(sel); if (!tb) return; let L = sendGroups(); if (d) L = L.filter(g => localDay(g.at) === d); const more = !d && !showAll && L.length > max; if (more) L = L.slice(0, max);
   tb.innerHTML = L.length ? L.map(g => { const S2 = g.ids.map(i => WS.ships.find(s => s.id === i)).filter(Boolean);
-    return `<tr><td class="mono">${esc(fmtDT(g.at))}</td><td>${esc(g.dname)}</td><td>${S2.map(s => `<b style="color:${STORE_COLOR[s.store] || '#555'}">${esc(storeName(s.store))}</b> ${fmt(s.tq || 0)}`).join(' · ')}</td><td class="n">${fmt(S2.reduce((a, s) => a + (s.tq || 0), 0))}</td><td class="note">${esc(g.by)}</td>
+    return `<tr><td class="mono">${esc(fmtDT(g.at))}</td><td>${esc(g.dname)}</td><td>${S2.map(s => `<b style="color:${STORE_COLOR[s.store] || '#555'}">${esc(storeName(s.store))}</b> ${fmt(s.tq || 0)}`).join(' · ')}</td><td class="n">${fmt(S2.reduce((a, s) => a + (s.tq || 0), 0))}</td><td class="note">${esc(whWho(g.by))}</td>
       <td style="white-space:nowrap"><button class="btn primary" data-wh-print="${esc(g.ids.join(','))}">🖨 Хэвлэх</button><button class="btn" data-wh-listids="${esc(g.ids.join(','))}">📄 Excel</button></td></tr>`; }).join('')
     + (more ? `<tr><td colspan="6" class="note">Сүүлийн ${max} — бүгдийг харахын тулд ${sel === '#wh-arch' ? '«Бүгдийг харуулах» эсвэл огноо сонгоно уу' : '«Бүх архив →»'}.</td></tr>` : '')
     : '<tr><td colspan="6" class="empty">Илгээлт алга.</td></tr>';
@@ -6150,7 +6151,7 @@ async function printShips(ids){
   for (const s of L) await loadParts(s.deliv);
   const page = (s, last) => { const rows = shipRows(s); const groups = {}; for (const r of rows) (groups[r[4]] = groups[r[4]] || []).push(r);
     return `<section class="${last ? '' : 'pb'}"><div class="hd"><div><div class="co">Вивекавикториа ХХК · VIVI</div><h1>Хуваарилалтын жагсаалт — ${esc(storeName(s.store))}</h1></div><div class="no">№ ${esc(s.no)}</div></div>
-      <div class="meta">Хүргэлт: <b>${esc(s.dname || '')}</b> · Илгээсэн: <b>${esc(fmtDT(s.sentAt || s.createdAt))}</b> · ${esc(s.sentBy || '')} · Нийт: <b>${fmt(s.tq || 0)} ш</b> · ${rows.length} баркод</div>
+      <div class="meta">Хүргэлт: <b>${esc(s.dname || '')}</b> · Илгээсэн: <b>${esc(fmtDT(s.sentAt || s.createdAt))}</b> · ${esc(whWho(s.sentBy))} · Нийт: <b>${fmt(s.tq || 0)} ш</b> · ${rows.length} баркод</div>
       <table><thead><tr><th>#</th><th>Баркод</th><th>Барааны нэр</th><th>Загвар</th><th>Хэмжээ</th><th class="n">Үнэ</th><th class="n">Тоо</th><th>✓</th></tr></thead><tbody>
       ${Object.entries(groups).map(([loc, rs]) => `<tr class="loc"><td colspan="8">Байршил ${esc(loc)} — ${fmt(rs.reduce((a, r) => a + r[6], 0))} ш</td></tr>` + rs.map((r, i) => `<tr><td>${i + 1}</td><td class="m">${esc(r[0])}</td><td>${esc(r[1])}${r[7] ? ' *' : ''}</td><td class="m">${esc(r[2])}</td><td>${esc(r[3])}</td><td class="n">${r[5] ? fmt(r[5]) : ''}</td><td class="n"><b>${fmt(r[6])}</b></td><td></td></tr>`).join('')).join('')}
       <tr class="tot"><td colspan="6">Нийт</td><td class="n">${fmt(rows.reduce((a, r) => a + r[6], 0))}</td><td></td></tr></tbody></table>
@@ -6225,7 +6226,7 @@ function renderShipDetail(){
   const L = decMap(s.l), R = decMap(s.r), I = decMap(s.i);
   if (s.status === 'diff' || s.status === 'closed'){
     const cmp = WH.compare(L, R), res = decMap(s.res);
-    el.innerHTML = `<div class="banner ${s.status === 'diff' ? 'bad' : ''}"><b>${esc(s.no)} · ${esc(storeName(s.store))}:</b> илгээсэн ${fmt(cmp.sent)}, хүлээн авсан ${fmt(cmp.recv)} — дутуу ${fmt(cmp.miss)}, илүү ${fmt(cmp.extra)}.</div>
+    el.innerHTML = shipEditBar(s) + `<div class="banner ${s.status === 'diff' ? 'bad' : ''}"><b>${esc(s.no)} · ${esc(storeName(s.store))}:</b> илгээсэн ${fmt(cmp.sent)}, хүлээн авсан ${fmt(cmp.recv)} — дутуу ${fmt(cmp.miss)}, илүү ${fmt(cmp.extra)}.</div>
       <div class="tbl"><table><thead><tr><th>Баркод</th><th>Бараа</th><th class="n">Илгээсэн</th><th class="n">Хүлээн авсан</th><th class="n">Зөрүү</th><th>Шийдвэр</th></tr></thead><tbody>${cmp.lines.map(x => { const r = res[x.e] || {};
         return `<tr><td class="mono">${esc(x.e)}</td><td>${esc((I[x.e] || {}).n || '')}</td><td class="n">${fmt(x.sent)}</td><td class="n">${fmt(x.recv)}</td><td class="n"><b>${x.d > 0 ? '+' : ''}${fmt(x.d)}</b></td>
         <td>${s.status === 'diff' && canWrite ? `<select data-wh-res="${esc(x.e)}" style="width:auto"><option value="">— сонгох —</option>${RES.filter(([v]) => x.d < 0 ? !['keep', 'back'].includes(v) : !['resend', 'lost'].includes(v)).map(([v, t]) => `<option value="${v}" ${r.how === v ? 'selected' : ''}>${t}</option>`).join('')}</select> <input data-wh-note="${esc(x.e)}" value="${esc(r.note || '')}" placeholder="тайлбар" style="width:160px">` : esc((RES.find(([v]) => v === r.how) || [, ''])[1] + (r.note ? ' · ' + r.note : ''))}</td></tr>`; }).join('')}</tbody></table></div>
@@ -6233,9 +6234,37 @@ function renderShipDetail(){
     return;
   }
   const rows = Object.entries(L).filter(([, n]) => n > 0).sort((a, b) => String((I[a[0]] || {}).k).localeCompare(String((I[b[0]] || {}).k)));
-  el.innerHTML = `<div class="banner"><b>${esc(s.no)} · ${esc(storeName(s.store))}</b> · ${fmt(s.tq || 0)} ш · ${rows.length} баркод</div>
-    <div class="tbl" style="max-height:360px;overflow:auto"><table><thead><tr><th>Баркод</th><th>Бараа</th><th>Загвар|хэмжээ</th><th>Байршил</th><th class="n">Тоо</th></tr></thead><tbody>${rows.map(([e, n]) => { const i = I[e] || {};
-      return `<tr><td class="mono">${esc(e)}</td><td>${esc(i.n || '')}${i.x ? ' <span class="chip c-warn">жагсаалтгүй</span>' : ''}</td><td class="mono">${esc(i.k || '')}</td><td>${esc((WH.storeOf(s.store, whCfg()) || {}).base + (s.store === whCfg().over.key ? '' : (i.l || '')))}</td><td class="n">${fmt(n)}</td></tr>`; }).join('')}</tbody></table></div>`;
+  const ed = shipCanEdit(s);
+  el.innerHTML = shipEditBar(s) + `<div class="banner"><b>${esc(s.no)} · ${esc(storeName(s.store))}</b> · ${fmt(s.tq || 0)} ш · ${rows.length} баркод</div>
+    <div class="tbl" style="max-height:360px;overflow:auto"><table><thead><tr><th>Баркод</th><th>Бараа</th><th>Загвар|хэмжээ</th><th>Байршил</th><th class="n">Тоо</th>${ed ? '<th>Засах</th>' : ''}</tr></thead><tbody>${rows.map(([e, n]) => { const i = I[e] || {};
+      return `<tr><td class="mono">${esc(e)}</td><td>${esc(i.n || '')}${i.x ? ' <span class="chip c-warn">жагсаалтгүй</span>' : ''}</td><td class="mono">${esc(i.k || '')}</td><td>${esc((WH.storeOf(s.store, whCfg()) || {}).base + (s.store === whCfg().over.key ? '' : (i.l || '')))}</td><td class="n">${fmt(n)}</td>${ed ? `<td style="white-space:nowrap"><button class="btn" data-wh-rm="${esc(s.id)}|${esc(e)}|1" title="1 ширхэг хасах">−1</button>${n > 1 ? `<button class="btn" data-wh-rm="${esc(s.id)}|${esc(e)}|${n}" title="Энэ мөрийг бүхэлд нь хасах">✕</button>` : ''}</td>` : ''}</tr>`; }).join('')}</tbody></table></div>`;
+}
+// ---------- editing a shipment already sent (mistakes, tests): remove pieces, re-open, cancel — the delivery's counts follow ----------
+function shipCanEdit(s){ const A = window.ALLOWX || {}; return !!(A.wh) && s.status !== 'closed'; }
+function shipEditBar(s){
+  const A = window.ALLOWX || {}; if (!A.wh) return ''; const got = Object.values(decMap(s.r)).some(q => q > 0);
+  return `<div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">
+    ${s.status === 'sent' && !got ? `<button class="btn" data-wh-reopen="${esc(s.id)}" title="Илгээмжийг буцааж нээгээд нэмж скан хийх / засах">↩ Буцааж нээх</button>` : ''}
+    <button class="btn" data-wh-cancel="${esc(s.id)}" style="color:var(--bad)" title="Илгээмжийг бүхэлд нь устгаж, барааг хүргэлтийн тооллогоос буцаана">🗑 Илгээмжийг цуцлах</button>
+    <span class="note">${s.status === 'closed' ? 'Хаагдсан илгээмж — зөвхөн цуцлах боломжтой.' : 'Мөр бүрийн «−1 / ✕»-ээр буруу скан хийсэн барааг хасна; хүргэлтийн тоо хамт засагдана.'}${got ? ' Дэлгүүр хүлээн авсан тоо бий — цуцалбал тэр нь ч устна.' : ''}</span></div>`;
+}
+async function shipRemove(sid, e, n){
+  const s = WS.ships.find(x => x.id === sid); if (!s) return; const i = decMap(s.i)[e] || {}, have = decMap(s.l)[e] || 0; n = Math.min(+n || 0, have); if (!(n > 0) || !i.k) return;
+  addPend(s.deliv, (i.x ? 'x|' : 'c|') + i.k, s.store, -n); addShipPend(sid, null, e, -n); await flush();
+}
+async function shipCancel(sid){
+  const s = WS.ships.find(x => x.id === sid); if (!s) return; const L = decMap(s.l), I = decMap(s.i), tot = Object.values(L).reduce((a, q) => a + Math.max(0, q), 0);
+  const got = Object.values(decMap(s.r)).reduce((a, q) => a + Math.max(0, q), 0);
+  if (!confirm(`${s.no} · ${storeName(s.store)} — ${tot} ширхэгтэй илгээмжийг цуцлах уу?\n\nБараа хүргэлтийн тооллогоос хасагдаж, дахин скан хийх боломжтой болно.${got ? `\nДэлгүүр ${got} ширхэг хүлээн авсан бүртгэл ч устна.` : ''}`)) return;
+  try{ for (const [e, q] of Object.entries(L)){ const i = I[e] || {}; if (q > 0 && i.k) addPend(s.deliv, (i.x ? 'x|' : 'c|') + i.k, s.store, -q); }
+    await flush(); await db.doc('ship/' + sid).delete(); delete WS.open[s.deliv + '|' + s.store]; WS.ships = WS.ships.filter(x => x.id !== sid); if (WS.detail === sid) WS.detail = ''; renderWh(); }
+  catch(err){ whErr(err); }
+}
+async function shipReopen(sid){
+  const s = WS.ships.find(x => x.id === sid); if (!s) return;
+  if (openShip(s.deliv, s.store)){ alert(`${storeName(s.store)}-д нээлттэй өөр илгээмж байна — эхлээд түүнийгээ илгээнэ үү.`); return; }
+  try{ await db.doc('ship/' + sid).update({status: 'open', sentAt: fv().delete(), sentBy: fv().delete(), reopenedAt: new Date().toISOString(), reopenedBy: me}); WS.open[s.deliv + '|' + s.store] = sid; }
+  catch(err){ whErr(err); }
 }
 async function resolveShip(sid){
   const s = WS.ships.find(x => x.id === sid); if (!s) return; const L = decMap(s.l), R = decMap(s.r), I = decMap(s.i), cmp = WH.compare(L, R);
@@ -6491,6 +6520,9 @@ document.addEventListener('click', async e => {
   if (d.whDet){ WS.detail = WS.detail === d.whDet ? '' : d.whDet; return renderShipDetail(); }
   if (d.whSmart) return smartFile(d.whSmart);
   if (d.whResolve) return resolveShip(d.whResolve);
+  if (d.whRm){ const [sid, e, n] = d.whRm.split('|'); return shipRemove(sid, e, n); }
+  if (d.whCancel) return shipCancel(d.whCancel);
+  if (d.whReopen) return shipReopen(d.whReopen);
   if (d.wdPurchase) return purchaseFile(d.wdPurchase);
   if (d.wdRep) return renderRecon(WS.repId === d.wdRep && $('#wd-rep').innerHTML ? '' : d.wdRep);
   if (d.wdRepx) return reconFile(d.wdRepx);
