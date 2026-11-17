@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd168</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd169</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -1887,6 +1887,16 @@ const VIVI = (() => {
       return f.ch === 'cash' ? 'Борлуулалтын өдрөөр (хуулгын утгаар)' : dd < 0 ? 'Банкинд дутуу орсон / mniej w banku' : 'Банкинд илүү орсон / więcej w banku'; };
     // who and which bills: wrong form → that payment; QPay/transfers → Smart payments with no bank money; card/cash → a payment of the same amount, else the cashiers of that form that day
     const bill = r => [r.no ? '№' + r.no : '', r.t || '', Math.round(r.amt).toLocaleString('en-US').replace(/,/g, ' ') + '₮'].filter(Boolean).join(' ');
+    // up to 3 bills summing to x (±tolerance); fewest bills first; returns ≤3 combinations and how many were found
+    const combos = (S0, x) => { const tol = Math.max(5, x * 0.001), S = S0.filter(r => r.amt > 0 && r.amt <= x + tol).sort((a, b) => a.amt - b.amt).slice(-800), n = S.length, out = []; let cnt = 0;
+      const add = c => { cnt++; if (out.length < 3) out.push(c); };
+      for (const r of S) if (Math.abs(r.amt - x) <= tol) add([r]);
+      if (cnt) return {list: out, n: cnt};
+      const pairs = (lo, rest, pre) => { let i = lo, j = n - 1; while (i < j){ const v = S[i].amt + S[j].amt;
+          if (v < rest - tol) i++; else if (v > rest + tol) j--; else { for (let k = j; k > i && S[i].amt + S[k].amt >= rest - tol; k--) add([...pre, S[i], S[k]]); i++; if (cnt > 50) return; } } };
+      pairs(0, x, []); if (cnt) return {list: out, n: cnt};
+      for (let a = 0; a < n - 2 && cnt <= 50; a++){ if (S[a].amt * 3 > x + tol) break; pairs(a + 1, x - S[a].amt, [S[a]]); }
+      return {list: out, n: cnt}; };
     const whoOf = (f, dd) => { const t = Math.max(3000, f.smart * 0.004); if (Math.abs(dd) <= t) return ['', ''];
       const e = (KF[f.store + '|' + f.d] || []).find(x => x.real === CH_NAME[f.ch] || x.rec && smartCh({form: x.rec === 'Бэлэн' ? 'Бэлнээр' : '', bank: x.rec}) === f.ch);
       if (e) return [e.kas || '', bill(e) + (e.sure ? '' : ' (магадгүй)')];
@@ -1894,6 +1904,11 @@ const VIVI = (() => {
       if (D.matched && D.sOnly.length) return [[...new Set(D.sOnly.map(r => r.kas).filter(Boolean))].join(', '), 'Банкинд алга: ' + cap(D.sOnly.map(r => bill(r) + (r.kas ? ' (' + r.kas + ')' : '')))];
       const x = Math.abs(dd), same = D.smart.filter(r => Math.abs(r.amt - x) <= Math.max(2, x * 0.005));
       if (same.length && f.ch !== 'cash') return [[...new Set(same.map(r => r.kas).filter(Boolean))].join(', '), 'Ижил дүнтэй (магадгүй): ' + cap(same.map(r => bill(r) + (r.kas ? ' (' + r.kas + ')' : '')))];
+      // card/cash: 1–3 bills of that form and day whose sum equals the difference — a hint only
+      const cb = dd < 0 ? combos(D.smart, x) : {list: []};
+      if (cb.list.length){ const who = [...new Set(cb.list.flat().map(r => r.kas).filter(Boolean))].join(', ');
+        const txt = cb.list.map(c => c.map(r => bill(r) + (r.kas ? ' (' + r.kas + ')' : '')).join(' + ')).join(' | ');
+        return [who, `Нийлбэр нь зөрүүтэй тэнцүү (магадгүй${cb.n > cb.list.length ? ', ' + cb.n + ' хослолоос' : ''}): ` + txt]; }
       return [D.byKas.map(o => `${o.kas} ${Math.round(o.amt).toLocaleString('en-US').replace(/,/g, ' ')}₮ (${o.n})`).join(', '), D.matched && D.bOnly.length ? 'Smart-д алга, банкинд орсон: ' + cap(D.bOnly.map(b => Math.round(b.amt) + '₮ ' + String(b.desc || '').slice(0, 40))) : ''];
     };
     const dForm = [['Огноо / Data', 'Гараг', 'Дэлгүүр / Sklep', 'Хэлбэр / Forma', 'Smart', 'Банк / Bank', 'Зөрүү / Różnica', '%', 'Тайлбар / Wyjaśnienie', 'Кассчин / Kasjer', 'Баримт (№ · цаг · дүн) / Paragony']];
@@ -6273,10 +6288,16 @@ function newShipBase(id, st){
   const D = WS.delivs.find(d => d.id === id) || {}, seq = WS.ships.filter(s => s.deliv === id && s.store === st).length + 1, now = new Date().toISOString();
   return {deliv: id, dname: D.name || '', store: st, no: `${(D.name || 'LPP').replace(/\s+/g, '').slice(0, 10)}-${st.toUpperCase()}-${seq}`, status: 'open', createdAt: now, by: me, tq: 0, l: {}, i: {}, r: {}, rq: 0};
 }
+// ready = shipment list from the server (or cache after 8 s offline) and this delivery's counters loaded
+async function whReady(id){ const ok = () => (WS.shipsSrv || (WS.shipsIn && Date.now() - WS.shipsIn > 8000)) && WS.cnt[id] && !WS.cnt[id]._err;
+  if (ok()) return true; showResult('', 'Ачаалж байна…', 'Өчигдрийн илгээмжүүдийг серверээс уншиж байна, түр хүлээнэ үү.');
+  for (let i = 0; i < 60 && !ok(); i++) await new Promise(r => setTimeout(r, 250)); return ok(); }
 async function onScan(raw){
   const e = WH.eanOf(raw); if (!e) return; const id = WS.active; const now = Date.now();
   if (e === WS.lastKey && now - WS.lastAt < 250) return; WS.lastKey = e; WS.lastAt = now;       // the reader sometimes sends one code twice
   if (!id){ showResult('bad', 'Хүргэлт сонгоогүй', 'Дээрээс идэвхтэй хүргэлтээ сонгоно уу.'); return; }
+  // after a restart the shipments and counters come from the server a moment later; scanning before that would open a second shipment for the store
+  if (!(await whReady(id))){ showResult('bad', 'Өгөгдөл ачаалж дуусаагүй', 'Илгээмж, тоолуурын мэдээлэл серверээс ирээгүй байна. Интернэтээ шалгаад дахин скан хийнэ үү — энэ скан тоологдоогүй.'); beep('bad'); return; }
   const P = await loadParts(id); if (!P){ showResult('bad', 'Хүргэлт ачаалж чадсангүй', ''); return; }
   let k = P.eans[e], it = k ? P.items[k] : null, st, kind = 'ok';
   if (it && it.x){ st = WH.pickExtra(totOf(id), whCfg()); kind = 'extra'; addPend(id, 'x|' + k, st, 1); statAdd(1); }
@@ -9337,7 +9358,7 @@ else VIVIFB.start(async () => {
     db.collection('deliv').onSnapshot(s => { WS.delivs = s.docs.map(d => ({id: d.id, ...d.data()}));
       for (const D of WS.delivs) if (!WS.cntSub || !WS.cntSub[D.id]){ (WS.cntSub = WS.cntSub || {})[D.id] = true; db.doc('delivcnt/' + D.id).onSnapshot(x => { WS.cnt[D.id] = x.exists ? x.data() : {}; render(); }, err => { console.warn('delivcnt', D.id, err); WS.cnt[D.id] = {_err: 1}; render(); }); }
       render(); }, onErr);
-    db.collection('ship').onSnapshot(s => { WS.ships = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+    db.collection('ship').onSnapshot(s => { WS.ships = s.docs.map(d => ({id: d.id, ...d.data()})); WS.shipsIn = WS.shipsIn || Date.now(); if (!(s.metadata && s.metadata.fromCache)) WS.shipsSrv = true; render(); }, onErr);
   } };
   if (!ALLOW.wh && ALLOW.rcv){
     const got = {}; for (const k of ['fc','dr','ns','ht']) if (ALLOW['rcv_' + k]) db.collection('ship').where('store', '==', k).onSnapshot(s => { got[k] = s.docs.map(d => ({id: d.id, ...d.data()})); WS.ships = [].concat(...Object.values(got)); render(); }, onErr);
