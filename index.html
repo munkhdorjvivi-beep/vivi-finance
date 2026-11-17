@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd165</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd166</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -1120,7 +1120,7 @@ window.VIVIFB = (() => {
   firebase.initializeApp(cfg);
   const auth = firebase.auth();
   const db = firebase.firestore();
-  // keep writes made offline (warehouse scans) in the browser until they reach the server; also saves reads on reload
+  // device cache (IndexedDB): keeps offline writes (warehouse scans) and shows the last data at once on the next start; wiped on sign-out
   try { db.enablePersistence({ synchronizeTabs: true }).catch(e => console.warn('persistence', e && e.code)); } catch (e) {}
   let current = null, staff = false;
   // every delete leaves a trace (who, when, what was there) in «audit»; the owner can put it back in «Тохиргоо»
@@ -1243,7 +1243,10 @@ window.VIVIFB = (() => {
     if (e && /popup/.test(e.code || '')) return auth.signInWithRedirect(provider());
     throw e;
   });
-  const signOut = () => auth.signOut();
+  const signOut = async () => {   // sign out and wipe the data kept on this device
+    try{ await auth.signOut(); }catch(e){}
+    try{ await db.terminate(); await db.clearPersistence(); }catch(e){ console.warn('cache clear', e); }
+    location.reload(); };
   // employees without Gmail: phone number + PIN. Under the hood an e-mail/password account {phone}.{v}@tel.vivi.mn;
   // hrphone/{phone} = {v} tells which version is current (a new PIN = a new account, the old one loses access)
   const PIN_DOM = 'tel.vivi.mn', pinPw = pin => 'vivi-' + pin;
