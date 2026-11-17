@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd164</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd165</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -436,6 +436,7 @@ body{margin:0;background:var(--bg)}
       <div class="row"><input id="pb-file" type="file" accept=".xls,.xlsx" style="max-width:320px"><span class="note" id="pb-msg"></span></div>
       <details style="margin-top:8px"><summary class="note" id="pb-sum"></summary><div class="tbl" style="margin-top:6px"><table><thead><tr><th>Бүлэг</th><th>Харилцагч</th><th>Данс</th><th>Ангилал</th><th>Салбар</th></tr></thead><tbody id="pb-list"></tbody></table></div></details>
     </div>
+    <div class="card" id="perf-card" hidden><div class="row" style="justify-content:space-between"><h2 style="margin:0">⚡ Ачаалалт (хурд)</h2><button class="btn" id="perf-refresh">Шинэчлэх</button></div><div id="perf-body" class="note" style="margin-top:8px"></div></div>
     <div class="card" id="aud-card" hidden>
       <h2>Нөөц хуулбар ба устгасан бичлэг</h2>
       <p class="note" style="margin:0 0 8px">Шөнө бүр (03:00-оос хойш) бүх өгөгдлийг <b>kontrolavivi@gmail.com</b>-ийн Google Drive-д «VIVI backup / огноо» хавтсанд хадгална — сүүлийн 30 хоног ба сар бүрийн 1-ний хуулбар үлдэнэ. Хэн нэгэн бичлэг устгавал доор харагдана, «↩ Сэргээх»-ээр буцаана.</p>
@@ -3348,7 +3349,7 @@ let reqFilter = 'pending', bankFilter = 'all', cashFilter = 'open', cashStore = 
 let pendingRun = null, lastFiles = null;
 
 // ---------- tabs ----------
-function showTab(t){ $$('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t)); $$('[data-panel]').forEach(p => p.hidden = p.dataset.panel !== t); try{ localStorage.setItem('vivi-tab', t); }catch(e){} }
+function showTab(t){ $$('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t)); $$('[data-panel]').forEach(p => p.hidden = p.dataset.panel !== t); try{ localStorage.setItem('vivi-tab', t); }catch(e){}  if (window.VIVI_NEED) VIVI_NEED(t); if (typeof render === 'function') render(); }
 $$('nav.tabs button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
 try{ const t = localStorage.getItem('vivi-tab'); if (t) showTab(t); }catch(e){}
 function bindFilter(id, set){ $(id).addEventListener('click', e => { const b = e.target.closest('button[data-f]'); if (!b) return; $$(id+' button').forEach(x => x.setAttribute('aria-pressed', x === b)); set(b.dataset.f); render(); }); }
@@ -3535,7 +3536,15 @@ function matchBank(){
 // ---------- render ----------
 function keepDrafts(sel){ const d = {}; $$(sel).forEach(el => { if (el.id) d[el.id] = el.value; }); return d; }
 function restoreDrafts(d){ for (const [id,v] of Object.entries(d)){ const el = document.getElementById(id); if (el && v !== '' ) el.value = v; } }
-function render(){
+const PERF = {t0: performance.now(), col: [], lazy: {}, renders: 0, renderMs: 0, maxMs: 0, first: 0};
+const pVis = p => { const el = document.querySelector(`[data-panel="${p}"]`); return !!el && !el.hidden; };   // is this tab on screen now
+let _rT = 0;
+function render(){ if (_rT) return; _rT = setTimeout(() => { _rT = 0; renderNow(); }, 40); }
+function renderNow(){
+  if (_rT){ clearTimeout(_rT); _rT = 0; } const t0 = performance.now();
+  try{ renderBody(); } finally { const ms = performance.now() - t0; PERF.renders++; PERF.renderMs += ms; PERF.maxMs = Math.max(PERF.maxMs, ms); if (!PERF.first && S.requests.length) PERF.first = Math.round(performance.now() - PERF.t0); }
+}
+function renderBody(){
   const drafts = keepDrafts('#req-list input, #req-list select, #cash-body textarea, #pl-fixed input');
   renderInner();
   if (typeof renderRecur === 'function') try{ renderRecur(); }catch(e){ console.warn('recur', e); }
@@ -3568,7 +3577,7 @@ function renderInner(){
     $('#rday-sum').innerHTML = (openOnly ? '<b>Бүх өдрийн</b> <span class="note">(хүлээгдэж буй / хүлээлгэсэн хүсэлт огноогоор шүүгдэхгүй)</span>' : reqDay ? `<b>${esc(dayLong(reqDay))}</b>` : '<b>Бүх өдөр</b>')
       + ` · ${list.length} хүсэлт · ${fmt(amt)} ₮`;
     $('#rday-next').disabled = !reqDay || reqDay >= today(); $('#rday-today').disabled = reqDay === today(); $('#rday-all').disabled = !reqDay; }
-  $('#req-list').innerHTML = list.length ? list.map(r => reqCard(r, byReq[r.id])).join('') : `<div class="empty">${reqFilter === 'pending' ? 'Хүлээгдэж буй хүсэлт алга.' : reqFilter === 'hold' ? 'Хүлээлгэсэн хүсэлт алга.' : 'Энэ төлөвт хүсэлт алга.'}</div>`;
+  if (pVis('req')) $('#req-list').innerHTML = list.length ? list.map(r => reqCard(r, byReq[r.id])).join('') : `<div class="empty">${reqFilter === 'pending' ? 'Хүлээгдэж буй хүсэлт алга.' : reqFilter === 'hold' ? 'Хүлээлгэсэн хүсэлт алга.' : 'Энэ төлөвт хүсэлт алга.'}</div>`;
   // bank
   const unm = S.banktx.filter(t => !t._old && mt[t.id] && mt[t.id].st === 'none');
   $('#k-unm').textContent = unm.length; $('#k-unm-s').textContent = unm.length ? fmt(unm.reduce((s,t)=>s+(+t.amount||0),0)) + ' ₮' : (S.banktx.length ? 'Бүгд тулгагдсан' : 'Гүйлгээ алга');
@@ -3589,29 +3598,33 @@ function renderInner(){
     $('#day-next').disabled = !bankDay || bankDay >= today(); $('#day-today').disabled = bankRange === 'day' && bankDay === today(); $('#day-all').disabled = !AB; }
   const rows = dayRows.filter(t => bankFilter === 'all' || (mt[t.id] && mt[t.id].st === bankFilter)).sort((a,b) => String(b.dt).localeCompare(String(a.dt)));
   BANK_X = {rows, mt, AB, catOf};
-  $('#bank-body').innerHTML = rows.length ? rows.map(t => { const m = mt[t.id] || {}; const sev = m.st === 'none' ? 'sev-bad' : m.st === 'warn' ? 'sev-warn' : m.st === 'ok' ? 'sev-ok' : '';
+  if (pVis('bank')) $('#bank-body').innerHTML = rows.length ? rows.map(t => { const m = mt[t.id] || {}; const sev = m.st === 'none' ? 'sev-bad' : m.st === 'warn' ? 'sev-warn' : m.st === 'ok' ? 'sev-ok' : '';
     return `<tr class="${sev}"><td class="mono">${esc(bankDayMode ? String(t.dt).slice(11,16) : String(t.dt).replace('T',' ').slice(0,16))}</td><td>${esc(ACC_LABEL[normAcc(t.fromAcc)] || t.fromAcc)}<div class="note">${esc(t.fromName||'')}</div></td><td>${esc(t.toName||'')}${(b => b ? `<div><span class="chip c-acc" title="Харилцагчийн сан">${esc(b.name)}${b.group ? ' · ' + esc(b.group) : ''}</span></div>` : '')(PAYEES.get(t.toAcc))}<div class="note mono">${esc(t.toAcc||'')} · ${esc(t.toBank||'')}</div></td><td class="n">${fmt(t.amount)}</td><td>${esc(t.desc||'')}</td><td><span class="chip ${m.cls||'c-grey'}">${esc(m.label||'')}</span></td></tr>`; }).join('')
     : `<tr><td colspan="6" class="empty">${AB && !dayRows.length ? 'Энэ хугацаанд гүйлгээ алга.' : S.banktx.length ? 'Энэ шүүлтүүрт гүйлгээ алга.' : 'Банкны гүйлгээ хараахан ороогүй байна.'}</td></tr>`;
   // cash
   try{ renderCash(); }catch(e){ console.warn('cash', e); }
-  try{ renderRev(); }catch(e){ console.warn('rev', e); }
+  if (pVis('rev')) try{ renderRev(); }catch(e){ console.warn('rev', e); }
   // balances
   renderBal();
-  try{ renderPay(); }catch(e){ console.warn('pay', e); }
-  try{ flRender(); }catch(e){ console.warn('flow', e); }
-  try{ renderAnal(); }catch(e){ console.warn('anal', e); }
-  try{ renderRot(); }catch(e){ console.warn('rot', e); }
-  try{ renderData(); }catch(e){ console.warn('data', e); }
-  try{ renderPL(); }catch(e){ console.warn('pl', e); }
-  try{ renderWh(); renderWhSettings(); }catch(e){ console.warn('wh', e); }
-  try{ renderInv(); }catch(e){ console.warn('inv', e); }
-  try{ renderRs(); }catch(e){ console.warn('rs', e); }
-  try{ renderContr(); }catch(e){ console.warn('contr', e); }
+  // hidden tabs are not redrawn (only their badges, at most every 20 s)
+  const thr = k => { const t = Date.now(); if (pVis(k) || !PERF['b_' + k] || t - PERF['b_' + k] > 20000){ PERF['b_' + k] = t; return true; } return false; };
+  if (thr('pay')) try{ renderPay(); }catch(e){ console.warn('pay', e); }
+  if (pVis('flow')) try{ flRender(); }catch(e){ console.warn('flow', e); }
+  if (pVis('anal')) try{ renderAnal(); }catch(e){ console.warn('anal', e); }
+  if (pVis('rot')) try{ renderRot(); }catch(e){ console.warn('rot', e); }
+  if (pVis('data')) try{ renderData(); }catch(e){ console.warn('data', e); }
+  if (pVis('pl')) try{ renderPL(); }catch(e){ console.warn('pl', e); }
+  if (pVis('wh') || pVis('rcv') || thr('wh')) try{ renderWh(); }catch(e){ console.warn('wh', e); }
+  if (pVis('set')) try{ renderWhSettings(); }catch(e){ console.warn('whs', e); }
+  if (pVis('inv')) try{ renderInv(); }catch(e){ console.warn('inv', e); }
+  if (pVis('rqs') || pVis('req')) try{ renderRs(); }catch(e){ console.warn('rs', e); }
+  if (thr('contr')) try{ renderContr(); }catch(e){ console.warn('contr', e); }
   try{ renderChat(); }catch(e){ console.warn('chat', e); }
-  try{ renderHR(); }catch(e){ console.warn('hr', e); }
-  try{ renderFixPay(); }catch(e){ console.warn('fixpay', e); }
+  if (pVis('hr')) try{ renderHR(); }catch(e){ console.warn('hr', e); }
+  if (pVis('pay')) try{ renderFixPay(); }catch(e){ console.warn('fixpay', e); }
   try{ renderNav(); }catch(e){ console.warn('nav', e); }
-  try{ renderDaily(); }catch(e){ console.warn('daily', e); }
+  if (pVis('daily')) try{ renderDaily(); }catch(e){ console.warn('daily', e); }
+  if (pVis('set')) try{ renderPerf(); }catch(e){ console.warn('perf', e); }
 }
 function reqCard(r, matches){
   const s = reqStatus(r), a = S.approvals[r.id];
@@ -5411,7 +5424,7 @@ document.addEventListener('click', async e => { const b = e.target.closest('[dat
   }catch(err){ alert('Буцааж чадсангүй: ' + (err.code || err.message)); } });
 // ---------- daily report (Өдрийн тайлан) ----------
 // days before DR_FROM are not kept live — they load on demand for the period being looked at
-const DR_FROM = (() => { const t = new Date(Date.now() + 8 * 3600e3 - 150 * 86400e3); return t.toISOString().slice(0, 10); })();
+const DR_FROM = (() => { const t = new Date(Date.now() + 8 * 3600e3 - 70 * 86400e3); return t.toISOString().slice(0, 10); })();
 const DR_TRIED = {};
 async function drEnsure(a, z){
   if (!db || !a || a >= DR_FROM) return false; const zz = z < DR_FROM ? z : shiftDay(DR_FROM, -1), key = a.slice(0, 7) + '|' + zz.slice(0, 7);
@@ -7790,6 +7803,34 @@ function prodRender(){ prRender(); }
     XLSX.writeFile(wb, `VIVI_aguulah_buteemj_${PR.a}_${PR.z}.xlsx`);
   });
 })();
+// ===== ⚡ load measurement: when each live query first answered, how many documents, roughly how many KB =====
+(function(){
+  const F = window.firebase && firebase.firestore; if (!F || !F.Query || !F.DocumentReference) return;
+  const label = x => { try{ if (x.path) return x.path; const q = x._delegate && x._delegate._query; const p = q && q.path && q.path.segments ? q.path.segments.join('/') : '?';
+    const f = q && q.filters && q.filters.length ? ' (' + q.filters.map(y => (y.field && y.field.segments ? y.field.segments.join('.') : '') + ' ' + (y.op || '')).join(', ') + ')' : ''; return p + f; }catch(e){ return '?'; } };
+  const wrap = proto => { const o = proto.onSnapshot; if (!o || o._perf) return;
+    proto.onSnapshot = function(...a){ const i = a.findIndex(f => typeof f === 'function'); if (i < 0) return o.apply(this, a);
+      const cb = a[i], rec = {path: label(this), at: Math.round(performance.now() - PERF.t0), first: null, docs: 0, kb: 0, n: 0}; PERF.col.push(rec);
+      a[i] = function(snap){ rec.n++; if (rec.first == null){ rec.first = Math.round(performance.now() - PERF.t0);
+          try{ if (snap.docs){ rec.docs = snap.docs.length; let b = 0; for (const d of snap.docs) b += JSON.stringify(d.data()).length; rec.kb = Math.round(b / 1024); } else { rec.docs = snap.exists ? 1 : 0; rec.kb = snap.exists ? Math.round(JSON.stringify(snap.data()).length / 1024) : 0; } }catch(e){} }
+        return cb.apply(this, arguments); };
+      return o.apply(this, a); };
+    proto.onSnapshot._perf = true; };
+  try{ wrap(F.Query.prototype); wrap(F.DocumentReference.prototype); }catch(e){ console.warn('perf', e); }
+})();
+function renderPerf(){
+  const c = $('#perf-card'); if (!c) return; c.hidden = !isOwner; if (!isOwner) return;
+  const L = PERF.col.slice().sort((a, b) => (b.kb - a.kb) || ((b.first || 0) - (a.first || 0))), kb = L.reduce((q, x) => q + x.kb, 0);
+  const boot = L.filter(x => x.at < 3000), last = Math.max(0, ...boot.map(x => x.first || 0));
+  $('#perf-body').innerHTML = `<div class="kpis" style="margin:0 0 8px"><div class="kpi"><div class="l">Эхний дэлгэц бэлэн</div><div class="v">${PERF.first ? (PERF.first / 1000).toFixed(1) + ' с' : '…'}</div><div class="s">хүсэлтүүд ирсэн мөч</div></div>
+    <div class="kpi"><div class="l">Эхлэхэд татсан өгөгдөл</div><div class="v">${fmt(boot.reduce((q, x) => q + x.kb, 0))} KB</div><div class="s">${boot.length} холболт · сүүлийнх ${(last / 1000).toFixed(1)} с</div></div>
+    <div class="kpi"><div class="l">Нийт татсан (одоог хүртэл)</div><div class="v">${fmt(kb)} KB</div><div class="s">${L.length} холболт</div></div>
+    <div class="kpi"><div class="l">Дэлгэц зурсан</div><div class="v">${PERF.renders} удаа</div><div class="s">дундаж ${PERF.renders ? Math.round(PERF.renderMs / PERF.renders) : 0} мс · хамгийн удаан ${Math.round(PERF.maxMs)} мс</div></div></div>
+    <div class="tbl" style="max-height:360px;overflow:auto"><table><thead><tr><th>Өгөгдөл</th><th class="n">Нээсэн (с)</th><th class="n">Ирсэн (с)</th><th class="n">Бичлэг</th><th class="n">KB</th><th class="n">Шинэчлэгдсэн</th></tr></thead><tbody>
+    ${L.map(x => `<tr><td class="mono">${esc(x.path)}</td><td class="n">${(x.at / 1000).toFixed(1)}</td><td class="n">${x.first == null ? '…' : (x.first / 1000).toFixed(1)}</td><td class="n">${fmt(x.docs)}</td><td class="n" style="${x.kb > 500 ? 'color:var(--bad);font-weight:700' : ''}">${fmt(x.kb)}</td><td class="n">${x.n}</td></tr>`).join('')}</tbody></table></div>
+    <p class="note" style="margin:6px 0 0">«Нээсэн» = эхэлснээс хойш хэдэн секундэд холболт нээгдсэн (3 с-ээс хойш = тухайн цэсийг нээхэд). Хэсэг тус бүр анх нээгдэхдээ л татагдана.</p>`;
+}
+(function(){ const b = document.getElementById('perf-refresh'); if (b) b.addEventListener('click', () => renderPerf()); })();
 // ===================== HR: employee cards, maternity leave, schedule & attendance, leave, hiring and leaving =====================
 // hremp/{id} — the employee card · hrleave/{id} — leave · hrsched/{unit}_{YYYY-MM} — schedule (plan) and attendance (att) · hrrec/{id} — a vacancy with its candidates
 const HR = {att: [], sites: {}, cfg: {}, attD: '', attM: '', emp: [], lv: [], sch: {}, rec: [], t: 'emp', q: '', unit: '', st: 'cur', open: '', edit: false, m: '', sunit: '', mode: 'plan', code: 'Б', lvF: 'pend', init: false};
@@ -9122,24 +9163,31 @@ else VIVIFB.start(async () => {
   for (const k in TABS){ const b = document.querySelector(`nav.tabs button[data-tab="${TABS[k]}"]`); if (b) b.hidden = !ALLOW[k]; if (KPI[k]) $(KPI[k]).closest('.kpi').hidden = !ALLOW[k]; }
   { const cur = document.querySelector('nav.tabs button[aria-selected="true"]'); if (!cur || cur.hidden){ const first = [...document.querySelectorAll('nav.tabs button')].find(b => !b.hidden); if (first) showTab(first.dataset.tab); } }
   if (!Object.values(ALLOW).some(Boolean)) gate('Танд харах хэсэг сонгогдоогүй байна. Эзэмшигчид хандана уу.', true);
+  // ----- start: only what the first screen needs (requests, bank KPI, cash KPI, balances, chat); every other part loads when its tab is first opened -----
+  const LZ = {}, need = k => { const f = LZ[k]; if (!f) return; delete LZ[k]; try{ const t0 = performance.now(); f(); PERF.lazy[k] = Math.round(performance.now() - t0); }catch(e){ console.warn('lazy', k, e); } };
+  const LZ_TAB = {req: [], bank: [], rev: ['runs', 'daily', 'stmt', 'fix'], cash: ['runs', 'fix'], bal: ['runs', 'stmt', 'daily'], pay: ['pay', 'fix', 'data'], pl: ['pl', 'pay', 'runs', 'stmt', 'daily', 'data'],
+    wh: ['wh'], rcv: ['wh'], inv: ['inv'], hr: ['hr', 'pay'], daily: ['daily', 'runs', 'stmt', 'snap', 'data'], anal: ['daily', 'snap'], rot: ['daily', 'snap'], data: ['data', 'daily', 'snap', 'runs', 'stmt'],
+    flow: ['stmt', 'runs', 'daily', 'data'], contr: ['stmt'], set: ['audit']};
+  window.VIVI_NEED = t => (LZ_TAB[t] || []).forEach(need);
   if (ALLOW.req) db.collection('requests').onSnapshot(s => { S.requests = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(S.requests.map(r => r.createdBy)); render(); }, onErr);
   if (ALLOW.req) db.collection('reqdraft').onSnapshot(s => { RS.list = s.docs.map(d => ({id: d.id, ...d.data()})); resolveNames(RS.list.map(x => x.createdBy)); render(); }, onErr);
   else if (ALLOW.reqsub) db.collection('reqdraft').where('createdBy', '==', me).onSnapshot(s => { RS.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   chLoadUsers().then(render);
   (isOwner ? db.collection('chats') : db.collection('chats').where('members', 'array-contains', me)).onSnapshot(s => { CH.chats = s.docs.map(d => ({id: d.id, ...d.data()})); CH.loaded = true; render(); }, onErr);
   if (ALLOW.contr || ALLOW.req) db.collection('contracts').onSnapshot(s => { CT.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
-  if (ALLOW.rev || ALLOW.cash || ALLOW.pay) db.collection('revfix').onSnapshot(s => { FIX.list = s.docs.map(d => ({id: d.id, ...d.data()})); resolveNames(FIX.list.map(x => x.by)); render(); }, onErr);
-  if (ALLOW.hr){ db.collection('hremp').onSnapshot(s => { HR.emp = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); db.collection('hrleave').onSnapshot(s => { HR.lv = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); db.collection('hrrec').onSnapshot(s => { HR.rec = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+  LZ.fix = () => { if (ALLOW.rev || ALLOW.cash || ALLOW.pay) db.collection('revfix').onSnapshot(s => { FIX.list = s.docs.map(d => ({id: d.id, ...d.data()})); resolveNames(FIX.list.map(x => x.by)); render(); }, onErr); };
+  LZ.hr = () => { if (ALLOW.hr){ db.collection('hremp').onSnapshot(s => { HR.emp = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); db.collection('hrleave').onSnapshot(s => { HR.lv = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); db.collection('hrrec').onSnapshot(s => { HR.rec = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
     db.collection('hratt').where('at', '>=', new Date(Date.now() - 75 * 864e5).toISOString()).onSnapshot(s => { HR.att = s.docs.map(d => d.data()); HR.att._v = Date.now(); render(); }, onErr);
-    db.collection('hrsites').onSnapshot(s => { HR.sites = {}; HR.cfg = {}; s.docs.forEach(d => { if (d.id === '_cfg') HR.cfg = d.data(); else HR.sites[d.id] = {id: d.id, ...d.data()}; }); render(); }, onErr); }
-  if (ALLOW.inv) db.collection('inv').onSnapshot(s => { IV.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+    db.collection('hrsites').onSnapshot(s => { HR.sites = {}; HR.cfg = {}; s.docs.forEach(d => { if (d.id === '_cfg') HR.cfg = d.data(); else HR.sites[d.id] = {id: d.id, ...d.data()}; }); render(); }, onErr); } };
+  LZ.inv = () => { if (ALLOW.inv) db.collection('inv').onSnapshot(s => { IV.list = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr); };
   if (ALLOW.wh || ALLOW.rcv) db.doc('config/wh').onSnapshot(d => { WS.cfg = d.exists ? d.data() : null; render(); }, onErr);
-  if (ALLOW.wh){
+  LZ.wh = () => { if (ALLOW.wh){
     db.collection('deliv').onSnapshot(s => { WS.delivs = s.docs.map(d => ({id: d.id, ...d.data()}));
       for (const D of WS.delivs) if (!WS.cntSub || !WS.cntSub[D.id]){ (WS.cntSub = WS.cntSub || {})[D.id] = true; db.doc('delivcnt/' + D.id).onSnapshot(x => { WS.cnt[D.id] = x.exists ? x.data() : {}; render(); }, err => { console.warn('delivcnt', D.id, err); WS.cnt[D.id] = {_err: 1}; render(); }); }
       render(); }, onErr);
     db.collection('ship').onSnapshot(s => { WS.ships = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
-  } else if (ALLOW.rcv){
+  } };
+  if (!ALLOW.wh && ALLOW.rcv){
     const got = {}; for (const k of ['fc','dr','ns','ht']) if (ALLOW['rcv_' + k]) db.collection('ship').where('store', '==', k).onSnapshot(s => { got[k] = s.docs.map(d => ({id: d.id, ...d.data()})); WS.ships = [].concat(...Object.values(got)); render(); }, onErr);
   }
   if (ALLOW.req) db.collection('recurring').onSnapshot(s => { S.recurring = s.docs.map(d => ({id:d.id, ...d.data()})); render(); }, onErr);
@@ -9161,39 +9209,39 @@ else VIVIFB.start(async () => {
   };
   $('#sync-row').hidden = false; $('#sync-btn').hidden = true; syncMsg('Имэйл автоматаар шалгагдана.');
   if (ALLOW.bank) db.doc('meta/sync').onSnapshot(d => { if (!d.exists) return; const m = d.data(); if (m.lastRun) syncMsg(`Имэйл автоматаар шалгасан ${hhmm(m.lastRun)}${m.lastAdded ? ' · сүүлийн шинэ гүйлгээ ' + hhmm(m.lastAdded) : ''}`); }, onErr);
-  if (ALLOW.cash || ALLOW.rev) db.collection('cashruns').onSnapshot(s => { S.runs = s.docs.map(d => ({id:d.id, ...d.data()})); render(); }, onErr);
+  LZ.runs = () => { if (ALLOW.cash || ALLOW.rev) db.collection('cashruns').onSnapshot(s => { S.runs = s.docs.map(d => ({id:d.id, ...d.data()})); render(); }, onErr); };
   if (ALLOW.cash || ALLOW.rev) db.doc('cash/latest').onSnapshot(d => { S.cash = d.exists ? d.data() : null; render(); }, onErr);
   if (ALLOW.cash) db.collection('cashnotes').onSnapshot(s => { S.notes = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); resolveNames(Object.values(S.notes).map(n => n.by)); render(); }, onErr);
   if (ALLOW.bal) db.collection('balances').onSnapshot(s => { const all = s.docs.map(d => ({id:d.id, ...d.data()})); S.plan = all.find(b => b.id === 'plan') || null; S.balances = all.filter(b => b.id !== 'plan' && b.date); resolveNames(S.balances.map(b => b.by)); render(); }, onErr);
-  if (ALLOW.pay){
+  LZ.pay = () => { if (ALLOW.pay){
     db.collection('payroll').onSnapshot(s => { PS.lists = s.docs.map(d => ({id:d.id, ...d.data()})); resolveNames(PS.lists.map(l => l.by)); render(); }, onErr);
     db.collection('paydec').onSnapshot(s => { PS.decs = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
     db.doc('config/payroll').onSnapshot(d => { PS.cfg = {exempt: {}, ...(d.exists ? d.data() : {})}; render(); }, onErr);
     const payTxBy = {};
     for (const acc of PAY.SAL_ACCS) db.collection('banktx').where('fromAcc', '==', acc).onSnapshot(s => { payTxBy[acc] = s.docs.map(d => ({id:d.id, ...d.data()})); PS.tx = [].concat(...Object.values(payTxBy)); render(); }, onErr);
-  }
+  } };
   db.doc('config/payees').onSnapshot(d => { const x = d.exists ? d.data() : {}; const base = (x.list || []).length ? x.list : PAYEES_DEFAULT.list;
     PAYEES.set((x.extra || []).concat(PAYEES_DEFAULT.added || [], base)); PAYEES.setDefaults(x.defaults || {}); PBINFO = {file: (x.list || []).length ? (x.file || '') : PBINFO.file, emps: x.emps || PBINFO.emps, extra: x.extra || [], defaults: x.defaults || {}, plStore: x.plStore || {}}; renderPayees(); render(); }, onErr);
   // only the recent days live; older ones (history, last year) are fetched when a period needs them — drEnsure()
-  db.collection('uplog').where('at', '>=', new Date(Date.now() - 120 * 864e5).toISOString()).onSnapshot(s => { DS.log = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
+  LZ.data = () => { db.collection('uplog').where('at', '>=', new Date(Date.now() - 120 * 864e5).toISOString()).onSnapshot(s => { DS.log = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, onErr);
   if (ALLOW.data || ALLOW.pay || ALLOW.pl){
     db.collection('stmtcov').onSnapshot(s => { DS.cov = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
     db.doc('config/duty').onSnapshot(s => { DS.duty = s.exists ? s.data() : {}; render(); }, onErr);
-    db.collection('monthclose').onSnapshot(s => { DS.closed = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); }
-  if (isOwner){ $('#aud-card').hidden = false; db.collection('audit').where('at', '>=', new Date(Date.now() - 60 * 864e5).toISOString()).onSnapshot(s => { AUD.list = s.docs.map(d => ({id: d.id, ...d.data()})); renderAudit(); }, onErr); }
-  if (ALLOW.daily) db.collection('stocksnap').onSnapshot(s => { AN.snaps = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr);
-  if (isOwner || (ALLOW.bank && ALLOW.bal) || ALLOW.pl || ALLOW.bal || ALLOW.flow){ db.collection('stmtday').where('per', '>=', new Date(Date.now() - 100 * 864e5).toISOString().slice(0, 7)).onSnapshot(s => { DR.stmt = {...Object.fromEntries(Object.entries(DR.stmt || {}).filter(([, v]) => v.fromRun)), ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; DR.stmtLoaded = true; render(); }, onErr);
-    db.collection('txmark').onSnapshot(s => { DR.marks = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); }
-  if (ALLOW.daily || ALLOW.rev) db.collection('daily').where('date', '>=', DR_FROM).onSnapshot(s => { const keep = Object.fromEntries(Object.entries(DR.days).filter(([d]) => d < DR_FROM)); DR.days = {...keep, ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; DR.live = true; render(); }, onErr);
+    db.collection('monthclose').onSnapshot(s => { DS.closed = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); } };
+  LZ.audit = () => { if (isOwner){ $('#aud-card').hidden = false; db.collection('audit').where('at', '>=', new Date(Date.now() - 60 * 864e5).toISOString()).onSnapshot(s => { AUD.list = s.docs.map(d => ({id: d.id, ...d.data()})); renderAudit(); }, onErr); } };
+  LZ.snap = () => { if (ALLOW.daily) db.collection('stocksnap').onSnapshot(s => { AN.snaps = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); };
+  LZ.stmt = () => { if (isOwner || (ALLOW.bank && ALLOW.bal) || ALLOW.pl || ALLOW.bal || ALLOW.flow){ db.collection('stmtday').where('per', '>=', new Date(Date.now() - 100 * 864e5).toISOString().slice(0, 7)).onSnapshot(s => { DR.stmt = {...Object.fromEntries(Object.entries(DR.stmt || {}).filter(([, v]) => v.fromRun)), ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; DR.stmtLoaded = true; render(); }, onErr);
+    db.collection('txmark').onSnapshot(s => { DR.marks = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); render(); }, onErr); } };
+  LZ.daily = () => { if (ALLOW.daily || ALLOW.rev) db.collection('daily').where('date', '>=', DR_FROM).onSnapshot(s => { const keep = Object.fromEntries(Object.entries(DR.days).filter(([d]) => d < DR_FROM)); DR.days = {...keep, ...Object.fromEntries(s.docs.map(d => [d.id, d.data()]))}; DR.live = true; render(); }, onErr); };
   $('#cash-upload').hidden = !(isOwner || ALLOW.rev); window.REV_DAILY = isOwner || !!ALLOW.daily || !!ALLOW.rev;
   $('#dr-upload').hidden = !ALLOW.daily; DR.canFlow = isOwner || (ALLOW.bank && ALLOW.bal);
-  if (ALLOW.pl){
+  LZ.pl = () => { if (ALLOW.pl){
     db.collection('pl').onSnapshot(s => { PLS.months = Object.fromEntries(s.docs.map(d => [d.id, {id: d.id, ...d.data()}])); render(); }, onErr);
     db.doc('config/pl').onSnapshot(d => { PLS.cfg = {catMode: {}, ...(d.exists ? d.data() : {})}; render(); }, onErr);
     db.doc('config/plarea').onSnapshot(d => { PLS.area = (d.exists && d.data().area) || {}; render(); }, onErr);
     db.doc('config/plfixed').onSnapshot(d => { PLS.fixedCfg = {units: {}, ...(d.exists ? d.data() : {})}; render(); }, onErr);
     db.doc('config/plmap').onSnapshot(d => { PLS.accStore = (d.exists && d.data().map) || {}; render(); }, onErr);
-  }
+  } };
   // push button
   const pushLabel = st => ({on:'🔔 Мэдэгдэл асаалттай', denied:'🔕 Мэдэгдэл хаалттай', unsupported:'🔔 Мэдэгдэл', off:'🔔 Мэдэгдэл асаах'})[st] || '🔔 Мэдэгдэл асаах';
   const setPush = st => { $('#push-btn').textContent = pushLabel(st); $('#push-btn').dataset.state = st; };
@@ -9225,6 +9273,7 @@ else VIVIFB.start(async () => {
     $('#nt-unapproved').addEventListener('change', e => db.doc('config/notify').set({unapproved: e.target.checked}, {merge:true}).catch(onErr));
   }
   if (isOwner) db.doc('config/access').onSnapshot(d => { const x = d.exists ? d.data() : {}; ACCESS = {emails: x.emails || [], perms: x.perms || {}}; renderAccess(); }, onErr);
+  { const cur = document.querySelector('nav.tabs button[aria-selected="true"]'); VIVI_NEED(cur ? cur.dataset.tab : 'req'); }
 }, () => { if (booted){ location.reload(); return; } gate('Google бүртгэлээрээ нэвтэрнэ үү.'); },
    async (email) => { if (await empStart(email)) return; gate(`<b>${esc(email)}</b> бүртгэлд эрх олгогдоогүй байна. Эзэмшигчээс энэ имэйлийг «Тохиргоо» хэсэгт нэмүүлнэ үү.`, true); });
 })();
