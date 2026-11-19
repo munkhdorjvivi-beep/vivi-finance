@@ -180,7 +180,7 @@ body{margin:0;background:var(--bg)}
       <h1>VIVI Санхүүгийн хяналт</h1>
       <div class="sub">Төлбөрийн хүсэлт, банкны гүйлгээ, бэлэн мөнгө, дансны үлдэгдэл</div>
     </div>
-    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd174</span></div>
+    <div class="row"><span class="role" id="role">Ачаалж байна…</span><button class="btn" id="push-btn" title="Утсан дээр мэдэгдэл авах">🔔 Мэдэгдэл асаах</button><button class="btn" id="sign-out" title="Гарах">Гарах</button><span class="note" title="Хувилбар" style="margin-left:6px">upd175</span></div>
   </header>
 
   <div id="offline" class="banner bad" hidden>Өгөгдлийн сантай холбогдож чадсангүй. firebase-config.js файлыг шалгана уу.</div>
@@ -341,11 +341,12 @@ body{margin:0;background:var(--bg)}
       <div class="row" style="margin-top:10px"><button class="btn primary" id="cash-save" disabled>Үр дүнг хадгалж нягтланд харуулах</button><span class="note" id="cash-msg"></span></div>
     </div>
     <div class="card" id="rev-arch-card">
-      <div class="row" style="justify-content:space-between">
-        <h2 style="margin:0">Хадгалсан хяналтууд</h2>
-        <div class="row"><select id="rev-run" style="width:auto;min-width:320px"></select><button class="btn bad" id="rev-run-del" hidden>Устгах</button></div>
-      </div>
-      <p class="note" id="rev-run-note" style="margin:6px 0 0">Хадгалсан хугацаа бүр энд үлдэнэ: сонгоод харах, Excel дахин татах боломжтой. Ижил хугацааг дахин хадгалбал шинэчлэгдэнэ.</p>
+      <h2 style="margin:0 0 6px">Хяналт харах — дурын хугацаа</h2>
+      <div class="row" style="align-items:flex-end;gap:8px;flex-wrap:wrap"><label class="f" style="width:auto">Эхлэх<input type="date" id="rev-v0" style="width:auto"></label><label class="f" style="width:auto">Дуусах<input type="date" id="rev-v1" style="width:auto"></label><button class="btn primary" id="rev-view">Харах</button><span class="note" id="rev-view-msg"></span></div>
+      <p class="note" style="margin:6px 0 0">Өмнө оруулсан бүх банкны хуулга, мерчант хуулга, «Өдрийн тайлан»-гийн POS өгөгдлөөс сонгосон хугацааны хяналтыг шууд тооцоолно — Excel татах, хадгалах боломжтой. Хуулга дутуу өдрийг доорх «Хуулга шалгах»-д харуулна.</p>
+      <details style="margin-top:8px"><summary class="note" style="cursor:pointer">Хадгалсан хяналтууд (жагсаалт)</summary>
+        <div class="row" style="margin-top:6px"><select id="rev-run" style="width:auto;min-width:320px"></select><button class="btn bad" id="rev-run-del" hidden>Устгах</button></div>
+        <p class="note" id="rev-run-note" style="margin:6px 0 0">Хадгалсан хугацаа бүр энд үлдэнэ. Ижил хугацааг дахин хадгалбал шинэчлэгдэнэ.</p></details>
     </div>
     <div class="card">
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
@@ -3947,11 +3948,24 @@ function revRuns(){
 function selectedRun(){ const L = revRuns(); return L.find(r => r.id === revSel) || L[0] || null; }
 function renderRuns(){
   const L = revRuns(), el = $('#rev-run'); $('#rev-arch-card').hidden = !L.length; if (!L.length) return;
+  if (!$('#rev-v0').value && L[0]){ $('#rev-v0').value = L[0].d1.slice(0, 8) + '01'; $('#rev-v1').value = L[0].d1; }
   const cur = selectedRun(); const html = L.map(r => `<option value="${esc(r.id)}" ${cur && r.id === cur.id ? 'selected' : ''}>${esc(runLabel(r))}</option>`).join('');
   if (el.innerHTML !== html) el.innerHTML = html;
   $('#rev-run-del').hidden = !(isOwner && cur && cur.id !== 'latest');
 }
 $('#rev-run').addEventListener('change', e => { revSel = e.target.value; pendingRun = null; render(); });
+// any period: rebuild the control from the kept statements + daily reports (nothing uploaded)
+$('#rev-view').addEventListener('click', async () => {
+  const a = $('#rev-v0').value, z = $('#rev-v1').value, msg = $('#rev-view-msg'); if (!a || !z || z < a){ msg.textContent = 'Хугацаагаа сонгоно уу.'; return; }
+  const btn = $('#rev-view'); btn.disabled = true; msg.textContent = 'Хуулга ачаалж байна…';
+  try{ const RR = await rangeRaw(a, z); const F = mergeFiles(RR.files); if (!F.some(f => f.type === 'bank')){ msg.textContent = 'Энэ хугацааны хадгалсан хуулга алга — дээр хуулгаа оруулна уу.'; return; }
+    parsedFiles.length = 0; parsedFiles.push(...F.filter(f => f.type !== 'smart' || f.file !== 'Өдрийн тайлан')); revPerTouched = true; $('#rev-per-row').hidden = false; $('#rev-d0').value = a; $('#rev-d1').value = z;
+    $('#cash-filelist').innerHTML = `<div><span class="chip c-acc">↺</span> Хадгалсан хуулга: ${F.filter(f => f.type === 'bank').length} данс${F.some(f => f.type === 'merchant') ? ', ' + F.filter(f => f.type === 'merchant').length + ' мерчант файл' : ''} (${RR.runs} хяналтаас)</div>`;
+    msg.textContent = 'Тооцоолж байна…'; await runRev(); if (pendingRun){ pendingRun.view = true; msg.textContent = `✓ ${a} – ${z}. Excel татах, «Үр дүнг хадгалах» боломжтой.`; }
+    else msg.textContent = $('#cash-msg').textContent; }
+  catch(err){ console.error(err); msg.textContent = '⚠️ ' + String(err && (err.message || err)).slice(0, 160); }
+  finally{ btn.disabled = false; }
+});
 $('#rev-run-del').addEventListener('click', async () => {
   const r = selectedRun(); if (!r || r.id === 'latest' || !confirm(`${r.d0} – ${r.d1} хяналтыг устгах уу?`)) return;
   try{ for (let i = 0; i < (r.rawN || 0); i++) await db.doc('cashraw/' + r.id + '_' + i).delete().catch(() => {}); await db.doc('cashruns/' + r.id).delete(); revSel = ''; }
@@ -4262,7 +4276,8 @@ async function handleFiles0(fl){
 const isoU = t => { const d = new Date(t); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`; };
 const addD = (s, n) => { const t = new Date(s + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return isoU(+t); };
 let revPerTouched = false;
-function stmtRange(){ const dts = parsedFiles.filter(f => f.type === 'bank').flatMap(f => f.rows.map(t => +t.dt)).filter(x => x > 0); return dts.length ? [isoU(Math.min(...dts)), isoU(Math.max(...dts))] : null; }
+function stmtRange(){ const dts = parsedFiles.filter(f => f.type === 'bank').flatMap(f => f.rows.map(t => +t.dt)).filter(x => x > 0); if (dts.length) return [isoU(Math.min(...dts)), isoU(Math.max(...dts))];
+  const M = parsedFiles.filter(f => f.type === 'merchant' && f.per && f.per[0]); return M.length ? [M.map(f => f.per[0]).sort()[0], addD(M.map(f => f.per[1]).sort().at(-1), 1)] : null; }
 function revDefaults(){
   const r = stmtRange(); $('#rev-per-row').hidden = !r; if (!r || revPerTouched) return;
   let a = r[0], z = addD(r[1], -1); const sm = parsedFiles.filter(f => f.type === 'smart').flatMap(f => f.rows.map(x => x.d)).sort();
@@ -4272,16 +4287,42 @@ function revDefaults(){
   $('#rev-d0').value = a; $('#rev-d1').value = z < a ? a : z;
 }
 ['#rev-d0', '#rev-d1'].forEach(s => $(s).addEventListener('change', () => { revPerTouched = true; runRev().catch(err => { console.error('rev', err); $('#cash-save').disabled = true; $('#cash-msg').textContent = '⚠️ Тооцоолоход алдаа гарлаа: ' + String(err && (err.message || err)).slice(0, 200); }); }));
+// one file per bank account / merchant: statements uploaded at different times (and kept with the saved controls) joined without duplicates
+function mergeFiles(list){
+  const out = [], B = {}, M = {};
+  for (const f of list){
+    if (f.type === 'bank'){ const k = f.acc || f.label; const o = B[k] = B[k] || {...f, rows: [], _k: new Set(), per: f.per ? f.per.slice() : null}; if (!out.includes(o)) out.push(o);
+      if (f.per){ o.per = o.per ? [[o.per[0], f.per[0]].sort()[0], [o.per[1], f.per[1]].sort()[1]] : f.per.slice(); }
+      for (const t of f.rows){ const kk = `${+new Date(t.dt)}|${t.cr}|${t.dr}|${t.desc}`; if (!o._k.has(kk)){ o._k.add(kk); o.rows.push(t); } } }
+    else if (f.type === 'merchant'){ const k = f.bank + '|' + (f.mid || '') + '|' + (f.failed ? 'f' : 's'); const o = M[k] = M[k] || {...f, rows: [], _k: new Set(), terms: [], per: f.per ? f.per.slice() : null}; if (!out.includes(o)) out.push(o);
+      if (f.per){ o.per = o.per ? [[o.per[0], f.per[0]].sort()[0], [o.per[1], f.per[1]].sort()[1]] : f.per.slice(); }
+      o.terms = [...new Set(o.terms.concat(f.terms || []))];
+      for (const r of f.rows){ const kk = [r.term, r.d, r.t, r.amt, r.card, r.appr, r.ok, r.refund].join('|'); if (!o._k.has(kk)){ o._k.add(kk); o.rows.push(r); } } }
+    else if (f.type === 'smart' && f.file === 'Өдрийн тайлан') continue;   // rebuilt from the daily reports every time
+    else out.push(f); }
+  for (const o of out) delete o._k;
+  return out;
+}
+// statements and merchant files kept with saved controls that touch [a, z+1]
+const RAW_CACHE = {};
+async function rangeRaw(a, z){
+  const L = (S.runs || []).filter(r => r.rawN && r.d0 <= addD(z, 1) && r.d1 >= addD(a, -1)), out = [];
+  for (const r of L){ const k = r.id + '|' + r.rawN + '|' + (r.savedAt || ''); try{ RAW_CACHE[k] = RAW_CACHE[k] || await loadRaw(r.rawN, r.id); out.push(...RAW_CACHE[k]); }catch(e){ console.warn('raw', r.id, e); } }
+  return {files: out, runs: L.length};
+}
 async function runRev(){
   if (!parsedFiles.length) return;
   const d0 = $('#rev-d0').value, d1 = $('#rev-d1').value, r = stmtRange();
-  if (!parsedFiles.some(f => f.type === 'smart')) await loadKas(d0, d1);
+  await loadKas(d0, d1);
   $('#rev-per-note').innerHTML = r ? `Хуулга: ${r[0]} – ${r[1]}. ${r[1] <= d1 ? `<span style="color:var(--bad)">Хуулга ${addD(d1, 1)}-ний өдрийг агуулаагүй — ${d1}-ний карт, QPay, бэлэн мөнгө банкинд дутуу харагдана.</span>` : 'Карт, QPay, бэлэн мөнгө дараа өдөр нь банкинд ордог тул хуулга хяналтын сүүлийн өдрөөс нэг өдөр илүү байна.'}` : '';
-  lastFiles = parsedFiles.slice();
-  // POS side: an uploaded payment-form report wins; otherwise take it from the saved daily reports («Өдрийн тайлан»)
-  const fromDaily = !parsedFiles.some(f => f.type === 'smart') ? dailySmartFile(parsedFiles, d0, d1) : null;
+  // the files uploaded now + everything kept with the saved controls of this period (statements of other accounts, merchant files)
+  const RR = await rangeRaw(d0, d1); lastFiles = mergeFiles(parsedFiles.concat(RR.files));
+  // POS side: the daily reports («Өдрийн тайлан») for every day; an uploaded payment-form report (old Smart files) wins on its own days
+  const fromDaily = dailySmartFile(lastFiles, d0, d1);
   $$('#cash-filelist .auto').forEach(x => x.remove());
-  if (fromDaily){ lastFiles.push(fromDaily); $('#cash-filelist').insertAdjacentHTML('beforeend', `<div class="auto"><span class="chip c-ok">✓</span> ${esc(fromDaily.label)} · ${fromDaily.rows.length} мөр</div>`); }
+  { const nb = lastFiles.filter(f => f.type === 'bank').length, nm = lastFiles.filter(f => f.type === 'merchant').length, ub = parsedFiles.filter(f => f.type === 'bank' || f.type === 'merchant').length;
+    if (RR.runs && nb + nm > ub) $('#cash-filelist').insertAdjacentHTML('beforeend', `<div class="auto"><span class="chip c-acc">＋</span> Өмнө оруулсан хуулгаас (${RR.runs} хадгалсан хяналт): нийт ${nb} дансны хуулга${nm ? ', ' + nm + ' мерчант файл' : ''}</div>`); }
+  if (fromDaily){ lastFiles.unshift(fromDaily); $('#cash-filelist').insertAdjacentHTML('beforeend', `<div class="auto"><span class="chip c-ok">✓</span> ${esc(fromDaily.label)} · ${fromDaily.rows.length} мөр</div>`); }
   const m = VIVI.build(lastFiles, {d0, d1});
   if (m.error){ $('#cash-msg').textContent = parsedFiles.some(f => f.type === 'bank') ? (window.REV_DAILY === false ? 'POS «Борлуулалтын жагсаалт /төлбөрийн хэлбэрээр/» тайланг хуулгатай хамт оруулна уу.' : 'Хуулгын хугацаанд «Өдрийн тайлан»-д төлбөрийн хэлбэрийн өгөгдөл алга — тухайн өдрүүдийн POS тайланг «Өдрийн тайлан»-д оруулна уу.') : 'Банкны хуулгаа оруулна уу.'; return; }
   const CHK = stmtCheck(lastFiles, m.d0, m.d1); $('#cash-check').innerHTML = stmtCheckHTML(CHK);
@@ -4524,7 +4565,7 @@ const drop = $('#drop');
 drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
 drop.addEventListener('dragleave', () => drop.classList.remove('over'));
 drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); handleFiles([...e.dataTransfer.files]); });
-window.addEventListener('beforeunload', e => { if (pendingRun){ e.preventDefault(); e.returnValue = ''; } });   // a computed but unsaved control is not lost by an accidental reload
+window.addEventListener('beforeunload', e => { if (pendingRun && !pendingRun.view){ e.preventDefault(); e.returnValue = ''; } });   // a computed but unsaved control is not lost by an accidental reload
 $('#cash-save').addEventListener('click', async () => {
   if (!db || !pendingRun) return;
   const C = pendingRun.check; if (C && (C.miss || C.part) && !confirm(`${C.need}-аас ${C.need - C.ok} дансны хуулга дутуу (${C.rows.filter(r => r.req && r.st !== 'ok').map(r => r.name || r.acc).join(', ')}).\n\nДутуу дансны мөнгө «банкинд ороогүй» гэж харагдана. Тэгсэн ч хадгалах уу?`)) return;
